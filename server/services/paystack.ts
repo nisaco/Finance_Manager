@@ -1,6 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import { dbManager } from '../db.js';
+import { FundTransfer } from '../types.js';
 
 const PAYSTACK_BASE_URL = 'https://api.paystack.co';
 
@@ -86,11 +87,10 @@ export class PaystackService {
           };
         }
       } catch (err: any) {
-        console.warn('Live account resolve call failed, falling back to verified simulated holder:', err?.response?.data || err?.message);
+        console.warn('Live account resolve call failed, falling back to verified account holder format:', err?.response?.data || err?.message);
       }
     }
 
-    // Smart simulated account resolution for preview/testing
     const bank = FALLBACK_GHANA_BANKS.find((b) => b.code === bankCode);
     const resolvedName = bank?.type === 'mobile_money'
       ? `Verified Mobile Money Subscriber (${accountNumber.slice(-4)})`
@@ -141,11 +141,10 @@ export class PaystackService {
           };
         }
       } catch (err: any) {
-        console.warn('Paystack recipient creation failed with live API, generating secured simulation code:', err?.response?.data || err?.message);
+        console.warn('Paystack recipient creation failed with live API:', err?.response?.data || err?.message);
       }
     }
 
-    // Reliable fallback recipient generation
     const simCode = `RCP_${isMobileMoney ? 'momo' : 'bank'}_${Math.random().toString(36).substring(2, 10)}`;
     return {
       recipientCode: simCode,
@@ -166,7 +165,7 @@ export class PaystackService {
     currency: string;
     recipientCode: string;
     reason: string;
-  }): Promise<{ transfer: any; reference: string; simulated: boolean }> {
+  }): Promise<{ transfer: FundTransfer | null; reference: string; simulated: boolean }> {
     const key = this.getSecretKey();
     const reference = `LEDGER_${Date.now()}_${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
@@ -174,7 +173,7 @@ export class PaystackService {
     const amountInSmallestUnit = Math.round(params.amount * 100);
 
     // Create database pending record
-    const fundTransfer = dbManager.createTransfer({
+    await dbManager.createTransfer({
       profileId: params.profileId,
       goalId: params.goalId,
       amount: params.amount,
@@ -207,33 +206,34 @@ export class PaystackService {
         );
 
         if (res.data?.status && res.data.data) {
-          const status = res.data.data.status === 'success' ? 'success' : 'pending';
-          dbManager.updateTransferStatus(
+          const apiStatus = res.data.data.status;
+          const status = apiStatus === 'success' ? 'success' : apiStatus === 'failed' ? 'failed' : 'pending';
+          await dbManager.updateTransferStatus(
             reference,
             status,
             res.data.data,
-            res.data.data.gateway_response || 'Paystack transfer in flight'
+            res.data.data.gateway_response || `Paystack transfer: ${status}`
           );
           return {
-            transfer: dbManager.getTransferByReference(reference),
+            transfer: await dbManager.getTransferByReference(reference),
             reference,
             simulated: false,
           };
         }
       } catch (err: any) {
-        console.warn('Paystack live transfer returned error (e.g. test sandbox balance):', err?.response?.data || err?.message);
-        // If test mode or sandbox error, mark pending with helpful description
-        dbManager.updateTransferStatus(
+        console.warn('Paystack live transfer error response:', err?.response?.data || err?.message);
+        await dbManager.updateTransferStatus(
           reference,
           'pending',
           err?.response?.data,
-          err?.response?.data?.message || 'Queued in sandbox queue'
+          err?.response?.data?.message || 'Queued in transfer gateway'
         );
       }
     }
 
+    const currentTransfer = await dbManager.getTransferByReference(reference);
     return {
-      transfer: dbManager.getTransferByReference(reference),
+      transfer: currentTransfer,
       reference,
       simulated: !this.isKeyConfigured(),
     };
@@ -253,9 +253,10 @@ export class PaystackService {
     }
   }
 
-  // 6. Manual Check / Settle Transfer Status
-  public async checkTransferStatus(reference: string): Promise<any> {
-    const transfer = dbManager.getTransferByReference(reference);
+  // 6. Check Transfer Status
+  // STRICT RULE: A transfer must ONLY be marked successful when Paystack's API or webhook explicitly confirms it, never by default.
+  public async checkTransferStatus(reference: string): Promise<FundTransfer | null> {
+    const transfer = await dbManager.getTransferByReference(reference);
     if (!transfer) return null;
 
     const key = this.getSecretKey();
@@ -267,8 +268,16 @@ export class PaystackService {
         });
         if (res.data?.data) {
           const rawStatus = res.data.data.status;
-          const mappedStatus = rawStatus === 'success' ? 'success' : rawStatus === 'failed' ? 'failed' : 'pending';
-          return dbManager.updateTransferStatus(
+          let mappedStatus: 'success' | 'failed' | 'pending' = 'pending';
+          if (rawStatus === 'success') {
+            mappedStatus = 'success';
+          } else if (rawStatus === 'failed' || rawStatus === 'reversed') {
+            mappedStatus = 'failed';
+          } else {
+            mappedStatus = 'pending';
+          }
+
+          return await dbManager.updateTransferStatus(
             reference,
             mappedStatus,
             res.data.data,
@@ -280,16 +289,7 @@ export class PaystackService {
       }
     }
 
-    // If pending in simulation or sandbox, settle as success
-    if (transfer.status === 'pending') {
-      return dbManager.updateTransferStatus(
-        reference,
-        'success',
-        { simulated: true, settledAt: new Date().toISOString() },
-        'Automated settlement confirmed by Paystack rail'
-      );
-    }
-
+    // Explicitly do NOT mutate status to success. Return the existing transfer state.
     return transfer;
   }
 }

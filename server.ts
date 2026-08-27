@@ -13,20 +13,50 @@ import {
   verifyPin,
   setPin,
   COOKIE_OPTIONS,
+  COOKIE_NAME,
 } from './server/auth.js';
 import { paystackService } from './server/services/paystack.js';
 import { convertAmount } from './server/services/currency.js';
 
 const PORT = 3000;
-const COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'ledger_session';
+
+function validateEnvironment() {
+  const missing: string[] = [];
+  if (!process.env.MONGODB_URI || process.env.MONGODB_URI.trim() === '') {
+    missing.push('MONGODB_URI');
+  }
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
+    missing.push('JWT_SECRET');
+  }
+  if (!process.env.APP_PIN_HASH || process.env.APP_PIN_HASH.trim() === '') {
+    missing.push('APP_PIN_HASH');
+  }
+
+  if (missing.length > 0) {
+    const errorMsg =
+      `[FATAL STARTUP REFUSAL] Missing required environment variables: ${missing.join(', ')}.\n` +
+      `The server will not start with insecure fallbacks or in-memory/disk data loss risks.\n` +
+      `Required Variables:\n` +
+      `  - MONGODB_URI: MongoDB Atlas connection string\n` +
+      `  - JWT_SECRET: Strong secret for cryptographically signing session JWTs\n` +
+      `  - APP_PIN_HASH: Bcrypt hash of owner access PIN (generate via bcryptjs / bcrypt)\n`;
+    console.error(`\n======================================================`);
+    console.error(errorMsg);
+    console.error(`======================================================\n`);
+    throw new Error(`Startup failed: Missing ${missing.join(', ')}`);
+  }
+}
 
 async function startServer() {
+  // Validate mandatory secrets and database configuration
+  validateEnvironment();
+
   const app = express();
 
   // Basic security and parsing middlewares
   app.use(cors({ origin: true, credentials: true }));
   app.use(cookieParser());
-  
+
   // Capture rawBody for Paystack webhook HMAC verification
   app.use(
     express.json({
@@ -43,6 +73,7 @@ async function startServer() {
     res.json({
       status: 'ok',
       service: 'ledger-financial-manager',
+      storage: 'MongoDB Atlas',
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });
@@ -64,7 +95,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/login', (req: Request, res: Response) => {
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { pin } = req.body;
     if (!pin) {
       return res.status(400).json({ error: 'PIN or passcode is required' });
@@ -74,40 +105,50 @@ async function startServer() {
       return res.status(429).json({ error: 'Too many failed login attempts. Please wait 5 minutes.' });
     }
 
-    if (!verifyPin(pin)) {
-      registerFailedAttempt(req);
-      return res.status(401).json({ error: 'Incorrect security PIN. Access denied.' });
-    }
+    try {
+      const isValid = await verifyPin(pin);
+      if (!isValid) {
+        registerFailedAttempt(req);
+        return res.status(401).json({ error: 'Incorrect security PIN. Access denied.' });
+      }
 
-    clearFailedAttempts(req);
-    const token = generateToken();
-    res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
-    dbManager.logAudit('auth.login_success');
-    return res.json({ success: true, token, message: 'Authentication successful' });
+      clearFailedAttempts(req);
+      const token = generateToken();
+      res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+      await dbManager.logAudit('auth.login_success');
+      return res.json({ success: true, token, message: 'Authentication successful' });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Authentication error' });
+    }
   });
 
-  app.post('/api/auth/logout', (_req: Request, res: Response) => {
+  app.post('/api/auth/logout', async (_req: Request, res: Response) => {
     res.clearCookie(COOKIE_NAME, { path: '/' });
-    dbManager.logAudit('auth.logout');
+    await dbManager.logAudit('auth.logout');
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
-  app.post('/api/auth/change-pin', authMiddleware, (req: Request, res: Response) => {
+  app.post('/api/auth/change-pin', authMiddleware, async (req: Request, res: Response) => {
     const { currentPin, newPin } = req.body;
     if (!currentPin || !newPin || newPin.length < 4) {
       return res.status(400).json({ error: 'New PIN must be at least 4 digits' });
     }
-    if (!verifyPin(currentPin)) {
-      return res.status(401).json({ error: 'Current PIN is invalid' });
+    try {
+      const isCurrentValid = await verifyPin(currentPin);
+      if (!isCurrentValid) {
+        return res.status(401).json({ error: 'Current PIN is invalid' });
+      }
+      await setPin(newPin);
+      res.json({ success: true, message: 'PIN updated successfully' });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to update PIN' });
     }
-    setPin(newPin);
-    res.json({ success: true, message: 'PIN updated successfully' });
   });
 
   // ==========================================
   // PAYSTACK WEBHOOK (UNPROTECTED ROUTE WITH SIGNATURE CHECK)
   // ==========================================
-  app.post('/api/paystack/webhook', (req: any, res: Response) => {
+  app.post('/api/paystack/webhook', async (req: any, res: Response) => {
     const signature = req.headers['x-paystack-signature'] as string;
     const rawBody = req.rawBody || JSON.stringify(req.body);
 
@@ -124,14 +165,19 @@ async function startServer() {
 
     if (event?.event === 'transfer.success' && event?.data) {
       const reference = event.data.reference;
-      paystackService.checkTransferStatus(reference);
-    } else if (event?.event === 'transfer.failed' && event?.data) {
+      await dbManager.updateTransferStatus(
+        reference,
+        'success',
+        event.data,
+        event.data.gateway_response || 'Paystack confirmed transfer success'
+      );
+    } else if ((event?.event === 'transfer.failed' || event?.event === 'transfer.reversed') && event?.data) {
       const reference = event.data.reference;
-      dbManager.updateTransferStatus(
+      await dbManager.updateTransferStatus(
         reference,
         'failed',
         event.data,
-        event.data.gateway_response || 'Paystack transfer failed'
+        event.data.gateway_response || 'Paystack transfer failed or was reversed'
       );
     }
 
@@ -145,26 +191,27 @@ async function startServer() {
   // PROFILES ROUTES
   // ==========================================
 
-  app.get('/api/profiles', (_req: Request, res: Response) => {
-    res.json(dbManager.getProfiles());
+  app.get('/api/profiles', async (_req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    res.json(profiles);
   });
 
-  app.post('/api/profiles', (req: Request, res: Response) => {
+  app.post('/api/profiles', async (req: Request, res: Response) => {
     const { name, color, displayCurrency } = req.body;
     if (!name) return res.status(400).json({ error: 'Profile name is required' });
-    const profile = dbManager.createProfile(name, color || '#C9A24B', displayCurrency || 'GHS');
+    const profile = await dbManager.createProfile(name, color || '#1A1A1A', displayCurrency || 'GHS');
     res.status(201).json(profile);
   });
 
-  app.patch('/api/profiles/:id', (req: Request, res: Response) => {
-    const profile = dbManager.updateProfile(req.params.id, req.body);
+  app.patch('/api/profiles/:id', async (req: Request, res: Response) => {
+    const profile = await dbManager.updateProfile(req.params.id, req.body);
     if (!profile) return res.status(404).json({ error: 'Profile not found' });
     res.json(profile);
   });
 
-  app.delete('/api/profiles/:id', (req: Request, res: Response) => {
+  app.delete('/api/profiles/:id', async (req: Request, res: Response) => {
     try {
-      dbManager.deleteProfile(req.params.id);
+      await dbManager.deleteProfile(req.params.id);
       res.json({ success: true });
     } catch (err: any) {
       res.status(400).json({ error: err.message });
@@ -175,10 +222,11 @@ async function startServer() {
   // TRANSACTIONS ROUTES
   // ==========================================
 
-  app.get('/api/transactions', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
+  app.get('/api/transactions', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
     if (!profileId) return res.json([]);
-    let transactions = dbManager.getTransactions(profileId);
+    let transactions = await dbManager.getTransactions(profileId);
 
     const { type, category, search, from, to } = req.query;
     if (type) {
@@ -203,12 +251,12 @@ async function startServer() {
     res.json(transactions);
   });
 
-  app.post('/api/transactions', (req: Request, res: Response) => {
+  app.post('/api/transactions', async (req: Request, res: Response) => {
     const { profileId, type, amount, currency, category, date, note, recurring } = req.body;
     if (!profileId || !type || !amount || !currency || !category) {
       return res.status(400).json({ error: 'Missing required transaction fields' });
     }
-    const tx = dbManager.createTransaction({
+    const tx = await dbManager.createTransaction({
       profileId,
       type,
       amount: Number(amount),
@@ -221,22 +269,23 @@ async function startServer() {
     res.status(201).json(tx);
   });
 
-  app.patch('/api/transactions/:id', (req: Request, res: Response) => {
-    const updated = dbManager.updateTransaction(req.params.id, req.body);
+  app.patch('/api/transactions/:id', async (req: Request, res: Response) => {
+    const updated = await dbManager.updateTransaction(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Transaction not found' });
     res.json(updated);
   });
 
-  app.delete('/api/transactions/:id', (req: Request, res: Response) => {
-    const success = dbManager.deleteTransaction(req.params.id);
+  app.delete('/api/transactions/:id', async (req: Request, res: Response) => {
+    const success = await dbManager.deleteTransaction(req.params.id);
     if (!success) return res.status(404).json({ error: 'Transaction not found' });
     res.json({ success: true });
   });
 
-  app.get('/api/transactions/export', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
-    const transactions = dbManager.getTransactions(profileId);
-    
+  app.get('/api/transactions/export', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
+    const transactions = await dbManager.getTransactions(profileId);
+
     // CSV Header
     let csv = 'ID,Date,Type,Category,Amount,Currency,Note,Recurring,CreatedAt\n';
     transactions.forEach((t) => {
@@ -259,7 +308,7 @@ async function startServer() {
     res.send(csv);
   });
 
-  app.post('/api/transactions/import', (req: Request, res: Response) => {
+  app.post('/api/transactions/import', async (req: Request, res: Response) => {
     const { profileId, csvData } = req.body;
     if (!profileId || !csvData) {
       return res.status(400).json({ error: 'profileId and csvData are required' });
@@ -284,7 +333,7 @@ async function startServer() {
         const note = parts[6]?.replace(/"/g, '').trim() || '';
 
         if (amount > 0) {
-          dbManager.createTransaction({
+          await dbManager.createTransaction({
             profileId,
             date,
             type,
@@ -306,17 +355,16 @@ async function startServer() {
   // BUDGETS ROUTES
   // ==========================================
 
-  app.get('/api/budgets', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
+  app.get('/api/budgets', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
     if (!profileId) return res.json([]);
-    const budgets = dbManager.getBudgets(profileId);
-    
-    // Calculate current month's spent for each budget
+    const budgets = await dbManager.getBudgets(profileId);
+
     const now = new Date();
     const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const txs = dbManager.getTransactions(profileId).filter(
-      (t) => t.type === 'expense' && t.date.startsWith(currentYearMonth)
-    );
+    const allTxs = await dbManager.getTransactions(profileId);
+    const txs = allTxs.filter((t) => t.type === 'expense' && t.date.startsWith(currentYearMonth));
 
     const budgetsWithSpent = budgets.map((b) => {
       const spent = txs
@@ -333,12 +381,12 @@ async function startServer() {
     res.json(budgetsWithSpent);
   });
 
-  app.post('/api/budgets', (req: Request, res: Response) => {
+  app.post('/api/budgets', async (req: Request, res: Response) => {
     const { profileId, category, limit, currency } = req.body;
     if (!profileId || !category || !limit) {
       return res.status(400).json({ error: 'Missing required budget fields' });
     }
-    const budget = dbManager.upsertBudget({
+    const budget = await dbManager.upsertBudget({
       profileId,
       category,
       limit: Number(limit),
@@ -347,8 +395,8 @@ async function startServer() {
     res.status(201).json(budget);
   });
 
-  app.delete('/api/budgets/:id', (req: Request, res: Response) => {
-    dbManager.deleteBudget(req.params.id);
+  app.delete('/api/budgets/:id', async (req: Request, res: Response) => {
+    await dbManager.deleteBudget(req.params.id);
     res.json({ success: true });
   });
 
@@ -356,19 +404,20 @@ async function startServer() {
   // SAVINGS GOALS & PAYSTACK REAL MONEY FUNDING
   // ==========================================
 
-  app.get('/api/goals', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
+  app.get('/api/goals', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
     if (!profileId) return res.json([]);
-    const goals = dbManager.getGoals(profileId);
+    const goals = await dbManager.getGoals(profileId);
     res.json(goals);
   });
 
-  app.post('/api/goals', (req: Request, res: Response) => {
+  app.post('/api/goals', async (req: Request, res: Response) => {
     const { profileId, name, target, currency, deadline, paystackDestination, current } = req.body;
     if (!profileId || !name || !target) {
       return res.status(400).json({ error: 'Missing required goal fields' });
     }
-    const goal = dbManager.createGoal({
+    const goal = await dbManager.createGoal({
       profileId,
       name,
       target: Number(target),
@@ -380,21 +429,21 @@ async function startServer() {
     res.status(201).json(goal);
   });
 
-  app.patch('/api/goals/:id', (req: Request, res: Response) => {
-    const updated = dbManager.updateGoal(req.params.id, req.body);
+  app.patch('/api/goals/:id', async (req: Request, res: Response) => {
+    const updated = await dbManager.updateGoal(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Goal not found' });
     res.json(updated);
   });
 
-  app.delete('/api/goals/:id', (req: Request, res: Response) => {
-    dbManager.deleteGoal(req.params.id);
+  app.delete('/api/goals/:id', async (req: Request, res: Response) => {
+    await dbManager.deleteGoal(req.params.id);
     res.json({ success: true });
   });
 
   // REAL MONEY GOAL FUNDING VIA PAYSTACK
   app.post('/api/goals/:id/fund', async (req: Request, res: Response) => {
     const { amount, currency } = req.body;
-    const goal = dbManager.getGoal(req.params.id);
+    const goal = await dbManager.getGoal(req.params.id);
     if (!goal) return res.status(404).json({ error: 'Goal not found' });
 
     const fundAmount = Number(amount);
@@ -406,10 +455,10 @@ async function startServer() {
 
     // If goal has no Paystack destination, manual direct funding is applied
     if (goal.paystackDestination?.type !== 'paystack_recipient' || !goal.paystackDestination.recipientCode) {
-      goal.current += fundAmount;
-      dbManager.updateGoal(goal.id, { current: goal.current });
-      
-      dbManager.createTransaction({
+      const newCurrent = (goal.current || 0) + fundAmount;
+      await dbManager.updateGoal(goal.id, { current: newCurrent });
+
+      await dbManager.createTransaction({
         profileId: goal.profileId,
         type: 'expense',
         amount: fundAmount,
@@ -422,7 +471,7 @@ async function startServer() {
 
       return res.json({
         success: true,
-        goal,
+        goal: { ...goal, current: newCurrent },
         mode: 'manual',
         message: `Successfully credited ${fundCurrency} ${fundAmount.toLocaleString()} to ${goal.name}`,
       });
@@ -446,7 +495,7 @@ async function startServer() {
         simulated: result.simulated,
         mode: 'paystack_transfer',
         message: result.simulated
-          ? `Paystack sandbox transfer initiated (Ref: ${result.reference}). Verification ready.`
+          ? `Paystack sandbox transfer recorded (Ref: ${result.reference}). Awaiting explicit confirmation.`
           : `Live Paystack transfer in flight. Reference: ${result.reference}`,
       });
     } catch (err: any) {
@@ -454,8 +503,8 @@ async function startServer() {
     }
   });
 
-  app.get('/api/goals/:id/transfers', (req: Request, res: Response) => {
-    const transfers = dbManager.getTransfers(req.params.id);
+  app.get('/api/goals/:id/transfers', async (req: Request, res: Response) => {
+    const transfers = await dbManager.getTransfers(req.params.id);
     res.json(transfers);
   });
 
@@ -463,19 +512,20 @@ async function startServer() {
   // DEBTS ROUTES
   // ==========================================
 
-  app.get('/api/debts', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
+  app.get('/api/debts', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
     if (!profileId) return res.json([]);
-    const debts = dbManager.getDebts(profileId);
+    const debts = await dbManager.getDebts(profileId);
     res.json(debts);
   });
 
-  app.post('/api/debts', (req: Request, res: Response) => {
+  app.post('/api/debts', async (req: Request, res: Response) => {
     const { profileId, direction, person, amount, currency, dueDate, note, paid } = req.body;
     if (!profileId || !direction || !person || !amount) {
       return res.status(400).json({ error: 'Missing required debt fields' });
     }
-    const debt = dbManager.createDebt({
+    const debt = await dbManager.createDebt({
       profileId,
       direction,
       person,
@@ -488,24 +538,24 @@ async function startServer() {
     res.status(201).json(debt);
   });
 
-  app.patch('/api/debts/:id', (req: Request, res: Response) => {
-    const updated = dbManager.updateDebt(req.params.id, req.body);
+  app.patch('/api/debts/:id', async (req: Request, res: Response) => {
+    const updated = await dbManager.updateDebt(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Debt record not found' });
     res.json(updated);
   });
 
-  app.post('/api/debts/:id/payment', (req: Request, res: Response) => {
+  app.post('/api/debts/:id/payment', async (req: Request, res: Response) => {
     const { amount } = req.body;
     const paymentAmount = Number(amount);
     if (!paymentAmount || paymentAmount <= 0) {
       return res.status(400).json({ error: 'Valid payment amount is required' });
     }
-    const debt = dbManager.recordDebtPayment(req.params.id, paymentAmount);
+    const debt = await dbManager.recordDebtPayment(req.params.id, paymentAmount);
     if (!debt) return res.status(404).json({ error: 'Debt record not found' });
 
     // Also record a corresponding transaction in the ledger
     const isIOwe = debt.direction === 'i_owe';
-    dbManager.createTransaction({
+    await dbManager.createTransaction({
       profileId: debt.profileId,
       type: isIOwe ? 'expense' : 'income',
       amount: paymentAmount,
@@ -519,8 +569,8 @@ async function startServer() {
     res.json({ success: true, debt });
   });
 
-  app.delete('/api/debts/:id', (req: Request, res: Response) => {
-    dbManager.deleteDebt(req.params.id);
+  app.delete('/api/debts/:id', async (req: Request, res: Response) => {
+    await dbManager.deleteDebt(req.params.id);
     res.json({ success: true });
   });
 
@@ -528,14 +578,15 @@ async function startServer() {
   // REPORTS & ANALYTICS
   // ==========================================
 
-  app.get('/api/reports/summary', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
-    const profile = dbManager.getProfile(profileId) || dbManager.getProfiles()[0];
+  app.get('/api/reports/summary', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
+    const profile = (await dbManager.getProfile(profileId)) || profiles[0];
     if (!profile) return res.json({});
 
-    const txs = dbManager.getTransactions(profileId);
-    const goals = dbManager.getGoals(profileId);
-    const debts = dbManager.getDebts(profileId);
+    const txs = await dbManager.getTransactions(profileId);
+    const goals = await dbManager.getGoals(profileId);
+    const debts = await dbManager.getDebts(profileId);
 
     const now = new Date();
     const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -589,13 +640,15 @@ async function startServer() {
     });
   });
 
-  app.get('/api/reports/category-breakdown', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
-    const profile = dbManager.getProfile(profileId) || dbManager.getProfiles()[0];
+  app.get('/api/reports/category-breakdown', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
+    const profile = (await dbManager.getProfile(profileId)) || profiles[0];
     const type = (req.query.type as string) || 'expense';
     const month = req.query.month as string;
 
-    let txs = dbManager.getTransactions(profileId).filter((t) => t.type === type);
+    const allTxs = await dbManager.getTransactions(profileId);
+    let txs = allTxs.filter((t) => t.type === type);
     if (month) {
       txs = txs.filter((t) => t.date.startsWith(month));
     }
@@ -618,9 +671,10 @@ async function startServer() {
     res.json({ currency: profile.displayCurrency, total: Math.round(total * 100) / 100, breakdown });
   });
 
-  app.get('/api/reports/trend', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
-    const profile = dbManager.getProfile(profileId) || dbManager.getProfiles()[0];
+  app.get('/api/reports/trend', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
+    const profile = (await dbManager.getProfile(profileId)) || profiles[0];
     const numMonths = parseInt(req.query.months as string) || 6;
 
     const months: string[] = [];
@@ -631,7 +685,7 @@ async function startServer() {
       months.push(mStr);
     }
 
-    const txs = dbManager.getTransactions(profileId);
+    const txs = await dbManager.getTransactions(profileId);
     const trend = months.map((month) => {
       const monthTxs = txs.filter((t) => t.date.startsWith(month));
       let income = 0;
@@ -698,13 +752,15 @@ async function startServer() {
   // AUDIT LOGS & SETTINGS
   // ==========================================
 
-  app.get('/api/audit-logs', (_req: Request, res: Response) => {
-    res.json(dbManager.getRaw().auditLogs || []);
+  app.get('/api/audit-logs', async (_req: Request, res: Response) => {
+    const logs = await dbManager.getAuditLogs();
+    res.json(logs);
   });
 
-  app.get('/api/settings', (req: Request, res: Response) => {
-    const profileId = (req.query.profileId as string) || dbManager.getProfiles()[0]?.id;
-    const profile = dbManager.getProfile(profileId) || dbManager.getProfiles()[0];
+  app.get('/api/settings', async (req: Request, res: Response) => {
+    const profiles = await dbManager.getProfiles();
+    const profileId = (req.query.profileId as string) || profiles[0]?.id;
+    const profile = (await dbManager.getProfile(profileId)) || profiles[0];
     res.json({
       profile,
       paystack: {
@@ -715,31 +771,26 @@ async function startServer() {
     });
   });
 
-  app.post('/api/migrate', (req: Request, res: Response) => {
+  app.post('/api/migrate', async (req: Request, res: Response) => {
     const payload = req.body;
     if (payload && (payload.profiles || payload.data)) {
       if (payload.profiles) {
-        dbManager.replaceAll(payload);
+        await dbManager.replaceAll(payload);
       }
-      return res.json({ success: true, message: 'Data imported/migrated successfully' });
+      return res.json({ success: true, message: 'Data imported/migrated successfully into MongoDB Atlas' });
     }
     res.status(400).json({ error: 'Invalid migration payload shape' });
   });
 
-  app.get('/api/export-all', (_req: Request, res: Response) => {
-    const raw = dbManager.getRaw();
+  app.get('/api/export-all', async (_req: Request, res: Response) => {
+    const raw = await dbManager.exportAll();
     const sanitized = {
-      profiles: raw.profiles,
-      transactions: raw.transactions,
-      budgets: raw.budgets,
-      goals: raw.goals,
-      debts: raw.debts,
-      transfers: raw.transfers,
+      ...raw,
       exportedAt: new Date().toISOString(),
-      version: '1.0.0',
+      version: '2.0.0-mongodb-atlas',
     };
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="ledger_full_backup.json"');
+    res.setHeader('Content-Disposition', 'attachment; filename="ledger_mongodb_backup.json"');
     res.json(sanitized);
   });
 
@@ -762,10 +813,10 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`\n========================================`);
-    console.log(` Ledger Financial Manager Backend Ready`);
+    console.log(`\n======================================================`);
+    console.log(` Ledger Financial Manager (MongoDB Atlas Connected)`);
     console.log(` Running on: http://0.0.0.0:${PORT}`);
-    console.log(`========================================\n`);
+    console.log(`======================================================\n`);
   });
 }
 

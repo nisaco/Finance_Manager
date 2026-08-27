@@ -1,21 +1,23 @@
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
-import { LedgerDatabase, Profile, Transaction, Budget, Goal, Debt, FundTransfer, AuditLog } from './types.js';
+import { MongoClient, Db } from 'mongodb';
+import {
+  Profile,
+  Transaction,
+  Budget,
+  Goal,
+  Debt,
+  FundTransfer,
+  AuditLog,
+  LedgerDatabase,
+} from './types.js';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'ledger.json');
-
-// Default initial hash for PIN '1234' (can be updated via auth endpoints)
-const DEFAULT_PIN = '1234';
-const DEFAULT_PIN_HASH = bcrypt.hashSync(DEFAULT_PIN, 10);
+let client: MongoClient | null = null;
+let dbInstance: Db | null = null;
 
 const initialProfiles: Profile[] = [
   {
     id: 'prof_personal',
     name: 'Personal',
-    color: '#C9A24B',
+    color: '#1A1A1A',
     displayCurrency: 'GHS',
     exchangeRates: {
       GHS: 1,
@@ -43,7 +45,6 @@ const initialProfiles: Profile[] = [
 ];
 
 const now = new Date();
-const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
 const initialTransactions: Transaction[] = [
   {
@@ -215,124 +216,148 @@ const initialTransfers: FundTransfer[] = [
   },
 ];
 
-const initialAuditLogs: AuditLog[] = [
-  {
-    id: 'audit_init',
-    action: 'system.database.initialized',
-    meta: { status: 'secure_engine_ready' },
-    createdAt: new Date().toISOString(),
-  },
-];
+export class LedgerMongoDbManager {
+  private async getDb(): Promise<Db> {
+    if (dbInstance) return dbInstance;
 
-class LedgerDatabaseManager {
-  private db: LedgerDatabase;
-  private isLoaded = false;
+    const uri = process.env.MONGODB_URI;
+    if (!uri || uri.trim() === '') {
+      throw new Error(
+        'MONGODB_URI environment variable is required to connect to MongoDB Atlas. Refusing to use insecure local file storage.'
+      );
+    }
 
-  constructor() {
-    this.ensureDirectory();
-    this.db = this.loadDatabase();
-  }
+    try {
+      client = new MongoClient(uri, {
+        maxPoolSize: 20,
+        serverSelectionTimeoutMS: 8000,
+        connectTimeoutMS: 10000,
+      });
+      await client.connect();
+      dbInstance = client.db();
+      console.log(' Successfully connected to MongoDB Atlas database cluster');
 
-  private ensureDirectory() {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      await this.initDatabase(dbInstance);
+      return dbInstance;
+    } catch (err: any) {
+      console.error(' MongoDB Atlas connection error:', err?.message || err);
+      throw err;
     }
   }
 
-  private loadDatabase(): LedgerDatabase {
+  private async initDatabase(db: Db): Promise<void> {
     try {
-      if (fs.existsSync(DB_FILE)) {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
-        const parsed = JSON.parse(raw);
-        this.isLoaded = true;
-        return {
-          pinHash: parsed.pinHash || DEFAULT_PIN_HASH,
-          profiles: parsed.profiles || initialProfiles,
-          transactions: parsed.transactions || initialTransactions,
-          budgets: parsed.budgets || initialBudgets,
-          goals: parsed.goals || initialGoals,
-          debts: parsed.debts || initialDebts,
-          transfers: parsed.transfers || initialTransfers,
-          auditLogs: parsed.auditLogs || initialAuditLogs,
-        };
+      // Create indexes
+      await Promise.all([
+        db.collection('profiles').createIndex({ id: 1 }, { unique: true }),
+        db.collection('transactions').createIndex({ id: 1 }, { unique: true }),
+        db.collection('transactions').createIndex({ profileId: 1, date: -1 }),
+        db.collection('budgets').createIndex({ id: 1 }, { unique: true }),
+        db.collection('budgets').createIndex({ profileId: 1, category: 1 }),
+        db.collection('goals').createIndex({ id: 1 }, { unique: true }),
+        db.collection('goals').createIndex({ profileId: 1 }),
+        db.collection('debts').createIndex({ id: 1 }, { unique: true }),
+        db.collection('debts').createIndex({ profileId: 1 }),
+        db.collection('transfers').createIndex({ paystackReference: 1 }, { unique: true }),
+        db.collection('transfers').createIndex({ goalId: 1 }),
+        db.collection('audit_logs').createIndex({ createdAt: -1 }),
+      ]);
+
+      // Seed initial data if profiles collection is completely empty
+      const profileCount = await db.collection('profiles').countDocuments();
+      if (profileCount === 0) {
+        console.log(' Initializing MongoDB Atlas with starter financial records and categories...');
+        await db.collection('profiles').insertMany(initialProfiles as any);
+        await db.collection('transactions').insertMany(initialTransactions as any);
+        await db.collection('budgets').insertMany(initialBudgets as any);
+        await db.collection('goals').insertMany(initialGoals as any);
+        await db.collection('debts').insertMany(initialDebts as any);
+        await db.collection('transfers').insertMany(initialTransfers as any);
+        await db.collection('audit_logs').insertOne({
+          id: 'audit_init',
+          action: 'system.mongodb.atlas_initialized',
+          meta: { status: 'mongodb_atlas_ready' },
+          createdAt: new Date().toISOString(),
+        } as any);
+
+        if (process.env.APP_PIN_HASH) {
+          await db.collection('app_config').updateOne(
+            { _id: 'pin_config' as any },
+            { $set: { pinHash: process.env.APP_PIN_HASH, updatedAt: new Date().toISOString() } },
+            { upsert: true }
+          );
+        }
       }
     } catch (err) {
-      console.error('Error loading database file, initializing defaults:', err);
+      console.warn('Index creation or seeding notice:', err);
     }
-
-    const defaultDb: LedgerDatabase = {
-      pinHash: process.env.APP_PIN_HASH || DEFAULT_PIN_HASH,
-      profiles: initialProfiles,
-      transactions: initialTransactions,
-      budgets: initialBudgets,
-      goals: initialGoals,
-      debts: initialDebts,
-      transfers: initialTransfers,
-      auditLogs: initialAuditLogs,
-    };
-
-    this.saveToDisk(defaultDb);
-    this.isLoaded = true;
-    return defaultDb;
-  }
-
-  private saveToDisk(data: LedgerDatabase) {
-    try {
-      this.ensureDirectory();
-      const tempFile = `${DB_FILE}.tmp.${Date.now()}`;
-      fs.writeFileSync(tempFile, JSON.stringify(data, null, 2), 'utf-8');
-      fs.renameSync(tempFile, DB_FILE);
-    } catch (err) {
-      console.error('Failed to atomically write database file:', err);
-    }
-  }
-
-  public getRaw(): LedgerDatabase {
-    return this.db;
-  }
-
-  public persist() {
-    this.saveToDisk(this.db);
   }
 
   // Audit Logger
-  public logAudit(action: string, entity?: string, entityId?: string, meta?: Record<string, any>) {
-    const log: AuditLog = {
-      id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      action,
-      entity,
-      entityId,
-      meta,
-      createdAt: new Date().toISOString(),
-    };
-    this.db.auditLogs.unshift(log);
-    if (this.db.auditLogs.length > 500) {
-      this.db.auditLogs = this.db.auditLogs.slice(0, 500);
+  public async logAudit(action: string, entity?: string, entityId?: string, meta?: Record<string, any>): Promise<void> {
+    try {
+      const db = await this.getDb();
+      const log: AuditLog = {
+        id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+        action,
+        entity,
+        entityId,
+        meta,
+        createdAt: new Date().toISOString(),
+      };
+      await db.collection('audit_logs').insertOne(log as any);
+    } catch (err) {
+      console.error('Failed to write audit log to MongoDB:', err);
     }
-    this.persist();
   }
 
-  // Auth
-  public getPinHash(): string {
-    return this.db.pinHash || DEFAULT_PIN_HASH;
+  public async getAuditLogs(): Promise<AuditLog[]> {
+    const db = await this.getDb();
+    return db
+      .collection<AuditLog>('audit_logs')
+      .find({}, { projection: { _id: 0 } })
+      .sort({ createdAt: -1 })
+      .limit(300)
+      .toArray();
   }
 
-  public setPinHash(hash: string) {
-    this.db.pinHash = hash;
-    this.logAudit('auth.pin.updated');
-    this.persist();
+  // Authentication & PIN
+  public async getPinHash(): Promise<string> {
+    const db = await this.getDb();
+    const config = await db.collection('app_config').findOne({ _id: 'pin_config' as any });
+    if (config?.pinHash) {
+      return config.pinHash;
+    }
+    const envHash = process.env.APP_PIN_HASH;
+    if (!envHash || envHash.trim() === '') {
+      throw new Error('APP_PIN_HASH is not configured. Server refuses insecure default PIN.');
+    }
+    return envHash;
+  }
+
+  public async setPinHash(hash: string): Promise<void> {
+    const db = await this.getDb();
+    await db.collection('app_config').updateOne(
+      { _id: 'pin_config' as any },
+      { $set: { pinHash: hash, updatedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+    await this.logAudit('auth.pin.updated');
   }
 
   // Profiles
-  public getProfiles(): Profile[] {
-    return this.db.profiles;
+  public async getProfiles(): Promise<Profile[]> {
+    const db = await this.getDb();
+    return db.collection<Profile>('profiles').find({}, { projection: { _id: 0 } }).toArray();
   }
 
-  public getProfile(id: string): Profile | undefined {
-    return this.db.profiles.find((p) => p.id === id);
+  public async getProfile(id: string): Promise<Profile | null> {
+    const db = await this.getDb();
+    return db.collection<Profile>('profiles').findOne({ id }, { projection: { _id: 0 } });
   }
 
-  public createProfile(name: string, color: string, displayCurrency = 'GHS'): Profile {
+  public async createProfile(name: string, color: string, displayCurrency = 'GHS'): Promise<Profile> {
+    const db = await this.getDb();
     const newProf: Profile = {
       id: `prof_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       name,
@@ -347,293 +372,366 @@ class LedgerDatabaseManager {
       },
       createdAt: new Date().toISOString(),
     };
-    this.db.profiles.push(newProf);
-    this.logAudit('profile.created', 'Profile', newProf.id, { name });
-    this.persist();
+    await db.collection('profiles').insertOne(newProf as any);
+    await this.logAudit('profile.created', 'Profile', newProf.id, { name });
     return newProf;
   }
 
-  public updateProfile(id: string, updates: Partial<Profile>): Profile | null {
-    const index = this.db.profiles.findIndex((p) => p.id === id);
-    if (index === -1) return null;
-    this.db.profiles[index] = { ...this.db.profiles[index], ...updates };
-    this.logAudit('profile.updated', 'Profile', id, updates);
-    this.persist();
-    return this.db.profiles[index];
+  public async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile | null> {
+    const db = await this.getDb();
+    const { _id, ...safeUpdates } = updates as any;
+    await db.collection('profiles').updateOne({ id }, { $set: safeUpdates });
+    await this.logAudit('profile.updated', 'Profile', id, safeUpdates);
+    return this.getProfile(id);
   }
 
-  public deleteProfile(id: string): boolean {
-    if (this.db.profiles.length <= 1) {
+  public async deleteProfile(id: string): Promise<boolean> {
+    const db = await this.getDb();
+    const count = await db.collection('profiles').countDocuments();
+    if (count <= 1) {
       throw new Error('Cannot delete the last remaining profile');
     }
-    this.db.profiles = this.db.profiles.filter((p) => p.id !== id);
-    this.db.transactions = this.db.transactions.filter((t) => t.profileId !== id);
-    this.db.budgets = this.db.budgets.filter((b) => b.profileId !== id);
-    this.db.goals = this.db.goals.filter((g) => g.profileId !== id);
-    this.db.debts = this.db.debts.filter((d) => d.profileId !== id);
-    this.db.transfers = this.db.transfers.filter((t) => t.profileId !== id);
-    this.logAudit('profile.deleted', 'Profile', id);
-    this.persist();
+    await Promise.all([
+      db.collection('profiles').deleteOne({ id }),
+      db.collection('transactions').deleteMany({ profileId: id }),
+      db.collection('budgets').deleteMany({ profileId: id }),
+      db.collection('goals').deleteMany({ profileId: id }),
+      db.collection('debts').deleteMany({ profileId: id }),
+      db.collection('transfers').deleteMany({ profileId: id }),
+    ]);
+    await this.logAudit('profile.deleted', 'Profile', id);
     return true;
   }
 
   // Transactions
-  public getTransactions(profileId: string): Transaction[] {
-    return this.db.transactions
-      .filter((t) => t.profileId === profileId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  public async getTransactions(profileId: string): Promise<Transaction[]> {
+    const db = await this.getDb();
+    return db
+      .collection<Transaction>('transactions')
+      .find({ profileId }, { projection: { _id: 0 } })
+      .sort({ date: -1, createdAt: -1 })
+      .toArray();
   }
 
-  public createTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Transaction {
+  public async createTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Promise<Transaction> {
+    const db = await this.getDb();
     const newTx: Transaction = {
       ...tx,
       id: `tx_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       createdAt: new Date().toISOString(),
     };
-    this.db.transactions.push(newTx);
-    this.logAudit('transaction.created', 'Transaction', newTx.id, {
+    await db.collection('transactions').insertOne(newTx as any);
+    await this.logAudit('transaction.created', 'Transaction', newTx.id, {
       amount: newTx.amount,
       type: newTx.type,
       category: newTx.category,
     });
-    this.persist();
     return newTx;
   }
 
-  public updateTransaction(id: string, updates: Partial<Transaction>): Transaction | null {
-    const index = this.db.transactions.findIndex((t) => t.id === id);
-    if (index === -1) return null;
-    this.db.transactions[index] = { ...this.db.transactions[index], ...updates };
-    this.logAudit('transaction.updated', 'Transaction', id, updates);
-    this.persist();
-    return this.db.transactions[index];
+  public async updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction | null> {
+    const db = await this.getDb();
+    const { _id, ...safeUpdates } = updates as any;
+    await db.collection('transactions').updateOne({ id }, { $set: safeUpdates });
+    await this.logAudit('transaction.updated', 'Transaction', id, safeUpdates);
+    return db.collection<Transaction>('transactions').findOne({ id }, { projection: { _id: 0 } });
   }
 
-  public deleteTransaction(id: string): boolean {
-    const tx = this.db.transactions.find((t) => t.id === id);
-    if (!tx) return false;
-    this.db.transactions = this.db.transactions.filter((t) => t.id !== id);
-    this.logAudit('transaction.deleted', 'Transaction', id);
-    this.persist();
-    return true;
+  public async deleteTransaction(id: string): Promise<boolean> {
+    const db = await this.getDb();
+    const result = await db.collection('transactions').deleteOne({ id });
+    if (result.deletedCount > 0) {
+      await this.logAudit('transaction.deleted', 'Transaction', id);
+      return true;
+    }
+    return false;
   }
 
   // Budgets
-  public getBudgets(profileId: string): Budget[] {
-    return this.db.budgets.filter((b) => b.profileId === profileId);
+  public async getBudgets(profileId: string): Promise<Budget[]> {
+    const db = await this.getDb();
+    return db.collection<Budget>('budgets').find({ profileId }, { projection: { _id: 0 } }).toArray();
   }
 
-  public upsertBudget(budget: Omit<Budget, 'id'>): Budget {
-    const existingIndex = this.db.budgets.findIndex(
-      (b) => b.profileId === budget.profileId && b.category.toLowerCase() === budget.category.toLowerCase()
-    );
-    if (existingIndex >= 0) {
-      this.db.budgets[existingIndex] = {
-        ...this.db.budgets[existingIndex],
-        limit: budget.limit,
-        currency: budget.currency,
-      };
-      this.logAudit('budget.updated', 'Budget', this.db.budgets[existingIndex].id, budget);
-      this.persist();
-      return this.db.budgets[existingIndex];
+  public async upsertBudget(budget: Omit<Budget, 'id'>): Promise<Budget> {
+    const db = await this.getDb();
+    const existing = await db.collection<Budget>('budgets').findOne({
+      profileId: budget.profileId,
+      category: { $regex: new RegExp(`^${budget.category}$`, 'i') },
+    });
+
+    if (existing) {
+      await db.collection('budgets').updateOne(
+        { id: existing.id },
+        { $set: { limit: budget.limit, currency: budget.currency } }
+      );
+      await this.logAudit('budget.updated', 'Budget', existing.id, budget);
+      return { ...existing, limit: budget.limit, currency: budget.currency };
     } else {
       const newBudget: Budget = {
         ...budget,
         id: `bgt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       };
-      this.db.budgets.push(newBudget);
-      this.logAudit('budget.created', 'Budget', newBudget.id, budget);
-      this.persist();
+      await db.collection('budgets').insertOne(newBudget as any);
+      await this.logAudit('budget.created', 'Budget', newBudget.id, budget);
       return newBudget;
     }
   }
 
-  public deleteBudget(id: string): boolean {
-    this.db.budgets = this.db.budgets.filter((b) => b.id !== id);
-    this.logAudit('budget.deleted', 'Budget', id);
-    this.persist();
-    return true;
+  public async deleteBudget(id: string): Promise<boolean> {
+    const db = await this.getDb();
+    const result = await db.collection('budgets').deleteOne({ id });
+    if (result.deletedCount > 0) {
+      await this.logAudit('budget.deleted', 'Budget', id);
+      return true;
+    }
+    return false;
   }
 
   // Goals
-  public getGoals(profileId: string): Goal[] {
-    return this.db.goals.filter((g) => g.profileId === profileId);
+  public async getGoals(profileId: string): Promise<Goal[]> {
+    const db = await this.getDb();
+    return db.collection<Goal>('goals').find({ profileId }, { projection: { _id: 0 } }).toArray();
   }
 
-  public getGoal(id: string): Goal | undefined {
-    return this.db.goals.find((g) => g.id === id);
+  public async getGoal(id: string): Promise<Goal | null> {
+    const db = await this.getDb();
+    return db.collection<Goal>('goals').findOne({ id }, { projection: { _id: 0 } });
   }
 
-  public createGoal(goal: Omit<Goal, 'id' | 'createdAt' | 'current'> & { current?: number }): Goal {
+  public async createGoal(goal: Omit<Goal, 'id' | 'createdAt' | 'current'> & { current?: number }): Promise<Goal> {
+    const db = await this.getDb();
     const newGoal: Goal = {
       ...goal,
       current: goal.current || 0,
       id: `goal_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       createdAt: new Date().toISOString(),
     };
-    this.db.goals.push(newGoal);
-    this.logAudit('goal.created', 'Goal', newGoal.id, { name: newGoal.name, target: newGoal.target });
-    this.persist();
+    await db.collection('goals').insertOne(newGoal as any);
+    await this.logAudit('goal.created', 'Goal', newGoal.id, { name: newGoal.name, target: newGoal.target });
     return newGoal;
   }
 
-  public updateGoal(id: string, updates: Partial<Goal>): Goal | null {
-    const index = this.db.goals.findIndex((g) => g.id === id);
-    if (index === -1) return null;
-    const existing = this.db.goals[index];
+  public async updateGoal(id: string, updates: Partial<Goal>): Promise<Goal | null> {
+    const db = await this.getDb();
+    const existing = await this.getGoal(id);
+    if (!existing) return null;
 
-    // Non-negotiable security requirement:
-    // When a real-money destination (paystack_recipient) is configured, Goal.current cannot be altered directly via standard PATCH!
-    if (existing.paystackDestination?.type === 'paystack_recipient' && updates.current !== undefined) {
-      delete updates.current;
+    const safeUpdates = { ...updates } as any;
+    delete safeUpdates._id;
+
+    // Protection rule: When paystack_recipient is enabled, do not allow arbitrary direct PATCH to current balance
+    if (existing.paystackDestination?.type === 'paystack_recipient' && safeUpdates.current !== undefined) {
+      delete safeUpdates.current;
     }
 
-    this.db.goals[index] = { ...existing, ...updates };
-    this.logAudit('goal.updated', 'Goal', id, updates);
-    this.persist();
-    return this.db.goals[index];
+    await db.collection('goals').updateOne({ id }, { $set: safeUpdates });
+    await this.logAudit('goal.updated', 'Goal', id, safeUpdates);
+    return this.getGoal(id);
   }
 
-  public deleteGoal(id: string): boolean {
-    this.db.goals = this.db.goals.filter((g) => g.id !== id);
-    this.db.transfers = this.db.transfers.filter((t) => t.goalId !== id);
-    this.logAudit('goal.deleted', 'Goal', id);
-    this.persist();
-    return true;
+  public async deleteGoal(id: string): Promise<boolean> {
+    const db = await this.getDb();
+    const result = await db.collection('goals').deleteOne({ id });
+    if (result.deletedCount > 0) {
+      await db.collection('transfers').deleteMany({ goalId: id });
+      await this.logAudit('goal.deleted', 'Goal', id);
+      return true;
+    }
+    return false;
   }
 
   // Debts
-  public getDebts(profileId: string): Debt[] {
-    return this.db.debts.filter((d) => d.profileId === profileId);
+  public async getDebts(profileId: string): Promise<Debt[]> {
+    const db = await this.getDb();
+    return db.collection<Debt>('debts').find({ profileId }, { projection: { _id: 0 } }).toArray();
   }
 
-  public createDebt(debt: Omit<Debt, 'id' | 'createdAt' | 'paid'> & { paid?: number }): Debt {
+  public async getDebt(id: string): Promise<Debt | null> {
+    const db = await this.getDb();
+    return db.collection<Debt>('debts').findOne({ id }, { projection: { _id: 0 } });
+  }
+
+  public async createDebt(debt: Omit<Debt, 'id' | 'createdAt' | 'paid'> & { paid?: number }): Promise<Debt> {
+    const db = await this.getDb();
     const newDebt: Debt = {
       ...debt,
       paid: debt.paid || 0,
       id: `debt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       createdAt: new Date().toISOString(),
     };
-    this.db.debts.push(newDebt);
-    this.logAudit('debt.created', 'Debt', newDebt.id, { person: newDebt.person, amount: newDebt.amount });
-    this.persist();
+    await db.collection('debts').insertOne(newDebt as any);
+    await this.logAudit('debt.created', 'Debt', newDebt.id, { person: newDebt.person, amount: newDebt.amount });
     return newDebt;
   }
 
-  public updateDebt(id: string, updates: Partial<Debt>): Debt | null {
-    const index = this.db.debts.findIndex((d) => d.id === id);
-    if (index === -1) return null;
-    this.db.debts[index] = { ...this.db.debts[index], ...updates };
-    this.logAudit('debt.updated', 'Debt', id, updates);
-    this.persist();
-    return this.db.debts[index];
+  public async updateDebt(id: string, updates: Partial<Debt>): Promise<Debt | null> {
+    const db = await this.getDb();
+    const { _id, ...safeUpdates } = updates as any;
+    await db.collection('debts').updateOne({ id }, { $set: safeUpdates });
+    await this.logAudit('debt.updated', 'Debt', id, safeUpdates);
+    return this.getDebt(id);
   }
 
-  public recordDebtPayment(id: string, paymentAmount: number): Debt | null {
-    const index = this.db.debts.findIndex((d) => d.id === id);
-    if (index === -1) return null;
-    const debt = this.db.debts[index];
-    debt.paid = Math.min(debt.amount, (debt.paid || 0) + paymentAmount);
-    this.logAudit('debt.payment_recorded', 'Debt', id, { paymentAmount, newTotalPaid: debt.paid });
-    this.persist();
-    return debt;
+  public async recordDebtPayment(id: string, paymentAmount: number): Promise<Debt | null> {
+    const db = await this.getDb();
+    const debt = await this.getDebt(id);
+    if (!debt) return null;
+
+    const newPaid = Math.min(debt.amount, (debt.paid || 0) + paymentAmount);
+    await db.collection('debts').updateOne({ id }, { $set: { paid: newPaid } });
+    await this.logAudit('debt.payment_recorded', 'Debt', id, { paymentAmount, newTotalPaid: newPaid });
+    return this.getDebt(id);
   }
 
-  public deleteDebt(id: string): boolean {
-    this.db.debts = this.db.debts.filter((d) => d.id !== id);
-    this.logAudit('debt.deleted', 'Debt', id);
-    this.persist();
-    return true;
+  public async deleteDebt(id: string): Promise<boolean> {
+    const db = await this.getDb();
+    const result = await db.collection('debts').deleteOne({ id });
+    if (result.deletedCount > 0) {
+      await this.logAudit('debt.deleted', 'Debt', id);
+      return true;
+    }
+    return false;
   }
 
   // Fund Transfers (Real Money Paystack Audit Trail)
-  public getTransfers(goalId?: string, profileId?: string): FundTransfer[] {
-    let list = this.db.transfers;
-    if (goalId) list = list.filter((t) => t.goalId === goalId);
-    if (profileId) list = list.filter((t) => t.profileId === profileId);
-    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  public async getTransfers(goalId?: string, profileId?: string): Promise<FundTransfer[]> {
+    const db = await this.getDb();
+    const filter: Record<string, any> = {};
+    if (goalId) filter.goalId = goalId;
+    if (profileId) filter.profileId = profileId;
+
+    return db
+      .collection<FundTransfer>('transfers')
+      .find(filter, { projection: { _id: 0 } })
+      .sort({ createdAt: -1 })
+      .toArray();
   }
 
-  public getTransferByReference(reference: string): FundTransfer | undefined {
-    return this.db.transfers.find((t) => t.paystackReference === reference);
+  public async getTransferByReference(reference: string): Promise<FundTransfer | null> {
+    const db = await this.getDb();
+    return db.collection<FundTransfer>('transfers').findOne({ paystackReference: reference }, { projection: { _id: 0 } });
   }
 
-  public createTransfer(transfer: Omit<FundTransfer, 'id' | 'createdAt'>): FundTransfer {
+  public async createTransfer(transfer: Omit<FundTransfer, 'id' | 'createdAt'>): Promise<FundTransfer> {
+    const db = await this.getDb();
     const newTx: FundTransfer = {
       ...transfer,
       id: `txf_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       createdAt: new Date().toISOString(),
     };
-    this.db.transfers.unshift(newTx);
-    this.logAudit('fund_transfer.initiated', 'FundTransfer', newTx.id, {
+    await db.collection('transfers').insertOne(newTx as any);
+    await this.logAudit('fund_transfer.initiated', 'FundTransfer', newTx.id, {
       reference: newTx.paystackReference,
       amount: newTx.amount,
       currency: newTx.currency,
       status: newTx.status,
     });
-    this.persist();
     return newTx;
   }
 
-  public updateTransferStatus(
+  public async updateTransferStatus(
     reference: string,
     status: 'success' | 'failed' | 'pending',
     payload?: any,
     gatewayResponse?: string
-  ): FundTransfer | null {
-    const index = this.db.transfers.findIndex((t) => t.paystackReference === reference);
-    if (index === -1) return null;
-    const transfer = this.db.transfers[index];
-    const previousStatus = transfer.status;
-    transfer.status = status;
-    if (payload) transfer.rawWebhookPayload = payload;
-    if (gatewayResponse) transfer.gatewayResponse = gatewayResponse;
+  ): Promise<FundTransfer | null> {
+    const db = await this.getDb();
+    const transfer = await this.getTransferByReference(reference);
+    if (!transfer) return null;
 
-    // If successfully settled and wasn't previously credited, increase goal balance
+    const previousStatus = transfer.status;
+    const updates: Record<string, any> = { status };
+    if (payload) updates.rawWebhookPayload = payload;
+    if (gatewayResponse) updates.gatewayResponse = gatewayResponse;
+
+    await db.collection('transfers').updateOne({ paystackReference: reference }, { $set: updates });
+
+    // When status becomes 'success' and wasn't previously 'success', credit goal balance and record transaction
     if (status === 'success' && previousStatus !== 'success') {
-      const goalIndex = this.db.goals.findIndex((g) => g.id === transfer.goalId);
-      if (goalIndex >= 0) {
-        this.db.goals[goalIndex].current += transfer.amount;
-        this.logAudit('goal.funded_confirmed', 'Goal', transfer.goalId, {
+      const goal = await this.getGoal(transfer.goalId);
+      if (goal) {
+        const newCurrent = (goal.current || 0) + transfer.amount;
+        await db.collection('goals').updateOne({ id: transfer.goalId }, { $set: { current: newCurrent } });
+        await this.logAudit('goal.funded_confirmed', 'Goal', transfer.goalId, {
           creditedAmount: transfer.amount,
-          newCurrent: this.db.goals[goalIndex].current,
+          newCurrent,
           reference,
         });
 
-        // Also record an automated expense/transfer transaction for the profile ledger
-        this.createTransaction({
+        // Record expense transaction in profile ledger
+        await this.createTransaction({
           profileId: transfer.profileId,
           type: 'expense',
           amount: transfer.amount,
           currency: transfer.currency,
           category: 'Savings & Investments',
           date: new Date().toISOString().split('T')[0],
-          note: `Paystack transfer to goal: ${this.db.goals[goalIndex].name} (Ref: ${reference})`,
+          note: `Paystack transfer to goal: ${goal.name} (Ref: ${reference})`,
           recurring: 'none',
         });
       }
     }
 
-    this.logAudit('fund_transfer.status_updated', 'FundTransfer', transfer.id, {
+    await this.logAudit('fund_transfer.status_updated', 'FundTransfer', transfer.id, {
       reference,
       previousStatus,
       newStatus: status,
     });
-    this.persist();
-    return transfer;
+
+    return this.getTransferByReference(reference);
   }
 
-  // Bulk Import / Export & Reset
-  public replaceAll(newData: Partial<LedgerDatabase>) {
-    if (newData.profiles && newData.profiles.length > 0) this.db.profiles = newData.profiles;
-    if (newData.transactions) this.db.transactions = newData.transactions;
-    if (newData.budgets) this.db.budgets = newData.budgets;
-    if (newData.goals) this.db.goals = newData.goals;
-    if (newData.debts) this.db.debts = newData.debts;
-    if (newData.transfers) this.db.transfers = newData.transfers;
-    this.logAudit('system.database.restored_or_imported');
-    this.persist();
+  // Backup & Restore
+  public async exportAll(): Promise<Partial<LedgerDatabase>> {
+    const db = await this.getDb();
+    const [profiles, transactions, budgets, goals, debts, transfers] = await Promise.all([
+      db.collection<Profile>('profiles').find({}, { projection: { _id: 0 } }).toArray(),
+      db.collection<Transaction>('transactions').find({}, { projection: { _id: 0 } }).toArray(),
+      db.collection<Budget>('budgets').find({}, { projection: { _id: 0 } }).toArray(),
+      db.collection<Goal>('goals').find({}, { projection: { _id: 0 } }).toArray(),
+      db.collection<Debt>('debts').find({}, { projection: { _id: 0 } }).toArray(),
+      db.collection<FundTransfer>('transfers').find({}, { projection: { _id: 0 } }).toArray(),
+    ]);
+
+    return {
+      profiles,
+      transactions,
+      budgets,
+      goals,
+      debts,
+      transfers,
+    };
+  }
+
+  public async replaceAll(newData: Partial<LedgerDatabase>): Promise<void> {
+    const db = await this.getDb();
+    if (newData.profiles && newData.profiles.length > 0) {
+      await db.collection('profiles').deleteMany({});
+      await db.collection('profiles').insertMany(newData.profiles as any);
+    }
+    if (newData.transactions) {
+      await db.collection('transactions').deleteMany({});
+      if (newData.transactions.length > 0) await db.collection('transactions').insertMany(newData.transactions as any);
+    }
+    if (newData.budgets) {
+      await db.collection('budgets').deleteMany({});
+      if (newData.budgets.length > 0) await db.collection('budgets').insertMany(newData.budgets as any);
+    }
+    if (newData.goals) {
+      await db.collection('goals').deleteMany({});
+      if (newData.goals.length > 0) await db.collection('goals').insertMany(newData.goals as any);
+    }
+    if (newData.debts) {
+      await db.collection('debts').deleteMany({});
+      if (newData.debts.length > 0) await db.collection('debts').insertMany(newData.debts as any);
+    }
+    if (newData.transfers) {
+      await db.collection('transfers').deleteMany({});
+      if (newData.transfers.length > 0) await db.collection('transfers').insertMany(newData.transfers as any);
+    }
+    await this.logAudit('system.database.restored_or_imported');
   }
 }
 
-export const dbManager = new LedgerDatabaseManager();
+export const dbManager = new LedgerMongoDbManager();

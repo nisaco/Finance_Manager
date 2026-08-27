@@ -409,7 +409,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
 
             <div>
               <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
-                Current PIN (Default: 1234)
+                Current Security PIN
               </label>
               <input
                 type="password"
@@ -470,7 +470,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
           <div className="flex items-center space-x-2 border-b border-[#E8E5DF] pb-3">
             <Shield className="w-4 h-4 text-[#1A1A1A]" />
             <h2 className="font-display text-base font-bold text-[#1A1A1A]">
-              Ledger Atomic Database Backup & Migration
+              MongoDB Atlas Database Backup & Migration
             </h2>
           </div>
 
@@ -482,7 +482,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
                 Export Full System Snapshot
               </span>
               <p className="text-[#6B7280]">
-                Download a clean, structured JSON file containing all profiles, transactions, debts, goals, and transfer logs.
+                Download a clean, structured snapshot of your MongoDB Atlas data including all profiles, transactions, debts, goals, and transfer logs.
               </p>
               <button
                 onClick={handleDownloadBackup}

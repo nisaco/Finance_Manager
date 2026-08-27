@@ -3,8 +3,15 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { dbManager } from './db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'ledger_default_secure_secret_key_2026';
-const COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'ledger_session';
+export function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret.trim() === '') {
+    throw new Error('JWT_SECRET environment variable is missing. Refusing to run with insecure default secret.');
+  }
+  return secret;
+}
+
+export const COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'ledger_session';
 
 // Rate limiter helper for login attempts
 const failedAttempts = new Map<string, { count: number; lastAttempt: number }>();
@@ -44,17 +51,18 @@ export function clearFailedAttempts(req: Request) {
 }
 
 export function generateToken(): string {
-  return jwt.sign({ role: 'owner', app: 'ledger' }, JWT_SECRET, { expiresIn: '30d' });
+  const secret = getJwtSecret();
+  return jwt.sign({ role: 'owner', app: 'ledger' }, secret, { expiresIn: '30d' });
 }
 
-export function verifyPin(pin: string): boolean {
-  const storedHash = dbManager.getPinHash();
-  return bcrypt.compareSync(pin, storedHash);
+export async function verifyPin(pin: string): Promise<boolean> {
+  const storedHash = await dbManager.getPinHash();
+  return bcrypt.compare(pin, storedHash);
 }
 
-export function setPin(pin: string) {
+export async function setPin(pin: string): Promise<void> {
   const hash = bcrypt.hashSync(pin, 10);
-  dbManager.setPinHash(hash);
+  await dbManager.setPinHash(hash);
 }
 
 export function authMiddleware(req: Request, res: Response, next: NextFunction): void {
@@ -62,7 +70,6 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   const openPaths = [
     '/api/auth/login',
     '/api/auth/status',
-    '/api/auth/setup-default',
     '/api/paystack/webhook',
     '/api/health',
   ];
@@ -79,7 +86,8 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret);
     (req as any).user = decoded;
     next();
   } catch (err) {

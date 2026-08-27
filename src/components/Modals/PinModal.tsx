@@ -127,7 +127,7 @@ export const PinModal: React.FC = () => {
         </button>
 
         <p className="text-[10px] text-[#6B7280] font-mono-num mt-4">
-          Default initial PIN: <span className="text-[#1A1A1A] font-bold">1234</span> (configurable in Settings)
+          Enter your owner security PIN (configured via APP_PIN_HASH)
         </p>
 
       </div>
