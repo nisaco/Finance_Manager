@@ -1,0 +1,257 @@
+import React, { useState } from 'react';
+import { AuthProvider } from './context/AuthContext';
+import { LedgerProvider, useLedger } from './context/LedgerContext';
+import { Navbar } from './components/Navbar';
+import { Overview } from './pages/Overview';
+import { TransactionsPage } from './pages/TransactionsPage';
+import { BudgetsPage } from './pages/BudgetsPage';
+import { GoalsPage } from './pages/GoalsPage';
+import { DebtsPage } from './pages/DebtsPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { SettingsPage } from './pages/SettingsPage';
+
+// Modals
+import { TransactionModal } from './components/Modals/TransactionModal';
+import { GoalModal } from './components/Modals/GoalModal';
+import { FundGoalModal } from './components/Modals/FundGoalModal';
+import { BudgetModal } from './components/Modals/BudgetModal';
+import { DebtModal } from './components/Modals/DebtModal';
+import { CsvImportModal } from './components/Modals/CsvImportModal';
+import { AuditLogModal } from './components/Modals/AuditLogModal';
+import { PinModal } from './components/Modals/PinModal';
+
+import { Transaction, Goal, Budget, Debt } from './types';
+import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+
+const MainShell: React.FC = () => {
+  const { notification, setNotification } = useLedger();
+
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'transactions' | 'budgets' | 'goals' | 'debts' | 'reports' | 'settings'
+  >('overview');
+
+  // Modal states
+  const [txModalOpen, setTxModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+
+  const [fundGoalModalOpen, setFundGoalModalOpen] = useState(false);
+  const [fundingGoal, setFundingGoal] = useState<Goal | null>(null);
+
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+
+  const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [debtModalMode, setDebtModalMode] = useState<'create' | 'edit' | 'payment'>('create');
+
+  const [csvModalOpen, setCsvModalOpen] = useState(false);
+  const [auditLogModalOpen, setAuditLogModalOpen] = useState(false);
+
+  // Handlers
+  const handleOpenNewTx = () => {
+    setEditingTx(null);
+    setTxModalOpen(true);
+  };
+
+  const handleEditTx = (tx: Transaction) => {
+    setEditingTx(tx);
+    setTxModalOpen(true);
+  };
+
+  const handleOpenNewGoal = () => {
+    setEditingGoal(null);
+    setGoalModalOpen(true);
+  };
+
+  const handleEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setGoalModalOpen(true);
+  };
+
+  const handleFundGoal = (goal: Goal) => {
+    setFundingGoal(goal);
+    setFundGoalModalOpen(true);
+  };
+
+  const handleOpenNewBudget = () => {
+    setEditingBudget(null);
+    setBudgetModalOpen(true);
+  };
+
+  const handleEditBudget = (budget: Budget) => {
+    setEditingBudget(budget);
+    setBudgetModalOpen(true);
+  };
+
+  const handleOpenNewDebt = () => {
+    setEditingDebt(null);
+    setDebtModalMode('create');
+    setDebtModalOpen(true);
+  };
+
+  const handleEditDebt = (debt: Debt) => {
+    setEditingDebt(debt);
+    setDebtModalMode('edit');
+    setDebtModalOpen(true);
+  };
+
+  const handleRecordDebtPayment = (debt: Debt) => {
+    setEditingDebt(debt);
+    setDebtModalMode('payment');
+    setDebtModalOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] flex flex-col font-sans selection:bg-[#1A1A1A] selection:text-[#FDFCFB]">
+      
+      {/* Top Fixed Header & Navigation */}
+      <Navbar
+        activeTab={activeTab}
+        onTabChange={(tab) => setActiveTab(tab as any)}
+        onOpenNewTx={handleOpenNewTx}
+      />
+
+      {/* Main Page Content Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {activeTab === 'overview' && (
+          <Overview
+            onNavigateTab={(tab) => setActiveTab(tab as any)}
+            onOpenNewTx={handleOpenNewTx}
+            onOpenNewBudget={handleOpenNewBudget}
+            onOpenNewGoal={handleOpenNewGoal}
+            onFundGoal={handleFundGoal}
+            onEditTx={handleEditTx}
+          />
+        )}
+
+        {activeTab === 'transactions' && (
+          <TransactionsPage
+            onOpenNewTx={handleOpenNewTx}
+            onEditTx={handleEditTx}
+            onOpenCsvImport={() => setCsvModalOpen(true)}
+          />
+        )}
+
+        {activeTab === 'budgets' && (
+          <BudgetsPage
+            onOpenNewBudget={handleOpenNewBudget}
+            onEditBudget={handleEditBudget}
+          />
+        )}
+
+        {activeTab === 'goals' && (
+          <GoalsPage
+            onOpenNewGoal={handleOpenNewGoal}
+            onEditGoal={handleEditGoal}
+            onFundGoal={handleFundGoal}
+          />
+        )}
+
+        {activeTab === 'debts' && (
+          <DebtsPage
+            onOpenNewDebt={handleOpenNewDebt}
+            onEditDebt={handleEditDebt}
+            onRecordPayment={handleRecordDebtPayment}
+          />
+        )}
+
+        {activeTab === 'reports' && <ReportsPage />}
+
+        {activeTab === 'settings' && (
+          <SettingsPage onOpenAuditLogs={() => setAuditLogModalOpen(true)} />
+        )}
+      </main>
+
+      {/* Toast Notification Alert Banner */}
+      {notification && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-200">
+          <div
+            className={`flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-medium backdrop-blur-md ${
+              notification.type === 'error'
+                ? 'bg-[#DC2626] text-[#FFFFFF] border-[#DC2626]'
+                : 'bg-[#1A1A1A] text-[#FDFCFB] border-[#1A1A1A]'
+            }`}
+          >
+            {notification.type === 'error' ? (
+              <AlertCircle className="w-4 h-4 text-[#FFFFFF] shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
+            )}
+            <span className="font-mono-num">{notification.message}</span>
+            <button
+              onClick={() => setNotification(null)}
+              className="p-1 hover:opacity-75 rounded ml-2"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      <TransactionModal
+        isOpen={txModalOpen}
+        onClose={() => setTxModalOpen(false)}
+        initialData={editingTx}
+      />
+
+      <GoalModal
+        isOpen={goalModalOpen}
+        onClose={() => setGoalModalOpen(false)}
+        initialData={editingGoal}
+      />
+
+      <FundGoalModal
+        isOpen={fundGoalModalOpen}
+        onClose={() => setFundGoalModalOpen(false)}
+        goal={fundingGoal}
+      />
+
+      <BudgetModal
+        isOpen={budgetModalOpen}
+        onClose={() => setBudgetModalOpen(false)}
+        initialData={editingBudget}
+      />
+
+      <DebtModal
+        isOpen={debtModalOpen}
+        onClose={() => setDebtModalOpen(false)}
+        initialData={editingDebt}
+        mode={debtModalMode}
+      />
+
+      <CsvImportModal
+        isOpen={csvModalOpen}
+        onClose={() => setCsvModalOpen(false)}
+      />
+
+      <AuditLogModal
+        isOpen={auditLogModalOpen}
+        onClose={() => setAuditLogModalOpen(false)}
+      />
+
+      <PinModal />
+
+      {/* Footer info banner */}
+      <footer className="border-t border-[#E8E5DF] py-4 px-6 text-center text-[11px] text-[#6B7280] font-mono-num">
+        Ledger • Real-Time Automated Financial Engine • Integrated with Paystack Banking Rails
+      </footer>
+
+    </div>
+  );
+};
+
+export function App() {
+  return (
+    <AuthProvider>
+      <LedgerProvider>
+        <MainShell />
+      </LedgerProvider>
+    </AuthProvider>
+  );
+}
+
+export default App;

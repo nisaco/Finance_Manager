@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: "Fraunces", Georgia, serif;
+    --font-mono: "IBM Plex Mono", monospace;
+    --font-sans: "Manrope", system-ui, -apple-system, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #FDFCFB;
+    color: #1A1A1A;
+  }
+}
+
+.font-display {
+  font-family: var(--font-serif);
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+}
+
+/* Receipt ticket stub notch pattern */
+.ticket-stub {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid #E8E5DF;
+}
+
+.ticket-stub::before,
+.ticket-stub::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  background-color: #FDFCFB;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.ticket-stub::before {
+  left: -8px;
+  border-right: 1px solid #E8E5DF;
+}
+
+.ticket-stub::after {
+  right: -8px;
+  border-left: 1px solid #E8E5DF;
+}
+
+/* Dotted leader line between item title and amount */
+.receipt-leader {
+  flex-grow: 1;
+  border-bottom: 1px dotted #D5D0C7;
+  margin: 0 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FDFCFB;
+}
+::-webkit-scrollbar-thumb {
+  background: #E8E5DF;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B5AFA2;
+}
