@@ -110,27 +110,27 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
-      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
+      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E5DF]">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#E8E5DF] shrink-0">
           <div>
-            <h2 className="font-display text-lg font-bold text-[#1A1A1A]">
+            <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A]">
               Add Funds to Vault
             </h2>
             <p className="text-xs text-[#6B7280] font-mono-num mt-0.5">
               {goal.name} ({formatCurrency(goal.current, goal.currency)} / {formatCurrency(goal.target, goal.currency)})
             </p>
           </div>
-          <button onClick={onClose} className="p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
+          <button onClick={onClose} className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Transfer Confirmation & In-Flight State */}
         {transferResult ? (
-          <div className="p-6 space-y-4 text-center">
+          <div className="p-4 sm:p-6 space-y-4 text-center overflow-y-auto flex-1">
             {transferResult.status === 'success' ? (
               <div className="w-12 h-12 rounded-full bg-[#15803D]/15 border border-[#15803D]/40 text-[#15803D] flex items-center justify-center mx-auto animate-in zoom-in">
                 <CheckCircle2 className="w-6 h-6" />
@@ -185,7 +185,7 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
             </div>
           </div>
         ) : (
-          <form onSubmit={handleFund} className="p-5 space-y-4">
+          <form onSubmit={handleFund} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
             
             {/* Vault Destination Info Card */}
             <div className="p-3.5 rounded-lg bg-[#FDFCFB] border border-[#E8E5DF] space-y-1.5">

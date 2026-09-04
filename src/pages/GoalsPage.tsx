@@ -78,11 +78,11 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
             <PiggyBank className="w-5 h-5 text-[#1A1A1A]" />
-            <h1 className="font-display text-2xl font-bold text-[#1A1A1A]">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A]">
               Savings Vaults & Real Money Goals
             </h1>
           </div>
@@ -93,7 +93,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
 
         <button
           onClick={onOpenNewGoal}
-          className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center space-x-1.5 self-start sm:self-auto"
+          className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center space-x-1.5 w-full sm:w-auto"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>New Savings Vault</span>
@@ -101,9 +101,9 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
       </div>
 
       {/* Goals Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {goals.length === 0 ? (
-          <div className="col-span-full bg-white border border-[#E8E5DF] rounded-xl p-12 text-center text-[#6B7280] space-y-2 shadow-sm">
+          <div className="col-span-full bg-white border border-[#E8E5DF] rounded-xl p-8 sm:p-12 text-center text-[#6B7280] space-y-2 shadow-sm">
             <PiggyBank className="w-8 h-8 text-[#D5D0C7] mx-auto" />
             <p className="text-sm font-medium">No savings goals established yet.</p>
             <button
@@ -122,20 +122,20 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
             return (
               <div
                 key={g.id}
-                className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4 flex flex-col justify-between"
+                className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4 flex flex-col justify-between"
               >
                 <div>
                   {/* Top Bar */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-display text-base font-bold text-[#1A1A1A]">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-display text-base font-bold text-[#1A1A1A] truncate">
                         {g.name}
                       </h3>
                       <div className="flex items-center space-x-2 mt-1">
                         {isPaystack ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono-num bg-[#15803D]/10 text-[#15803D] border border-[#15803D]/20 font-semibold">
-                            <ShieldCheck className="w-3 h-3 mr-1" />
-                            Paystack Rail • {g.paystackDestination.bankName} (•••• {g.paystackDestination.accountLast4})
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono-num bg-[#15803D]/10 text-[#15803D] border border-[#15803D]/20 font-semibold truncate max-w-full">
+                            <ShieldCheck className="w-3 h-3 mr-1 shrink-0" />
+                            <span className="truncate">Paystack • {g.paystackDestination.bankName} (•••• {g.paystackDestination.accountLast4})</span>
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono-num bg-[#F7F5F2] text-[#6B7280] border border-[#E8E5DF] font-medium">
@@ -145,18 +145,20 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 shrink-0">
                       <button
                         onClick={() => onEditGoal(g)}
-                        className="p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded transition-colors"
+                        className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded transition-colors"
                         title="Edit Goal"
+                        aria-label="Edit goal"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDelete(g.id)}
-                        className="p-1 text-[#6B7280] hover:text-[#DC2626] hover:bg-[#FEE2E2] rounded transition-colors"
+                        className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#DC2626] hover:bg-[#FEE2E2] rounded transition-colors"
                         title="Delete Goal"
+                        aria-label="Delete goal"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -167,7 +169,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                   <div className="mt-4 p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF] space-y-1">
                     <div className="flex justify-between items-baseline">
                       <span className="text-xs text-[#6B7280]">Current Saved:</span>
-                      <span className="text-lg font-mono-num font-bold text-[#1A1A1A]">
+                      <span className="text-base sm:text-lg font-mono-num font-bold text-[#1A1A1A]">
                         {formatCurrency(g.current, g.currency)}
                       </span>
                     </div>
@@ -200,10 +202,10 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                 </div>
 
                 {/* Bottom Action Row */}
-                <div className="pt-3 border-t border-[#E8E5DF] flex items-center justify-between">
+                <div className="pt-3 border-t border-[#E8E5DF] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <button
                     onClick={() => handleViewTransfers(g)}
-                    className="text-xs text-[#6B7280] hover:text-[#1A1A1A] flex items-center space-x-1 font-semibold transition-colors"
+                    className="text-xs text-[#6B7280] hover:text-[#1A1A1A] flex items-center justify-center sm:justify-start space-x-1 font-semibold transition-colors py-1 sm:py-0"
                   >
                     <History className="w-3.5 h-3.5" />
                     <span>View Transfer History</span>
@@ -211,7 +213,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
 
                   <button
                     onClick={() => onFundGoal(g)}
-                    className="px-3.5 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded text-xs font-bold shadow-sm transition-all flex items-center space-x-1.5 active:scale-95"
+                    className="px-3.5 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded text-xs font-bold shadow-sm transition-all flex items-center justify-center space-x-1.5 active:scale-95 w-full sm:w-auto"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>{isPaystack ? 'Transfer via Paystack' : 'Add Funds'}</span>

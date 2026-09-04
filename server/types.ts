@@ -4,6 +4,9 @@ export interface Profile {
   color: string;
   displayCurrency: string;
   exchangeRates: Record<string, number>; // Value of 1 unit in GHS
+  type?: 'personal' | 'family' | 'business' | 'savings' | string;
+  isLocked?: boolean;
+  pinHash?: string;
   createdAt: string;
 }
 

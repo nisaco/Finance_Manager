@@ -1,0 +1,605 @@
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  User,
+  Lock,
+  Unlock,
+  ShieldCheck,
+  Check,
+  Trash2,
+  AlertCircle,
+  Briefcase,
+  Home,
+  PiggyBank,
+  FolderGit2,
+} from 'lucide-react';
+import { Profile } from '../../types';
+import { useLedger } from '../../context/LedgerContext';
+import { api } from '../../api/client';
+
+interface ProfileModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  initialData?: Profile | null;
+}
+
+const COLOR_PALETTE = [
+  { hex: '#1A1A1A', name: 'Onyx' },
+  { hex: '#C9A24B', name: 'Gold' },
+  { hex: '#15803D', name: 'Emerald' },
+  { hex: '#1D4ED8', name: 'Sapphire' },
+  { hex: '#B91C1C', name: 'Crimson' },
+  { hex: '#7C3AED', name: 'Violet' },
+  { hex: '#0F766E', name: 'Teal' },
+  { hex: '#EA580C', name: 'Terracotta' },
+];
+
+const PROFILE_TYPES = [
+  { id: 'personal', label: 'Personal', icon: User },
+  { id: 'business', label: 'Business / Freelance', icon: Briefcase },
+  { id: 'family', label: 'Family Member', icon: Home },
+  { id: 'savings', label: 'Savings Vault', icon: PiggyBank },
+  { id: 'project', label: 'Project / Venture', icon: FolderGit2 },
+];
+
+const CURRENCIES = [
+  { code: 'GHS', label: 'GHS (Ghana Cedi)' },
+  { code: 'USD', label: 'USD (US Dollar)' },
+  { code: 'EUR', label: 'EUR (Euro)' },
+  { code: 'GBP', label: 'GBP (British Pound)' },
+  { code: 'NGN', label: 'NGN (Nigerian Naira)' },
+  { code: 'CAD', label: 'CAD (Canadian Dollar)' },
+  { code: 'AUD', label: 'AUD (Australian Dollar)' },
+  { code: 'KES', label: 'KES (Kenyan Shilling)' },
+  { code: 'ZAR', label: 'ZAR (South African Rand)' },
+];
+
+export const ProfileModal: React.FC<ProfileModalProps> = ({
+  isOpen,
+  onClose,
+  initialData,
+}) => {
+  const { profiles, fetchProfiles, setActiveProfileId, notify } = useLedger();
+
+  const [name, setName] = useState('');
+  const [type, setType] = useState('personal');
+  const [color, setColor] = useState('#1A1A1A');
+  const [currency, setCurrency] = useState('GHS');
+
+  // Lock & PIN states
+  const [isLocked, setIsLocked] = useState(false);
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [currentPin, setCurrentPin] = useState('');
+  const [pinAction, setPinAction] = useState<'keep' | 'change' | 'remove'>('keep');
+
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setType(initialData.type || 'personal');
+      setColor(initialData.color || '#1A1A1A');
+      setCurrency(initialData.displayCurrency || 'GHS');
+      setIsLocked(Boolean(initialData.isLocked));
+      setPinAction('keep');
+      setPin('');
+      setConfirmPin('');
+      setCurrentPin('');
+    } else {
+      setName('');
+      setType('personal');
+      setColor('#1A1A1A');
+      setCurrency('GHS');
+      setIsLocked(false);
+      setPinAction('keep');
+      setPin('');
+      setConfirmPin('');
+      setCurrentPin('');
+    }
+    setError('');
+    setShowDeleteConfirm(false);
+  }, [initialData, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError('Profile name is required');
+      return;
+    }
+
+    // Validation for new lock
+    if (!initialData || !initialData.isLocked) {
+      if (isLocked) {
+        if (!pin || pin.length < 4) {
+          setError('Security PIN must be at least 4 digits');
+          return;
+        }
+        if (pin !== confirmPin) {
+          setError('PIN and confirmation PIN do not match');
+          return;
+        }
+      }
+    } else {
+      // Modifying an already locked profile
+      if (pinAction === 'remove') {
+        if (!currentPin) {
+          setError('Current PIN is required to unlock this profile');
+          return;
+        }
+      } else if (pinAction === 'change') {
+        if (!currentPin) {
+          setError('Current PIN is required');
+          return;
+        }
+        if (!pin || pin.length < 4) {
+          setError('New PIN must be at least 4 digits');
+          return;
+        }
+        if (pin !== confirmPin) {
+          setError('New PIN and confirmation PIN do not match');
+          return;
+        }
+      }
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (initialData) {
+        // Update existing profile
+        const payload: any = {
+          name: trimmedName,
+          type,
+          color,
+          displayCurrency: currency,
+        };
+
+        if (initialData.isLocked) {
+          if (pinAction === 'remove') {
+            payload.isLocked = false;
+            payload.currentPin = currentPin;
+          } else if (pinAction === 'change') {
+            payload.isLocked = true;
+            payload.currentPin = currentPin;
+            payload.newPin = pin;
+          }
+        } else if (isLocked) {
+          payload.isLocked = true;
+          payload.pin = pin;
+        }
+
+        await api.updateProfile(initialData.id, payload);
+        await fetchProfiles();
+        notify(`Profile "${trimmedName}" updated successfully`);
+      } else {
+        // Create new profile
+        const newProf = await api.createProfile({
+          name: trimmedName,
+          type,
+          color,
+          displayCurrency: currency,
+          isLocked,
+          pin: isLocked ? pin : undefined,
+        });
+
+        await fetchProfiles();
+        setActiveProfileId(newProf.id);
+        notify(
+          isLocked
+            ? `Protected profile "${trimmedName}" created with PIN`
+            : `Profile "${trimmedName}" created successfully`
+        );
+      }
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save profile. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!initialData) return;
+    if (profiles.length <= 1) {
+      setError('Cannot delete the only remaining profile.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.deleteProfile(initialData.id);
+      await fetchProfiles();
+      notify(`Profile "${initialData.name}" was deleted`);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete profile');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/50 backdrop-blur-xs">
+      <div className="bg-white border border-[#E8E5DF] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E5DF] shrink-0 bg-[#FDFCFB]">
+          <div className="flex items-center space-x-2.5">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-xs"
+              style={{ backgroundColor: color }}
+            >
+              {isLocked ? <Lock className="w-4 h-4" /> : <User className="w-4 h-4" />}
+            </div>
+            <div>
+              <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A]">
+                {initialData ? 'Edit Profile & Security' : 'Create New Profile'}
+              </h2>
+              <span className="text-[11px] text-[#6B7280] font-mono-num">
+                {initialData
+                  ? 'Manage identity, base currency, and PIN lock'
+                  : 'Add an independent financial space to your ledger'}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded-md transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+          
+          {error && (
+            <div className="p-3 bg-[#DC2626]/10 border border-[#DC2626]/30 rounded-lg flex items-start space-x-2 text-xs text-[#DC2626] font-semibold animate-shake">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Profile Name & Category */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                Profile Name *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="e.g., Personal, Family, Consulting LLC, Travel Fund"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3.5 py-2 rounded-lg border border-[#E8E5DF] text-xs font-semibold focus:outline-none focus:border-[#1A1A1A] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                Entity Category
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {PROFILE_TYPES.map((t) => {
+                  const Icon = t.icon;
+                  const isSelected = type === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setType(t.id)}
+                      className={`flex items-center space-x-1.5 p-2 rounded-lg border text-left text-xs transition-all ${
+                        isSelected
+                          ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] font-bold shadow-xs'
+                          : 'bg-[#FDFCFB] text-[#4B5563] border-[#E8E5DF] hover:border-[#1A1A1A]'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Color and Currency in 2 cols */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            {/* Color Swatches */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1.5 font-bold">
+                Color Accent
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {COLOR_PALETTE.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    onClick={() => setColor(c.hex)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 border border-white/40 shadow-xs"
+                    style={{ backgroundColor: c.hex }}
+                    title={c.name}
+                  >
+                    {color === c.hex && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Display Currency */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1.5 font-bold">
+                Base Currency
+              </label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Security & Lock Section */}
+          <div className="border border-[#E8E5DF] bg-[#F7F5F2]/50 rounded-xl p-3.5 sm:p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className={`p-1.5 rounded-md ${isLocked ? 'bg-amber-100 text-amber-800' : 'bg-[#E8E5DF] text-[#6B7280]'}`}>
+                  {isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                </div>
+                <div>
+                  <span className="font-bold text-xs text-[#1A1A1A] block">
+                    Profile Security Lock
+                  </span>
+                  <span className="text-[10px] text-[#6B7280] block font-mono-num">
+                    Require PIN to view transactions & accounts
+                  </span>
+                </div>
+              </div>
+
+              {!initialData?.isLocked && (
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isLocked}
+                    onChange={(e) => setIsLocked(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-[#D1D5DB] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#1A1A1A]"></div>
+                </label>
+              )}
+            </div>
+
+            {/* Case A: Creating a new profile with Lock, or locking an unlocked profile */}
+            {isLocked && (!initialData || !initialData.isLocked) && (
+              <div className="space-y-2.5 pt-2 border-t border-[#E8E5DF] animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                      Set 4-6 Digit PIN *
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      placeholder="••••"
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-white text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                      Confirm PIN *
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      placeholder="••••"
+                      value={confirmPin}
+                      onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-white text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-[#6B7280] font-mono-num">
+                  Anyone switching into this profile will be prompted for this PIN.
+                </p>
+              </div>
+            )}
+
+            {/* Case B: Editing an already locked profile */}
+            {initialData && initialData.isLocked && (
+              <div className="space-y-3 pt-2 border-t border-[#E8E5DF]">
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setPinAction('keep')}
+                    className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
+                      pinAction === 'keep'
+                        ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                        : 'bg-white text-[#4B5563] border-[#E8E5DF]'
+                    }`}
+                  >
+                    Keep Current PIN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPinAction('change')}
+                    className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
+                      pinAction === 'change'
+                        ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                        : 'bg-white text-[#4B5563] border-[#E8E5DF]'
+                    }`}
+                  >
+                    Change PIN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPinAction('remove')}
+                    className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
+                      pinAction === 'remove'
+                        ? 'bg-rose-700 text-white border-rose-700'
+                        : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
+                    }`}
+                  >
+                    Remove Lock
+                  </button>
+                </div>
+
+                {pinAction === 'remove' && (
+                  <div className="p-2.5 bg-white rounded-lg border border-rose-200 space-y-1.5 animate-in fade-in duration-150">
+                    <label className="block text-[10px] uppercase tracking-wider text-rose-700 font-mono-num font-bold">
+                      Enter Current PIN to Unlock
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={6}
+                      pattern="[0-9]*"
+                      inputMode="numeric"
+                      placeholder="••••"
+                      value={currentPin}
+                      onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-rose-300 text-sm tracking-widest font-mono-num font-bold focus:outline-none"
+                    />
+                    <p className="text-[10px] text-[#6B7280]">
+                      Removing the lock allows anyone to view this profile without a PIN.
+                    </p>
+                  </div>
+                )}
+
+                {pinAction === 'change' && (
+                  <div className="p-2.5 bg-white rounded-lg border border-[#E8E5DF] space-y-2 animate-in fade-in duration-150">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                        Current PIN *
+                      </label>
+                      <input
+                        type="password"
+                        maxLength={6}
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        placeholder="••••"
+                        value={currentPin}
+                        onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                          New PIN *
+                        </label>
+                        <input
+                          type="password"
+                          maxLength={6}
+                          pattern="[0-9]*"
+                          inputMode="numeric"
+                          placeholder="••••"
+                          value={pin}
+                          onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                          className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                          Confirm New PIN *
+                        </label>
+                        <input
+                          type="password"
+                          maxLength={6}
+                          pattern="[0-9]*"
+                          inputMode="numeric"
+                          placeholder="••••"
+                          value={confirmPin}
+                          onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                          className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Delete confirmation section if editing and more than 1 profile */}
+          {initialData && profiles.length > 1 && (
+            <div className="pt-2">
+              {!showDeleteConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="text-xs text-rose-600 hover:text-rose-700 flex items-center space-x-1 font-semibold transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete this profile...</span>
+                </button>
+              ) : (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-2">
+                  <p className="text-xs text-rose-800 font-semibold">
+                    Are you sure you want to delete &quot;{initialData.name}&quot;? All associated transactions, goals, and budgets will be permanently removed.
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={isSubmitting}
+                      className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition-colors disabled:opacity-50"
+                    >
+                      Yes, Delete Profile
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="px-3 py-1 bg-white hover:bg-gray-100 text-[#4B5563] rounded border border-gray-300 text-xs font-semibold"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center justify-end space-x-2 pt-3 border-t border-[#E8E5DF]">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-bold text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !name.trim()}
+              className="px-5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 disabled:opacity-50 flex items-center space-x-1.5"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-white/80" />
+              <span>{initialData ? 'Save Changes' : 'Create Profile'}</span>
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  );
+};

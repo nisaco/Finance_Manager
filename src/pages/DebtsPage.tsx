@@ -60,11 +60,11 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
     <div className="space-y-6">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
             <Layers className="w-5 h-5 text-[#1A1A1A]" />
-            <h1 className="font-display text-2xl font-bold text-[#1A1A1A]">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A]">
               Debts & Credit Ledger
             </h1>
           </div>
@@ -75,7 +75,7 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
 
         <button
           onClick={onOpenNewDebt}
-          className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center space-x-1.5 self-start sm:self-auto"
+          className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center space-x-1.5 w-full sm:w-auto"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Record Debt / Credit</span>
@@ -83,43 +83,43 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <div className="flex items-center space-x-1.5 text-xs text-[#15803D] font-bold mb-0.5">
-              <ArrowUpRight className="w-4 h-4" />
-              <span>Owed to Me (Receivables)</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3.5 sm:p-4 shadow-sm flex items-center justify-between">
+          <div className="min-w-0 mr-2">
+            <div className="flex items-center space-x-1.5 text-xs text-[#15803D] font-bold mb-0.5 truncate">
+              <ArrowUpRight className="w-4 h-4 shrink-0" />
+              <span className="truncate">Owed to Me (Receivables)</span>
             </div>
-            <div className="text-xl font-mono-num font-bold text-[#1A1A1A]">
+            <div className="text-lg sm:text-xl font-mono-num font-bold text-[#1A1A1A] truncate">
               {formatCurrency(totalOwedToMe, currency)}
             </div>
           </div>
-          <span className="text-[11px] text-[#6B7280] font-mono-num">
+          <span className="text-[11px] text-[#6B7280] font-mono-num shrink-0">
             {debts.filter((d) => d.direction === 'owed_to_me').length} records
           </span>
         </div>
 
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm flex items-center justify-between">
-          <div>
-            <div className="flex items-center space-x-1.5 text-xs text-[#DC2626] font-bold mb-0.5">
-              <ArrowDownLeft className="w-4 h-4" />
-              <span>I Owe (Payables)</span>
+        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3.5 sm:p-4 shadow-sm flex items-center justify-between">
+          <div className="min-w-0 mr-2">
+            <div className="flex items-center space-x-1.5 text-xs text-[#DC2626] font-bold mb-0.5 truncate">
+              <ArrowDownLeft className="w-4 h-4 shrink-0" />
+              <span className="truncate">I Owe (Payables)</span>
             </div>
-            <div className="text-xl font-mono-num font-bold text-[#1A1A1A]">
+            <div className="text-lg sm:text-xl font-mono-num font-bold text-[#1A1A1A] truncate">
               {formatCurrency(totalIOwe, currency)}
             </div>
           </div>
-          <span className="text-[11px] text-[#6B7280] font-mono-num">
+          <span className="text-[11px] text-[#6B7280] font-mono-num shrink-0">
             {debts.filter((d) => d.direction === 'i_owe').length} records
           </span>
         </div>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex space-x-2 border-b border-[#E8E5DF] pb-3">
+      <div className="flex space-x-2 border-b border-[#E8E5DF] pb-3 overflow-x-auto scrollbar-none">
         <button
           onClick={() => setFilterTab('all')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-colors ${
             filterTab === 'all'
               ? 'bg-[#F7F5F2] text-[#1A1A1A] border border-[#E8E5DF]'
               : 'text-[#6B7280] hover:text-[#1A1A1A]'
@@ -129,7 +129,7 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
         </button>
         <button
           onClick={() => setFilterTab('owed_to_me')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-colors ${
             filterTab === 'owed_to_me'
               ? 'bg-[#15803D]/10 text-[#15803D] border border-[#15803D]/20'
               : 'text-[#6B7280] hover:text-[#1A1A1A]'
@@ -139,7 +139,7 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
         </button>
         <button
           onClick={() => setFilterTab('i_owe')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-colors ${
             filterTab === 'i_owe'
               ? 'bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20'
               : 'text-[#6B7280] hover:text-[#1A1A1A]'
@@ -150,9 +150,9 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
       </div>
 
       {/* Debts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {filteredDebts.length === 0 ? (
-          <div className="col-span-full bg-white border border-[#E8E5DF] rounded-xl p-12 text-center text-[#6B7280] space-y-2 shadow-sm">
+          <div className="col-span-full bg-white border border-[#E8E5DF] rounded-xl p-8 sm:p-12 text-center text-[#6B7280] space-y-2 shadow-sm">
             <Layers className="w-8 h-8 text-[#D5D0C7] mx-auto" />
             <p className="text-sm font-medium">No debt or loan records found.</p>
           </div>
@@ -167,7 +167,7 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
             return (
               <div
                 key={d.id}
-                className={`bg-white border rounded-xl p-5 shadow-sm space-y-4 flex flex-col justify-between ${
+                className={`bg-white border rounded-xl p-4 sm:p-5 shadow-sm space-y-4 flex flex-col justify-between ${
                   isSettled ? 'border-[#15803D]/40 bg-[#FDFCFB]' : 'border-[#E8E5DF]'
                 }`}
               >

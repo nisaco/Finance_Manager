@@ -74,7 +74,7 @@ export const Overview: React.FC<OverviewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Left Column: Recent Transactions (Receipt Style) */}
-        <div className="lg:col-span-7 bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
+        <div className="lg:col-span-7 bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
             <div className="flex items-center space-x-2">
               <Receipt className="w-4 h-4 text-[#1A1A1A]" />
@@ -126,7 +126,7 @@ export const Overview: React.FC<OverviewProps> = ({
         <div className="lg:col-span-5 space-y-6">
           
           {/* Monthly Budgets Monitor */}
-          <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
+          <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
               <div className="flex items-center space-x-2">
                 <Scale className="w-4 h-4 text-[#1A1A1A]" />
@@ -183,7 +183,7 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Savings Vaults Preview (Paystack Powered) */}
-          <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
+          <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
               <div className="flex items-center space-x-2">
                 <PiggyBank className="w-4 h-4 text-[#1A1A1A]" />
@@ -251,21 +251,21 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
 
           {/* Debts Snapshot */}
-          <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg bg-[#F7F5F2] border border-[#E8E5DF] flex items-center justify-center text-[#1A1A1A]">
+          <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center space-x-3 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-[#F7F5F2] border border-[#E8E5DF] flex items-center justify-center text-[#1A1A1A] shrink-0">
                 <Layers className="w-4 h-4" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <span className="font-bold text-[#1A1A1A] block">Debts & Credit Ledger</span>
-                <span className="text-[#6B7280] font-mono-num">
-                  Owed to Me: {formatCurrency(summary?.totalOwedToMe || 0, currency)} | I Owe: {formatCurrency(summary?.totalIOwe || 0, currency)}
+                <span className="text-[#6B7280] font-mono-num text-[11px] block truncate">
+                  Owed: {formatCurrency(summary?.totalOwedToMe || 0, currency)} • I Owe: {formatCurrency(summary?.totalIOwe || 0, currency)}
                 </span>
               </div>
             </div>
             <button
               onClick={() => onNavigateTab('debts')}
-              className="px-3 py-1.5 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded border border-[#E8E5DF] font-semibold text-xs transition-colors"
+              className="w-full sm:w-auto px-3 py-1.5 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded border border-[#E8E5DF] font-semibold text-xs transition-colors text-center shrink-0"
             >
               Review
             </button>

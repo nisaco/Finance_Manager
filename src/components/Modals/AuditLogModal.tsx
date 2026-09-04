@@ -34,36 +34,36 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
-      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
+      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
         
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E5DF] shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#E8E5DF] shrink-0">
           <div className="flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-[#1A1A1A]" />
+            <Shield className="w-5 h-5 text-[#1A1A1A] shrink-0" />
             <div>
-              <h2 className="font-display text-lg font-bold text-[#1A1A1A]">
+              <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A]">
                 System & Financial Audit Trail
               </h2>
-              <span className="text-[11px] text-[#6B7280] font-mono-num">
-                Append-only log of all money movements, fund transfers, and ledger mutations
+              <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num line-clamp-1">
+                Append-only log of all money movements and mutations
               </span>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 shrink-0">
             <button
               onClick={loadLogs}
               title="Refresh logs"
-              className="p-1 text-[#6B7280] hover:text-[#1A1A1A] rounded"
+              className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] rounded"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={onClose} className="p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
+            <button onClick={onClose} className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <div className="p-5 overflow-y-auto space-y-2.5 flex-1">
+        <div className="p-3 sm:p-5 overflow-y-auto space-y-2.5 flex-1">
           {logs.length === 0 ? (
             <p className="text-xs text-[#6B7280] text-center py-8">
               No audit records registered yet.

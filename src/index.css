@@ -5,12 +5,77 @@
     --font-serif: "Fraunces", Georgia, serif;
     --font-mono: "IBM Plex Mono", monospace;
     --font-sans: "Manrope", system-ui, -apple-system, sans-serif;
+
+    /* Light Theme Palette */
+    --bg-primary: #FDFCFB;
+    --bg-surface: #FFFFFF;
+    --bg-surface-alt: #F7F5F2;
+    --bg-surface-elevated: #FFFFFF;
+    --border-primary: #E8E5DF;
+    --border-subtle: #D5D0C7;
+    --text-primary: #1A1A1A;
+    --text-secondary: #4B5563;
+    --text-muted: #6B7280;
+    
+    --ticket-notch: #FDFCFB;
+    --receipt-leader: #D5D0C7;
+    --scrollbar-track: #FDFCFB;
+    --scrollbar-thumb: #E8E5DF;
+    --scrollbar-hover: #B5AFA2;
+
+    --btn-primary-bg: #1A1A1A;
+    --btn-primary-hover: #333333;
+    --btn-primary-text: #FFFFFF;
+
+    --status-income: #15803D;
+    --status-expense: #B91C1C;
+    --status-danger: #DC2626;
+  }
+
+  [data-theme="dark"],
+  .dark {
+    /* Professional Obsidian/Charcoal Dark Theme */
+    --bg-primary: #0F1115;
+    --bg-surface: #181A20;
+    --bg-surface-alt: #22252E;
+    --bg-surface-elevated: #282C37;
+    --border-primary: #2D323F;
+    --border-subtle: #3A404F;
+    --text-primary: #F3F4F6;
+    --text-secondary: #9CA3AF;
+    --text-muted: #6B7280;
+
+    --ticket-notch: #0F1115;
+    --receipt-leader: #3A404F;
+    --scrollbar-track: #0F1115;
+    --scrollbar-thumb: #2D323F;
+    --scrollbar-hover: #4B5563;
+
+    --btn-primary-bg: #F3F4F6;
+    --btn-primary-hover: #E5E7EB;
+    --btn-primary-text: #111317;
+
+    --status-income: #22C55E;
+    --status-expense: #EF4444;
+    --status-danger: #F87171;
+  }
+
+  html {
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
   }
 
   body {
     font-family: var(--font-sans);
-    background-color: #FDFCFB;
-    color: #1A1A1A;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    width: 100%;
+    min-height: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
   }
 }
 
@@ -23,11 +88,12 @@
   font-feature-settings: "tnum" 1;
 }
 
-/* Receipt ticket stub notch pattern */
+/* Receipt ticket stub notch pattern using CSS variables */
 .ticket-stub {
   position: relative;
-  background: #FFFFFF;
-  border: 1px solid #E8E5DF;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-primary);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .ticket-stub::before,
@@ -38,41 +104,140 @@
   transform: translateY(-50%);
   width: 14px;
   height: 14px;
-  background-color: #FDFCFB;
+  background-color: var(--ticket-notch);
   border-radius: 50%;
   z-index: 10;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .ticket-stub::before {
   left: -8px;
-  border-right: 1px solid #E8E5DF;
+  border-right: 1px solid var(--border-primary);
 }
 
 .ticket-stub::after {
   right: -8px;
-  border-left: 1px solid #E8E5DF;
+  border-left: 1px solid var(--border-primary);
 }
 
 /* Dotted leader line between item title and amount */
 .receipt-leader {
   flex-grow: 1;
-  border-bottom: 1px dotted #D5D0C7;
+  border-bottom: 1px dotted var(--receipt-leader);
   margin: 0 0.5rem;
   margin-bottom: 0.25rem;
 }
 
-/* Custom subtle scrollbar */
+/* Custom subtle scrollbar with theme adaptation */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #FDFCFB;
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #E8E5DF;
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #B5AFA2;
+  background: var(--scrollbar-hover);
+}
+
+/* ========================================================
+   DARK MODE ADAPTATION FOR EXISTING PALETTE CLASSES
+   ======================================================== */
+.dark .bg-\[\#FDFCFB\] {
+  background-color: var(--bg-primary) !important;
+}
+
+.dark .bg-white,
+.dark .bg-\[\#FFFFFF\] {
+  background-color: var(--bg-surface) !important;
+}
+
+.dark .bg-\[\#F7F5F2\] {
+  background-color: var(--bg-surface-alt) !important;
+}
+
+.dark .bg-\[\#E8E5DF\] {
+  background-color: var(--border-primary) !important;
+}
+
+.dark .border-\[\#E8E5DF\] {
+  border-color: var(--border-primary) !important;
+}
+
+.dark .border-\[\#D5D0C7\] {
+  border-color: var(--border-subtle) !important;
+}
+
+.dark .text-\[\#1A1A1A\] {
+  color: var(--text-primary) !important;
+}
+
+.dark .text-\[\#4B5563\] {
+  color: var(--text-secondary) !important;
+}
+
+.dark .text-\[\#6B7280\] {
+  color: var(--text-muted) !important;
+}
+
+.dark .divide-\[\#E8E5DF\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-primary) !important;
+}
+
+.dark .divide-\[\#F7F5F2\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-subtle) !important;
+}
+
+.dark .hover\:bg-\[\#F7F5F2\]:hover {
+  background-color: var(--bg-surface-alt) !important;
+}
+
+.dark .hover\:bg-\[\#E8E5DF\]:hover {
+  background-color: #282C37 !important;
+}
+
+.dark .hover\:border-\[\#D5D0C7\]:hover {
+  border-color: var(--border-subtle) !important;
+}
+
+.dark .hover\:text-\[\#1A1A1A\]:hover {
+  color: var(--text-primary) !important;
+}
+
+/* Dark mode inputs, selects, textareas */
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-primary) !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* Primary buttons in dark mode: crisp contrast */
+.dark button.bg-\[\#1A1A1A\] {
+  background-color: var(--btn-primary-bg) !important;
+  color: var(--btn-primary-text) !important;
+}
+
+.dark button.bg-\[\#1A1A1A\]:hover {
+  background-color: var(--btn-primary-hover) !important;
+}
+
+.dark button.bg-\[\#1A1A1A\] svg {
+  color: var(--btn-primary-text) !important;
+}
+
+/* Modal overlays & dialogs */
+.dark .bg-black\/40,
+.dark .bg-black\/50 {
+  background-color: rgba(0, 0, 0, 0.75) !important;
 }

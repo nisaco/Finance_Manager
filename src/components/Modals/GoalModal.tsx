@@ -155,24 +155,24 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
-      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
+      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E5DF] shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#E8E5DF] shrink-0">
           <div className="flex items-center space-x-2">
             <PiggyBank className="w-5 h-5 text-[#1A1A1A]" />
-            <h2 className="font-display text-lg font-bold text-[#1A1A1A]">
+            <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A]">
               {initialData ? 'Edit Savings Goal' : 'Create Savings Goal'}
             </h2>
           </div>
-          <button onClick={onClose} className="p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
+          <button onClick={onClose} className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           
           {/* Goal Name */}
           <div>

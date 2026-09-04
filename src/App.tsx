@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { LedgerProvider, useLedger } from './context/LedgerContext';
 import { Navbar } from './components/Navbar';
@@ -18,13 +19,22 @@ import { BudgetModal } from './components/Modals/BudgetModal';
 import { DebtModal } from './components/Modals/DebtModal';
 import { CsvImportModal } from './components/Modals/CsvImportModal';
 import { AuditLogModal } from './components/Modals/AuditLogModal';
-import { PinModal } from './components/Modals/PinModal';
+import { ProfileModal } from './components/Modals/ProfileModal';
+import { ProfileLockModal } from './components/Modals/ProfileLockModal';
 
 import { Transaction, Goal, Budget, Debt } from './types';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 const MainShell: React.FC = () => {
-  const { notification, setNotification } = useLedger();
+  const {
+    notification,
+    clearNotification,
+    profileModalOpen,
+    closeProfileModal,
+    editingProfile,
+    pendingLockedProfile,
+    setPendingLockedProfile,
+  } = useLedger();
 
   const [activeTab, setActiveTab] = useState<
     'overview' | 'transactions' | 'budgets' | 'goals' | 'debts' | 'reports' | 'settings'
@@ -105,7 +115,7 @@ const MainShell: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] text-[#1A1A1A] flex flex-col font-sans selection:bg-[#1A1A1A] selection:text-[#FDFCFB]">
+    <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0F1115] text-[#1A1A1A] dark:text-[#F3F4F6] flex flex-col font-sans selection:bg-[#1A1A1A] dark:selection:bg-[#F3F4F6] selection:text-[#FDFCFB] dark:selection:text-[#111317] transition-colors">
       
       {/* Top Fixed Header & Navigation */}
       <Navbar
@@ -115,7 +125,7 @@ const MainShell: React.FC = () => {
       />
 
       {/* Main Page Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
         {activeTab === 'overview' && (
           <Overview
             onNavigateTab={(tab) => setActiveTab(tab as any)}
@@ -167,9 +177,9 @@ const MainShell: React.FC = () => {
 
       {/* Toast Notification Alert Banner */}
       {notification && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-200">
+        <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 animate-in slide-in-from-bottom-5 duration-200">
           <div
-            className={`flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-medium backdrop-blur-md ${
+            className={`flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-medium backdrop-blur-md max-w-md ${
               notification.type === 'error'
                 ? 'bg-[#DC2626] text-[#FFFFFF] border-[#DC2626]'
                 : 'bg-[#1A1A1A] text-[#FDFCFB] border-[#1A1A1A]'
@@ -182,7 +192,7 @@ const MainShell: React.FC = () => {
             )}
             <span className="font-mono-num">{notification.message}</span>
             <button
-              onClick={() => setNotification(null)}
+              onClick={clearNotification}
               className="p-1 hover:opacity-75 rounded ml-2"
             >
               <X className="w-3.5 h-3.5" />
@@ -192,6 +202,19 @@ const MainShell: React.FC = () => {
       )}
 
       {/* Modals */}
+      <ProfileModal
+        isOpen={profileModalOpen}
+        onClose={closeProfileModal}
+        initialData={editingProfile}
+      />
+
+      <ProfileLockModal
+        isOpen={Boolean(pendingLockedProfile)}
+        onClose={() => setPendingLockedProfile(null)}
+        profile={pendingLockedProfile}
+        onUnlockSuccess={() => setPendingLockedProfile(null)}
+      />
+
       <TransactionModal
         isOpen={txModalOpen}
         onClose={() => setTxModalOpen(false)}
@@ -233,10 +256,8 @@ const MainShell: React.FC = () => {
         onClose={() => setAuditLogModalOpen(false)}
       />
 
-      <PinModal />
-
       {/* Footer info banner */}
-      <footer className="border-t border-[#E8E5DF] py-4 px-6 text-center text-[11px] text-[#6B7280] font-mono-num">
+      <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] py-4 px-6 text-center text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num transition-colors">
         Ledger • Real-Time Automated Financial Engine • Integrated with Paystack Banking Rails
       </footer>
 
@@ -246,11 +267,13 @@ const MainShell: React.FC = () => {
 
 export function App() {
   return (
-    <AuthProvider>
-      <LedgerProvider>
-        <MainShell />
-      </LedgerProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <LedgerProvider>
+          <MainShell />
+        </LedgerProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

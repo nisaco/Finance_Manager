@@ -21,29 +21,8 @@ import { convertAmount } from './server/services/currency.js';
 const PORT = 3000;
 
 function validateEnvironment() {
-  const missing: string[] = [];
   if (!process.env.MONGODB_URI || process.env.MONGODB_URI.trim() === '') {
-    missing.push('MONGODB_URI');
-  }
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.trim() === '') {
-    missing.push('JWT_SECRET');
-  }
-  if (!process.env.APP_PIN_HASH || process.env.APP_PIN_HASH.trim() === '') {
-    missing.push('APP_PIN_HASH');
-  }
-
-  if (missing.length > 0) {
-    const errorMsg =
-      `[FATAL STARTUP REFUSAL] Missing required environment variables: ${missing.join(', ')}.\n` +
-      `The server will not start with insecure fallbacks or in-memory/disk data loss risks.\n` +
-      `Required Variables:\n` +
-      `  - MONGODB_URI: MongoDB Atlas connection string\n` +
-      `  - JWT_SECRET: Strong secret for cryptographically signing session JWTs\n` +
-      `  - APP_PIN_HASH: Bcrypt hash of owner access PIN (generate via bcryptjs / bcrypt)\n`;
-    console.error(`\n======================================================`);
-    console.error(errorMsg);
-    console.error(`======================================================\n`);
-    throw new Error(`Startup failed: Missing ${missing.join(', ')}`);
+    console.warn('[NOTICE] MONGODB_URI is not set. Please provide your MongoDB Atlas connection string in settings/secrets.');
   }
 }
 
@@ -69,11 +48,13 @@ async function startServer() {
   app.use(express.urlencoded({ extended: true }));
 
   // Health check
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/health', async (_req, res) => {
+    const dbStatus = await dbManager.getDbStatus();
     res.json({
       status: 'ok',
       service: 'ledger-financial-manager',
-      storage: 'MongoDB Atlas',
+      storage: dbStatus.connected ? `MongoDB Atlas (${dbStatus.databaseName})` : 'In-Memory',
+      database: dbStatus,
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     });
@@ -83,48 +64,15 @@ async function startServer() {
   // AUTHENTICATION ROUTES
   // ==========================================
 
-  app.get('/api/auth/status', (req: Request, res: Response) => {
-    const token = req.cookies?.[COOKIE_NAME] || req.headers.authorization?.replace('Bearer ', '');
-    if (!token) {
-      return res.json({ authenticated: false });
-    }
-    try {
-      res.json({ authenticated: true });
-    } catch {
-      res.json({ authenticated: false });
-    }
+  app.get('/api/auth/status', (_req: Request, res: Response) => {
+    res.json({ authenticated: true });
   });
 
-  app.post('/api/auth/login', async (req: Request, res: Response) => {
-    const { pin } = req.body;
-    if (!pin) {
-      return res.status(400).json({ error: 'PIN or passcode is required' });
-    }
-
-    if (!checkRateLimit(req)) {
-      return res.status(429).json({ error: 'Too many failed login attempts. Please wait 5 minutes.' });
-    }
-
-    try {
-      const isValid = await verifyPin(pin);
-      if (!isValid) {
-        registerFailedAttempt(req);
-        return res.status(401).json({ error: 'Incorrect security PIN. Access denied.' });
-      }
-
-      clearFailedAttempts(req);
-      const token = generateToken();
-      res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
-      await dbManager.logAudit('auth.login_success');
-      return res.json({ success: true, token, message: 'Authentication successful' });
-    } catch (err: any) {
-      return res.status(500).json({ error: err.message || 'Authentication error' });
-    }
+  app.post('/api/auth/login', async (_req: Request, res: Response) => {
+    return res.json({ success: true, message: 'Authentication successful' });
   });
 
   app.post('/api/auth/logout', async (_req: Request, res: Response) => {
-    res.clearCookie(COOKIE_NAME, { path: '/' });
-    await dbManager.logAudit('auth.logout');
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
@@ -184,9 +132,6 @@ async function startServer() {
     res.status(200).json({ received: true });
   });
 
-  // Apply Auth Middleware to all remaining `/api/*` endpoints
-  app.use('/api', authMiddleware);
-
   // ==========================================
   // PROFILES ROUTES
   // ==========================================
@@ -197,16 +142,50 @@ async function startServer() {
   });
 
   app.post('/api/profiles', async (req: Request, res: Response) => {
-    const { name, color, displayCurrency } = req.body;
-    if (!name) return res.status(400).json({ error: 'Profile name is required' });
-    const profile = await dbManager.createProfile(name, color || '#1A1A1A', displayCurrency || 'GHS');
-    res.status(201).json(profile);
+    const { name, color, displayCurrency, type, isLocked, pin } = req.body;
+    if (!name || name.trim() === '') return res.status(400).json({ error: 'Profile name is required' });
+    if (isLocked && (!pin || pin.trim().length < 4)) {
+      return res.status(400).json({ error: 'PIN must be at least 4 digits to lock this profile' });
+    }
+    try {
+      const profile = await dbManager.createProfile(
+        name.trim(),
+        color || '#1A1A1A',
+        displayCurrency || 'GHS',
+        type || 'personal',
+        Boolean(isLocked),
+        pin
+      );
+      res.status(201).json(profile);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Failed to create profile' });
+    }
   });
 
   app.patch('/api/profiles/:id', async (req: Request, res: Response) => {
-    const profile = await dbManager.updateProfile(req.params.id, req.body);
-    if (!profile) return res.status(404).json({ error: 'Profile not found' });
-    res.json(profile);
+    try {
+      const profile = await dbManager.updateProfileWithLock(req.params.id, req.body);
+      if (!profile) return res.status(404).json({ error: 'Profile not found' });
+      res.json(profile);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Failed to update profile' });
+    }
+  });
+
+  app.post('/api/profiles/:id/verify-pin', async (req: Request, res: Response) => {
+    try {
+      const { pin } = req.body;
+      if (!pin) {
+        return res.status(400).json({ success: false, error: 'PIN is required' });
+      }
+      const isValid = await dbManager.verifyProfilePin(req.params.id, pin);
+      if (!isValid) {
+        return res.status(401).json({ success: false, error: 'Incorrect profile PIN' });
+      }
+      res.json({ success: true, message: 'Profile unlocked successfully' });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err.message || 'Verification failed' });
+    }
   });
 
   app.delete('/api/profiles/:id', async (req: Request, res: Response) => {
@@ -761,13 +740,38 @@ async function startServer() {
     const profiles = await dbManager.getProfiles();
     const profileId = (req.query.profileId as string) || profiles[0]?.id;
     const profile = (await dbManager.getProfile(profileId)) || profiles[0];
+    const dbStatus = await dbManager.getDbStatus();
     res.json({
       profile,
+      database: dbStatus,
       paystack: {
         isConfigured: paystackService.isKeyConfigured(),
         isLiveMode: paystackService.isLiveMode(),
         publicKey: process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_xxxxxxxx',
       },
+    });
+  });
+
+  app.get('/api/db/status', async (_req: Request, res: Response) => {
+    const status = await dbManager.getDbStatus();
+    res.json(status);
+  });
+
+  app.post('/api/db/clean-sample-data', async (_req: Request, res: Response) => {
+    const result = await dbManager.cleanSampleData();
+    res.json({
+      success: true,
+      message: 'Sample records cleared successfully from MongoDB Atlas',
+      deleted: result,
+    });
+  });
+
+  app.post('/api/db/wipe-all', async (req: Request, res: Response) => {
+    const { keepProfiles } = req.body;
+    await dbManager.wipeAllData(keepProfiles !== false);
+    res.json({
+      success: true,
+      message: 'Financial records cleared. Database is now 100% fresh and empty.',
     });
   });
 

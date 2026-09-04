@@ -52,7 +52,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
 
         <button
           onClick={onOpenNewBudget}
-          className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center space-x-1.5 self-start sm:self-auto"
+          className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center space-x-1.5 w-full sm:w-auto"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>New Budget</span>
@@ -60,18 +60,18 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
       </div>
 
       {/* Global Budget Meter Card */}
-      <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-3">
+      <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
           <div>
-            <span className="text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num font-semibold">
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num font-semibold">
               Consolidated Monthly Budget Utilization
             </span>
-            <div className="text-lg font-mono-num font-bold text-[#1A1A1A] mt-0.5">
+            <div className="text-base sm:text-lg font-mono-num font-bold text-[#1A1A1A] mt-0.5">
               {formatCurrency(totalBudgetSpent, currency)} / {formatCurrency(totalBudgetLimit, currency)}
             </div>
           </div>
-          <div className="text-right">
-            <span className="font-mono-num font-bold text-sm text-[#1A1A1A]">
+          <div className="text-left sm:text-right">
+            <span className="font-mono-num font-bold text-xs sm:text-sm text-[#1A1A1A]">
               {overallPercentage}% Utilized
             </span>
             <span className="text-[11px] text-[#6B7280] block font-mono-num">
@@ -95,9 +95,9 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
       </div>
 
       {/* Budgets Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {budgets.length === 0 ? (
-          <div className="col-span-full bg-white border border-[#E8E5DF] rounded-xl p-12 text-center text-[#6B7280] space-y-2 shadow-sm">
+          <div className="col-span-full bg-white border border-[#E8E5DF] rounded-xl p-8 sm:p-12 text-center text-[#6B7280] space-y-2 shadow-sm">
             <Scale className="w-8 h-8 text-[#D5D0C7] mx-auto" />
             <p className="text-sm font-medium">No category budgets established yet.</p>
             <button
@@ -117,7 +117,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
             return (
               <div
                 key={b.id}
-                className={`bg-white border rounded-xl p-5 shadow-sm space-y-4 transition-all ${
+                className={`bg-white border rounded-xl p-4 sm:p-5 shadow-sm space-y-4 transition-all ${
                   isOver ? 'border-[#DC2626]' : isNear ? 'border-[#EA580C]' : 'border-[#E8E5DF]'
                 }`}
               >

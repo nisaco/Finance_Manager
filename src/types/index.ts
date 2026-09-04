@@ -4,6 +4,8 @@ export interface Profile {
   color: string;
   displayCurrency: string;
   exchangeRates: Record<string, number>;
+  type?: 'personal' | 'family' | 'business' | 'savings' | string;
+  isLocked?: boolean;
   createdAt: string;
 }
 

@@ -95,11 +95,11 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
     <div className="space-y-6">
       
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
             <Receipt className="w-5 h-5 text-[#1A1A1A]" />
-            <h1 className="font-display text-2xl font-bold text-[#1A1A1A]">
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A]">
               Ledger Transactions
             </h1>
           </div>
@@ -108,28 +108,28 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center space-x-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={onOpenCsvImport}
-            className="px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+            className="flex-1 xs:flex-initial px-2.5 sm:px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors"
           >
-            <Upload className="w-3.5 h-3.5 text-[#6B7280]" />
+            <Upload className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
             <span>Import CSV</span>
           </button>
 
           <button
             onClick={handleExportCsv}
-            className="px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center space-x-1.5 transition-colors"
+            className="flex-1 xs:flex-initial px-2.5 sm:px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors"
           >
-            <Download className="w-3.5 h-3.5 text-[#6B7280]" />
+            <Download className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
             <span>Export CSV</span>
           </button>
 
           <button
             onClick={onOpenNewTx}
-            className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center space-x-1.5"
+            className="w-full xs:w-auto px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center space-x-1.5"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
             <span>Record Entry</span>
           </button>
         </div>
@@ -194,11 +194,11 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
         </div>
 
         {/* Filter Summary Stats */}
-        <div className="flex flex-wrap items-center justify-between pt-2 border-t border-[#E8E5DF] text-xs text-[#6B7280] font-mono-num">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-[#E8E5DF] text-xs text-[#6B7280] font-mono-num">
           <div>
             Showing <span className="text-[#1A1A1A] font-bold">{filteredTransactions.length}</span> of {transactions.length} entries
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <span>Inflow: <span className="text-[#15803D] font-bold">+{formatCurrency(totalInflow, currency)}</span></span>
             <span>Outflow: <span className="text-[#B91C1C] font-bold">-{formatCurrency(totalOutflow, currency)}</span></span>
             <span>Net: <span className={net >= 0 ? 'text-[#15803D] font-bold' : 'text-[#B91C1C] font-bold'}>{formatCurrency(net, currency)}</span></span>
@@ -207,7 +207,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
       </div>
 
       {/* Transactions List (Receipt Aesthetic) */}
-      <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-2">
+      <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-5 shadow-sm space-y-2">
         {filteredTransactions.length === 0 ? (
           <div className="text-center py-12 space-y-2 text-[#6B7280]">
             <Receipt className="w-8 h-8 text-[#D5D0C7] mx-auto" />

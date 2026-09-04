@@ -184,7 +184,13 @@ export class PaystackService {
       gatewayResponse: 'Transfer initiated via Paystack rail',
     });
 
-    if (this.isKeyConfigured()) {
+    const isSimulatedCode =
+      !params.recipientCode ||
+      params.recipientCode.startsWith('RCP_test_') ||
+      params.recipientCode.startsWith('RCP_momo_') ||
+      params.recipientCode.startsWith('RCP_bank_');
+
+    if (this.isKeyConfigured() && !isSimulatedCode) {
       try {
         const res = await axios.post(
           `${PAYSTACK_BASE_URL}/transfer`,
@@ -221,21 +227,34 @@ export class PaystackService {
           };
         }
       } catch (err: any) {
-        console.warn('Paystack live transfer error response:', err?.response?.data || err?.message);
+        const errMsg = err?.response?.data?.message || err?.message || 'Paystack live transfer pending or rejected';
         await dbManager.updateTransferStatus(
           reference,
-          'pending',
+          'failed',
           err?.response?.data,
-          err?.response?.data?.message || 'Queued in transfer gateway'
+          errMsg
         );
+        return {
+          transfer: await dbManager.getTransferByReference(reference),
+          reference,
+          simulated: false,
+        };
       }
+    } else {
+      // Sandbox mode / simulated recipient code
+      await dbManager.updateTransferStatus(
+        reference,
+        'pending',
+        undefined,
+        'Sandbox transfer initiated. In live mode, balance is transferred via Paystack.'
+      );
     }
 
     const currentTransfer = await dbManager.getTransferByReference(reference);
     return {
       transfer: currentTransfer,
       reference,
-      simulated: !this.isKeyConfigured(),
+      simulated: !this.isKeyConfigured() || isSimulatedCode,
     };
   }
 
@@ -285,11 +304,11 @@ export class PaystackService {
           );
         }
       } catch (err: any) {
-        console.warn('Paystack transfer verify API call failed:', err?.response?.data || err?.message);
+        // Quietly handle verify lookups for sandbox or unpropagated references
       }
     }
 
-    // Explicitly do NOT mutate status to success. Return the existing transfer state.
+    // Return the existing transfer state
     return transfer;
   }
 }

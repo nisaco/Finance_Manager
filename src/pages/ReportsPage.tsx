@@ -92,31 +92,31 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm space-y-1">
-          <span className="text-[11px] text-[#6B7280] font-mono-num uppercase font-bold">Total Inflow</span>
-          <div className="text-lg font-mono-num font-bold text-[#15803D]">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
+          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Total Inflow</span>
+          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#15803D] truncate">
             {formatCurrency(summary?.totalIncome || 0, currency)}
           </div>
         </div>
 
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm space-y-1">
-          <span className="text-[11px] text-[#6B7280] font-mono-num uppercase font-bold">Total Outflow</span>
-          <div className="text-lg font-mono-num font-bold text-[#DC2626]">
+        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
+          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Total Outflow</span>
+          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#DC2626] truncate">
             {formatCurrency(summary?.totalExpense || 0, currency)}
           </div>
         </div>
 
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm space-y-1">
-          <span className="text-[11px] text-[#6B7280] font-mono-num uppercase font-bold">Net Cash Flow</span>
-          <div className="text-lg font-mono-num font-bold text-[#1A1A1A]">
+        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
+          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Net Cash Flow</span>
+          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#1A1A1A] truncate">
             {formatCurrency(summary?.netBalance || 0, currency)}
           </div>
         </div>
 
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm space-y-1">
-          <span className="text-[11px] text-[#6B7280] font-mono-num uppercase font-bold">Savings Rate</span>
-          <div className="text-lg font-mono-num font-bold text-[#1A1A1A]">
+        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
+          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Savings Rate</span>
+          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#1A1A1A] truncate">
             {summary?.savingsRate || 0}%
           </div>
         </div>
@@ -126,20 +126,20 @@ export const ReportsPage: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* 6-Month Inflow vs Outflow Bar Chart */}
-        <div className="lg:col-span-7 bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
+        <div className="lg:col-span-7 bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8E5DF] pb-3">
             <div className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4 text-[#1A1A1A]" />
-              <h2 className="font-display text-base font-bold text-[#1A1A1A]">
+              <BarChart3 className="w-4 h-4 text-[#1A1A1A] shrink-0" />
+              <h2 className="font-display text-sm sm:text-base font-bold text-[#1A1A1A]">
                 6-Month Income vs. Expense Trend
               </h2>
             </div>
-            <span className="text-[11px] text-[#6B7280] font-mono-num">
+            <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num">
               Monthly Inflow/Outflow ({currency})
             </span>
           </div>
 
-          <div className="h-72 w-full pt-2">
+          <div className="h-64 sm:h-72 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <XAxis dataKey="label" stroke="#6B7280" fontSize={11} tickLine={false} />
@@ -157,12 +157,12 @@ export const ReportsPage: React.FC = () => {
         </div>
 
         {/* Category Breakdown Donut */}
-        <div className="lg:col-span-5 bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+        <div className="lg:col-span-5 bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8E5DF] pb-3">
               <div className="flex items-center space-x-2">
-                <PieIcon className="w-4 h-4 text-[#1A1A1A]" />
-                <h2 className="font-display text-base font-bold text-[#1A1A1A]">
+                <PieIcon className="w-4 h-4 text-[#1A1A1A] shrink-0" />
+                <h2 className="font-display text-sm sm:text-base font-bold text-[#1A1A1A]">
                   Category Share
                 </h2>
               </div>
@@ -190,7 +190,7 @@ export const ReportsPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="h-52 w-full pt-2">
+            <div className="h-48 sm:h-52 w-full pt-2">
               {breakdown.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-xs text-[#6B7280]">
                   No category records available for this period.
@@ -204,8 +204,8 @@ export const ReportsPage: React.FC = () => {
                       nameKey="category"
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={75}
+                      innerRadius={45}
+                      outerRadius={70}
                       paddingAngle={3}
                     >
                       {breakdown.map((entry, index) => (
@@ -245,7 +245,7 @@ export const ReportsPage: React.FC = () => {
       </div>
 
       {/* Net Cumulative Curve Area Chart */}
-      <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
+      <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
           <div className="flex items-center space-x-2">
             <TrendingUp className="w-4 h-4 text-[#1A1A1A]" />

@@ -28,8 +28,6 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   });
 
   if (response.status === 401) {
-    // Notify auth context of expired session
-    window.dispatchEvent(new CustomEvent('ledger:unauthorized'));
     throw new Error('Unauthorized');
   }
 
@@ -65,19 +63,48 @@ export const api = {
 
   // Profiles
   getProfiles: () => request<Profile[]>('/api/profiles'),
-  createProfile: (data: { name: string; color?: string; displayCurrency?: string; type?: string } | string, color = '#C9A24B', displayCurrency = 'GHS') => {
-    const body = typeof data === 'string'
-      ? { name: data, color, displayCurrency, type: 'personal' }
-      : { name: data.name, color: data.color || color, displayCurrency: data.displayCurrency || displayCurrency, type: data.type || 'personal' };
+  createProfile: (
+    data:
+      | {
+          name: string;
+          color?: string;
+          displayCurrency?: string;
+          type?: string;
+          isLocked?: boolean;
+          pin?: string;
+        }
+      | string,
+    color = '#1A1A1A',
+    displayCurrency = 'GHS'
+  ) => {
+    const body =
+      typeof data === 'string'
+        ? { name: data, color, displayCurrency, type: 'personal' }
+        : {
+            name: data.name,
+            color: data.color || color,
+            displayCurrency: data.displayCurrency || displayCurrency,
+            type: data.type || 'personal',
+            isLocked: Boolean(data.isLocked),
+            pin: data.pin,
+          };
     return request<Profile>('/api/profiles', {
       method: 'POST',
       body: JSON.stringify(body),
     });
   },
-  updateProfile: (id: string, updates: Partial<Profile>) =>
+  updateProfile: (
+    id: string,
+    updates: Partial<Profile> & { pin?: string; newPin?: string; currentPin?: string }
+  ) =>
     request<Profile>(`/api/profiles/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
+    }),
+  verifyProfilePin: (id: string, pin: string) =>
+    request<{ success: boolean; message?: string }>(`/api/profiles/${id}/verify-pin`, {
+      method: 'POST',
+      body: JSON.stringify({ pin }),
     }),
   deleteProfile: (id: string) => request<{ success: boolean }>(`/api/profiles/${id}`, { method: 'DELETE' }),
   updateRates: (profileId: string, exchangeRates: Record<string, number>) =>
@@ -194,8 +221,49 @@ export const api = {
   getSettings: (profileId: string) =>
     request<{
       profile: Profile;
+      database?: {
+        connected: boolean;
+        databaseName: string;
+        counts: {
+          profiles: number;
+          transactions: number;
+          budgets: number;
+          goals: number;
+          debts: number;
+          transfers: number;
+        };
+      };
       paystack: { isConfigured: boolean; isLiveMode: boolean; publicKey: string };
     }>(`/api/settings?profileId=${profileId}`),
+  getDbStatus: () =>
+    request<{
+      connected: boolean;
+      databaseName: string;
+      counts: {
+        profiles: number;
+        transactions: number;
+        budgets: number;
+        goals: number;
+        debts: number;
+        transfers: number;
+      };
+    }>('/api/db/status'),
+  cleanSampleData: () =>
+    request<{
+      success: boolean;
+      message: string;
+      deleted: {
+        deletedTransactions: number;
+        deletedBudgets: number;
+        deletedGoals: number;
+        deletedDebts: number;
+      };
+    }>('/api/db/clean-sample-data', { method: 'POST' }),
+  wipeAllData: (keepProfiles = true) =>
+    request<{ success: boolean; message: string }>('/api/db/wipe-all', {
+      method: 'POST',
+      body: JSON.stringify({ keepProfiles }),
+    }),
   getAuditLogs: () => request<AuditLog[]>('/api/audit-logs'),
   getBackup: () => request<any>('/api/export-all'),
   restoreBackup: (payload: any) =>
