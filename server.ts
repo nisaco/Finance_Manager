@@ -2,10 +2,12 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import bcrypt from 'bcryptjs';
 import { createServer as createViteServer } from 'vite';
 import { dbManager } from './server/db.js';
 import {
   authMiddleware,
+  optionalAuthMiddleware,
   checkRateLimit,
   registerFailedAttempt,
   clearFailedAttempts,
@@ -61,18 +63,137 @@ async function startServer() {
   });
 
   // ==========================================
-  // AUTHENTICATION ROUTES
+  // AUTHENTICATION & MULTI-USER ROUTES
   // ==========================================
 
-  app.get('/api/auth/status', (_req: Request, res: Response) => {
-    res.json({ authenticated: true });
+  app.get('/api/auth/me', optionalAuthMiddleware, async (req: any, res: Response) => {
+    if (!req.user?.userId) {
+      return res.status(401).json({ user: null });
+    }
+    try {
+      const user = await dbManager.findUserById(req.user.userId);
+      if (!user) {
+        return res.status(401).json({ user: null });
+      }
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          agreedToTermsAt: user.agreedToTermsAt,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Internal server error' });
+    }
   });
 
-  app.post('/api/auth/login', async (_req: Request, res: Response) => {
-    return res.json({ success: true, message: 'Authentication successful' });
+  app.post('/api/auth/register', async (req: Request, res: Response) => {
+    const { username, email, password, agreedToTerms } = req.body;
+
+    if (!username || typeof username !== 'string' || username.trim().length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters long.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || typeof email !== 'string' || !emailRegex.test(email.trim())) {
+      return res.status(400).json({ error: 'A valid email address is required for Paystack receipt routing and payment referencing.' });
+    }
+
+    if (!password || typeof password !== 'string' || password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    }
+
+    if (agreedToTerms !== true) {
+      return res.status(400).json({ error: 'You must read and agree to the Terms & Conditions and Privacy Policy to register.' });
+    }
+
+    try {
+      const existingUser = await dbManager.findUserByUsername(username);
+      if (existingUser) {
+        return res.status(409).json({ error: 'This username is already taken. Please choose another.' });
+      }
+
+      const existingEmail = await dbManager.findUserByEmail(email);
+      if (existingEmail) {
+        return res.status(409).json({ error: 'This email is already registered. Please sign in.' });
+      }
+
+      const passwordHash = bcrypt.hashSync(password, 10);
+      const agreedToTermsAt = new Date().toISOString();
+      const user = await dbManager.createUser(username, email, passwordHash, agreedToTermsAt);
+
+      const token = generateToken({
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+      });
+
+      res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+
+      res.status(201).json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          agreedToTermsAt: user.agreedToTermsAt,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      res.status(500).json({ error: err.message || 'Failed to create user account' });
+    }
   });
 
-  app.post('/api/auth/logout', async (_req: Request, res: Response) => {
+  app.post('/api/auth/login', async (req: Request, res: Response) => {
+    const { usernameOrEmail, password } = req.body;
+
+    if (!usernameOrEmail || !password) {
+      return res.status(400).json({ error: 'Username/email and password are required.' });
+    }
+
+    try {
+      const user = await dbManager.findUserByUsernameOrEmail(usernameOrEmail);
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid username/email or password.' });
+      }
+
+      const isPasswordValid = bcrypt.compareSync(password, user.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid username/email or password.' });
+      }
+
+      const token = generateToken({
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+      });
+
+      res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+
+      res.json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          agreedToTermsAt: user.agreedToTermsAt,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (err: any) {
+      console.error('Login error:', err);
+      res.status(500).json({ error: err.message || 'Authentication error' });
+    }
+  });
+
+  app.post('/api/auth/logout', (_req: Request, res: Response) => {
+    res.clearCookie(COOKIE_NAME, COOKIE_OPTIONS);
     res.json({ success: true, message: 'Logged out successfully' });
   });
 
@@ -136,12 +257,12 @@ async function startServer() {
   // PROFILES ROUTES
   // ==========================================
 
-  app.get('/api/profiles', async (_req: Request, res: Response) => {
-    const profiles = await dbManager.getProfiles();
+  app.get('/api/profiles', optionalAuthMiddleware, async (req: any, res: Response) => {
+    const profiles = await dbManager.getProfiles(req.user?.userId);
     res.json(profiles);
   });
 
-  app.post('/api/profiles', async (req: Request, res: Response) => {
+  app.post('/api/profiles', optionalAuthMiddleware, async (req: any, res: Response) => {
     const { name, color, displayCurrency, type, isLocked, pin } = req.body;
     if (!name || name.trim() === '') return res.status(400).json({ error: 'Profile name is required' });
     if (isLocked && (!pin || pin.trim().length < 4)) {
@@ -154,7 +275,8 @@ async function startServer() {
         displayCurrency || 'GHS',
         type || 'personal',
         Boolean(isLocked),
-        pin
+        pin,
+        req.user?.userId
       );
       res.status(201).json(profile);
     } catch (err: any) {

@@ -4,29 +4,72 @@ import bcrypt from 'bcryptjs';
 import { dbManager } from './db.js';
 
 export function getJwtSecret(): string {
-  return process.env.JWT_SECRET || 'ledger-open-session-key';
+  return process.env.JWT_SECRET || 'ledger-secret-auth-key-2026';
 }
 
 export const COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'ledger_session';
 
-// Rate limiter helper for login attempts
-const failedAttempts = new Map<string, { count: number; lastAttempt: number }>();
-
-export function getClientIp(req: Request): string {
-  return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+export interface AuthTokenPayload {
+  userId: string;
+  username: string;
+  email: string;
 }
 
-export function checkRateLimit(_req: Request): boolean {
-  return true;
-}
-
-export function registerFailedAttempt(_req: Request) {}
-
-export function clearFailedAttempts(_req: Request) {}
-
-export function generateToken(): string {
+export function generateToken(payload: AuthTokenPayload): string {
   const secret = getJwtSecret();
-  return jwt.sign({ role: 'owner', app: 'ledger' }, secret, { expiresIn: '30d' });
+  return jwt.sign(payload, secret, { expiresIn: '30d' });
+}
+
+export function verifyToken(token: string): AuthTokenPayload | null {
+  try {
+    const secret = getJwtSecret();
+    const decoded = jwt.verify(token, secret) as AuthTokenPayload;
+    if (decoded && decoded.userId) {
+      return decoded;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function extractToken(req: Request): string | null {
+  if (req.cookies && req.cookies[COOKIE_NAME]) {
+    return req.cookies[COOKIE_NAME];
+  }
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+  return null;
+}
+
+export function authMiddleware(req: any, res: Response, next: NextFunction): void {
+  const token = extractToken(req);
+  if (!token) {
+    res.status(401).json({ error: 'Authentication required. Please sign in.' });
+    return;
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' });
+    return;
+  }
+
+  req.user = payload;
+  next();
+}
+
+export function optionalAuthMiddleware(req: any, _res: Response, next: NextFunction): void {
+  const token = extractToken(req);
+  if (token) {
+    const payload = verifyToken(token);
+    if (payload) {
+      req.user = payload;
+    }
+  }
+  next();
 }
 
 export async function verifyPin(pin: string): Promise<boolean> {
@@ -38,9 +81,34 @@ export async function setPin(pin: string): Promise<void> {
   await dbManager.setPinHash(hash);
 }
 
-export function authMiddleware(req: Request, _res: Response, next: NextFunction): void {
-  // Authentication disabled per user request
-  next();
+const failedAttemptsMap = new Map<string, { count: number; lockedUntil: number }>();
+
+export function checkRateLimit(key: string, maxAttempts = 5, lockDurationMs = 15 * 60 * 1000): { allowed: boolean; remainingMs?: number } {
+  const record = failedAttemptsMap.get(key);
+  if (!record) return { allowed: true };
+  const now = Date.now();
+  if (record.lockedUntil > now) {
+    return { allowed: false, remainingMs: record.lockedUntil - now };
+  }
+  if (record.count >= maxAttempts) {
+    record.lockedUntil = now + lockDurationMs;
+    return { allowed: false, remainingMs: lockDurationMs };
+  }
+  return { allowed: true };
+}
+
+export function registerFailedAttempt(key: string, maxAttempts = 5, lockDurationMs = 15 * 60 * 1000): void {
+  const now = Date.now();
+  const record = failedAttemptsMap.get(key) || { count: 0, lockedUntil: 0 };
+  record.count += 1;
+  if (record.count >= maxAttempts) {
+    record.lockedUntil = now + lockDurationMs;
+  }
+  failedAttemptsMap.set(key, record);
+}
+
+export function clearFailedAttempts(key: string): void {
+  failedAttemptsMap.delete(key);
 }
 
 export const COOKIE_OPTIONS = {

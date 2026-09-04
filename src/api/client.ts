@@ -14,8 +14,10 @@ import {
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const defaultHeaders: HeadersInit = {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('ledger_token') : null;
+  const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
   const response = await fetch(url, {

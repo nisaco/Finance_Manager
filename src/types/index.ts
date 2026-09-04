@@ -1,5 +1,14 @@
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  agreedToTermsAt: string;
+  createdAt: string;
+}
+
 export interface Profile {
   id: string;
+  userId?: string;
   name: string;
   color: string;
   displayCurrency: string;

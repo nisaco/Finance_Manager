@@ -1,6 +1,7 @@
 import { MongoClient, Db } from 'mongodb';
 import bcrypt from 'bcryptjs';
 import {
+  User,
   Profile,
   Transaction,
   Budget,
@@ -16,6 +17,7 @@ let dbInstance: Db | null = null;
 
 export class LedgerMongoDbManager {
   // In-memory fallback stores (initialized completely empty so no sample data ever appears)
+  private memUsers: User[] = [];
   private memProfiles: Profile[] = [
     {
       id: 'prof_personal',
@@ -73,7 +75,11 @@ export class LedgerMongoDbManager {
   private async initDatabase(db: Db): Promise<void> {
     try {
       await Promise.all([
+        db.collection('users').createIndex({ id: 1 }, { unique: true }),
+        db.collection('users').createIndex({ username: 1 }, { unique: true }),
+        db.collection('users').createIndex({ email: 1 }, { unique: true }),
         db.collection('profiles').createIndex({ id: 1 }, { unique: true }),
+        db.collection('profiles').createIndex({ userId: 1 }),
         db.collection('transactions').createIndex({ id: 1 }, { unique: true }),
         db.collection('transactions').createIndex({ profileId: 1, date: -1 }),
         db.collection('budgets').createIndex({ id: 1 }, { unique: true }),
@@ -342,6 +348,104 @@ export class LedgerMongoDbManager {
     await this.logAudit('auth.pin.updated');
   }
 
+  // ==========================================
+  // MULTI-USER MANAGEMENT & AUTHENTICATION
+  // ==========================================
+  public async findUserById(id: string): Promise<User | null> {
+    try {
+      const db = await this.getDb();
+      if (db) {
+        const user = await db.collection<User>('users').findOne({ id }, { projection: { _id: 0 } });
+        if (user) return user;
+      }
+    } catch (err) {
+      console.error('[DATABASE] findUserById error:', err);
+    }
+    return this.memUsers.find((u) => u.id === id) || null;
+  }
+
+  public async findUserByUsername(username: string): Promise<User | null> {
+    const cleanUsername = username.trim().toLowerCase();
+    try {
+      const db = await this.getDb();
+      if (db) {
+        const user = await db
+          .collection<User>('users')
+          .findOne({ username: { $regex: `^${cleanUsername}$`, $options: 'i' } }, { projection: { _id: 0 } });
+        if (user) return user;
+      }
+    } catch (err) {
+      console.error('[DATABASE] findUserByUsername error:', err);
+    }
+    return this.memUsers.find((u) => u.username.toLowerCase() === cleanUsername) || null;
+  }
+
+  public async findUserByEmail(email: string): Promise<User | null> {
+    const cleanEmail = email.trim().toLowerCase();
+    try {
+      const db = await this.getDb();
+      if (db) {
+        const user = await db
+          .collection<User>('users')
+          .findOne({ email: { $regex: `^${cleanEmail}$`, $options: 'i' } }, { projection: { _id: 0 } });
+        if (user) return user;
+      }
+    } catch (err) {
+      console.error('[DATABASE] findUserByEmail error:', err);
+    }
+    return this.memUsers.find((u) => u.email.toLowerCase() === cleanEmail) || null;
+  }
+
+  public async findUserByUsernameOrEmail(identifier: string): Promise<User | null> {
+    const clean = identifier.trim().toLowerCase();
+    const byEmail = await this.findUserByEmail(clean);
+    if (byEmail) return byEmail;
+    return await this.findUserByUsername(clean);
+  }
+
+  public async createUser(
+    username: string,
+    email: string,
+    passwordHash: string,
+    agreedToTermsAt: string
+  ): Promise<User> {
+    const newUser: User = {
+      id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      username: username.trim().toLowerCase(),
+      email: email.trim().toLowerCase(),
+      passwordHash,
+      agreedToTermsAt,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.memUsers.push(newUser);
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').insertOne(newUser as any);
+      }
+    } catch (err) {
+      console.error('[DATABASE] createUser MongoDB error:', err);
+    }
+
+    // Automatically create a default initial "Personal" profile for this user
+    await this.createProfile('Personal', '#1A1A1A', 'GHS', 'personal', false, undefined, newUser.id);
+    await this.logAudit('user.registered', 'user', newUser.id, { username: newUser.username, email: newUser.email });
+
+    return newUser;
+  }
+
+  public async getUsersCount(): Promise<number> {
+    try {
+      const db = await this.getDb();
+      if (db) {
+        return await db.collection('users').countDocuments();
+      }
+    } catch {}
+    return this.memUsers.length;
+  }
+
   // Profiles
   private sanitizeProfile(prof: Profile): Profile {
     const { pinHash, ...safe } = prof;
@@ -352,18 +456,27 @@ export class LedgerMongoDbManager {
     };
   }
 
-  public async getProfiles(): Promise<Profile[]> {
+  public async getProfiles(userId?: string): Promise<Profile[]> {
     try {
       const db = await this.getDb();
       if (db) {
-        const list = await db.collection<Profile>('profiles').find({}, { projection: { _id: 0 } }).toArray();
+        const query = userId ? { $or: [{ userId }, { userId: { $exists: false } }] } : {};
+        const list = await db.collection<Profile>('profiles').find(query, { projection: { _id: 0 } }).toArray();
         if (list.length > 0) {
-          return list.map((p) => this.sanitizeProfile(p));
+          // If filtering by userId, prefer user-scoped profiles
+          const userSpecific = userId ? list.filter((p) => p.userId === userId) : list;
+          if (userSpecific.length > 0) {
+            return userSpecific.map((p) => this.sanitizeProfile(p));
+          }
+          if (list.length > 0 && !userId) {
+            return list.map((p) => this.sanitizeProfile(p));
+          }
         }
-        // Auto-initialize default profile so that when users delete all data directly in Atlas/Compass,
-        // the app continues to operate seamlessly with a fresh, clean slate.
+        
+        // Auto-initialize default profile for this user or workspace
         const defaultProfile: Profile = {
-          id: 'prof_personal',
+          id: `prof_${userId ? `${userId}_` : ''}personal`,
+          userId,
           name: 'Personal',
           color: '#1A1A1A',
           displayCurrency: 'GHS',
@@ -384,6 +497,34 @@ export class LedgerMongoDbManager {
     } catch (err) {
       console.error('[DATABASE] Failed to read profiles from MongoDB:', err);
     }
+
+    if (userId) {
+      const userProfiles = this.memProfiles.filter((p) => p.userId === userId);
+      if (userProfiles.length > 0) {
+        return userProfiles.map((p) => this.sanitizeProfile(p));
+      }
+      // Create memory default profile for this user
+      const defaultProfile: Profile = {
+        id: `prof_${userId}_personal`,
+        userId,
+        name: 'Personal',
+        color: '#1A1A1A',
+        displayCurrency: 'GHS',
+        type: 'personal',
+        isLocked: false,
+        exchangeRates: {
+          GHS: 1,
+          USD: 15.5,
+          EUR: 17.0,
+          GBP: 19.5,
+          NGN: 0.0098,
+        },
+        createdAt: new Date().toISOString(),
+      };
+      this.memProfiles.push(defaultProfile);
+      return [this.sanitizeProfile(defaultProfile)];
+    }
+
     if (this.memProfiles.length === 0) {
       this.memProfiles = [
         {
@@ -441,13 +582,15 @@ export class LedgerMongoDbManager {
     displayCurrency = 'GHS',
     type = 'personal',
     isLocked = false,
-    pin?: string
+    pin?: string,
+    userId?: string
   ): Promise<Profile> {
     const willLock = Boolean(isLocked && pin && pin.trim().length >= 4);
     const pinHash = willLock ? bcrypt.hashSync(pin!.trim(), 10) : undefined;
 
     const newProf: Profile = {
       id: `prof_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      userId,
       name,
       color: color || '#1A1A1A',
       displayCurrency: displayCurrency || 'GHS',

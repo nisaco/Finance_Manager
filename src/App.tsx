@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { LedgerProvider, useLedger } from './context/LedgerContext';
+import { LandingPage } from './pages/LandingPage';
 import { Navbar } from './components/Navbar';
 import { Overview } from './pages/Overview';
 import { TransactionsPage } from './pages/TransactionsPage';
@@ -21,6 +22,8 @@ import { CsvImportModal } from './components/Modals/CsvImportModal';
 import { AuditLogModal } from './components/Modals/AuditLogModal';
 import { ProfileModal } from './components/Modals/ProfileModal';
 import { ProfileLockModal } from './components/Modals/ProfileLockModal';
+import { TermsModal } from './components/TermsModal';
+import { PrivacyModal } from './components/PrivacyModal';
 
 import { Transaction, Goal, Budget, Debt } from './types';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
@@ -59,6 +62,8 @@ const MainShell: React.FC = () => {
 
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [auditLogModalOpen, setAuditLogModalOpen] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
   // Handlers
   const handleOpenNewTx = () => {
@@ -256,12 +261,68 @@ const MainShell: React.FC = () => {
         onClose={() => setAuditLogModalOpen(false)}
       />
 
-      {/* Footer info banner */}
-      <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] py-4 px-6 text-center text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num transition-colors">
-        Ledger • Real-Time Automated Financial Engine • Integrated with Paystack Banking Rails
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        isAccepted={true}
+      />
+
+      <PrivacyModal
+        isOpen={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
+        isAccepted={true}
+      />
+
+      {/* Footer info banner with legal links */}
+      <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] py-4 px-6 text-center text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num transition-colors flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto w-full">
+        <div>
+          Ledger • Real-Time Automated Financial Engine • Integrated with Paystack Banking Rails
+        </div>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowTermsModal(true)}
+            className="hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline transition-colors"
+          >
+            Terms &amp; Conditions
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => setShowPrivacyModal(true)}
+            className="hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline transition-colors"
+          >
+            Privacy Policy
+          </button>
+        </div>
       </footer>
 
     </div>
+  );
+};
+
+const AppRouter: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0F1115] flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 rounded-xl bg-[#1A1A1A] dark:bg-[#F3F4F6] text-[#FFFFFF] dark:text-[#111317] flex items-center justify-center font-bold text-sm mb-4 animate-pulse shadow-md">
+          L
+        </div>
+        <div className="text-xs font-mono tracking-widest text-[#6B7280] dark:text-[#9CA3AF]">
+          INITIALIZING SECURE LEDGER...
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
+  }
+
+  return (
+    <LedgerProvider>
+      <MainShell />
+    </LedgerProvider>
   );
 };
 
@@ -269,9 +330,7 @@ export function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <LedgerProvider>
-          <MainShell />
-        </LedgerProvider>
+        <AppRouter />
       </AuthProvider>
     </ThemeProvider>
   );

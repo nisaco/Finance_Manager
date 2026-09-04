@@ -39,7 +39,7 @@ interface LedgerContextType {
 const LedgerContext = createContext<LedgerContextType | undefined>(undefined);
 
 export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string>('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -215,8 +215,17 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     if (isAuthenticated) {
       fetchProfiles();
+    } else {
+      setProfiles([]);
+      setActiveProfileId('');
+      setTransactions([]);
+      setBudgets([]);
+      setGoals([]);
+      setDebts([]);
+      setSummary(null);
+      setIsLoading(false);
     }
-  }, [isAuthenticated, fetchProfiles]);
+  }, [isAuthenticated, user?.id, fetchProfiles]);
 
   useEffect(() => {
     if (activeProfileId) {

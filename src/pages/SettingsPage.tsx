@@ -23,9 +23,16 @@ import {
   ShieldCheck,
   Edit3,
   UserPlus,
+  Mail,
+  LogOut,
+  FileText,
+  UserCheck,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
+import { TermsModal } from '../components/TermsModal';
+import { PrivacyModal } from '../components/PrivacyModal';
 import { api } from '../api/client';
 
 interface SettingsPageProps {
@@ -33,6 +40,10 @@ interface SettingsPageProps {
 }
 
 export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) => {
+  const { user, logout } = useAuth();
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
   const {
     profiles,
     activeProfile,
@@ -258,6 +269,83 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
           <span>System Audit Trail</span>
         </button>
       </div>
+
+      {/* User Account & Paystack Referencing Card */}
+      {user && (
+        <div className="bg-white dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl p-4 sm:p-5 shadow-sm space-y-3 transition-colors">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3 gap-2">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-[#F5F4F0] dark:bg-[#1E2330] flex items-center justify-center text-[#1A1A1A] dark:text-[#F3F4F6]">
+                <UserCheck className="w-4 h-4 text-[#2563EB]" />
+              </div>
+              <div>
+                <h2 className="font-display text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                  User Account &amp; Paystack Profile
+                </h2>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  Primary account holder credentials and receipt routing
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => logout()}
+              className="px-3 py-1.5 rounded-lg border border-[#FCA5A5] dark:border-[#7F1D1D] bg-[#FEF2F2] dark:bg-[#450A0A]/30 text-[#B91C1C] dark:text-[#FCA5A5] text-xs font-semibold flex items-center justify-center space-x-1.5 hover:bg-[#FEE2E2] transition-colors w-full sm:w-auto"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div className="p-3 bg-[#FDFCFB] dark:bg-[#1E2330] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F]">
+              <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block">
+                Username
+              </span>
+              <span className="text-sm font-bold text-[#1A1A1A] dark:text-[#F3F4F6] mt-0.5 block truncate">
+                @{user.username}
+              </span>
+            </div>
+
+            <div className="p-3 bg-[#FDFCFB] dark:bg-[#1E2330] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F]">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block">
+                  Email (Paystack Receipts)
+                </span>
+                <span className="text-[9px] font-bold text-[#10B981] bg-[#ECFDF5] dark:bg-[#064E3B]/30 px-1.5 py-0.5 rounded">
+                  Linked
+                </span>
+              </div>
+              <span className="text-sm font-bold text-[#1A1A1A] dark:text-[#F3F4F6] mt-0.5 block truncate flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-[#6B7280]" />
+                {user.email}
+              </span>
+            </div>
+
+            <div className="p-3 bg-[#FDFCFB] dark:bg-[#1E2330] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F]">
+              <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block">
+                Terms &amp; Privacy Agreement
+              </span>
+              <div className="flex items-center space-x-2 mt-1">
+                <button
+                  onClick={() => setShowTermsModal(true)}
+                  className="text-xs text-[#2563EB] hover:underline font-medium"
+                >
+                  Terms
+                </button>
+                <span className="text-[#9CA3AF]">•</span>
+                <button
+                  onClick={() => setShowPrivacyModal(true)}
+                  className="text-xs text-[#2563EB] hover:underline font-medium"
+                >
+                  Privacy
+                </button>
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Online MongoDB Database Status Banner */}
       <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
@@ -851,6 +939,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
           </div>
         </div>
       </div>
+
+      <TermsModal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        isAccepted={true}
+      />
+      <PrivacyModal
+        isOpen={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
+        isAccepted={true}
+      />
     </div>
   );
 };
