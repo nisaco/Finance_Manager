@@ -16,9 +16,12 @@ import {
   Unlock,
   UserPlus,
   Shield,
+  LogOut,
+  User,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 
 interface NavbarProps {
   activeTab?: string;
@@ -47,6 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     openCreateProfileModal,
     lockProfile,
   } = useLedger();
+  const { user, logout } = useAuth();
   const { resolvedTheme, toggleTheme } = useTheme();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
@@ -208,6 +212,37 @@ export const Navbar: React.FC<NavbarProps> = ({
                           <Settings className="w-3.5 h-3.5 shrink-0" />
                           <span>Manage All Profiles</span>
                         </button>
+
+                        {user && (
+                          <div className="pt-2 mt-1.5 border-t border-[#E8E5DF] dark:border-[#2D323F]">
+                            <div className="px-2.5 py-1.5 bg-[#FAF9F6] dark:bg-[#1E2330] rounded-lg mb-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] uppercase font-mono tracking-wider text-[#6B7280] dark:text-[#9CA3AF]">
+                                  Account
+                                </span>
+                                <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1 py-0.5 rounded">
+                                  Paystack Linked
+                                </span>
+                              </div>
+                              <div className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] truncate mt-0.5">
+                                @{user.username}
+                              </div>
+                              <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] truncate">
+                                {user.email}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setProfileDropdownOpen(false);
+                                logout();
+                              }}
+                              className="w-full flex items-center justify-center space-x-1.5 px-2.5 py-1.5 text-xs text-[#B91C1C] dark:text-[#FCA5A5] bg-[#FEF2F2] dark:bg-[#450A0A]/30 border border-[#FCA5A5] dark:border-[#7F1D1D] hover:bg-[#FEE2E2] dark:hover:bg-[#450A0A]/50 rounded-lg transition-colors font-semibold"
+                            >
+                              <LogOut className="w-3.5 h-3.5 shrink-0" />
+                              <span>Sign Out</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </>
@@ -284,11 +319,24 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <History className="w-4 h-4" />
               </button>
             )}
+
+            {/* Direct Sign Out Button */}
+            {user && (
+              <button
+                onClick={() => logout()}
+                title={`Sign out of account (@${user.username})`}
+                aria-label="Sign out"
+                className="flex items-center space-x-1.5 px-2 sm:px-2.5 py-1.5 rounded-md bg-[#F7F5F2] dark:bg-[#22252E] hover:bg-[#FEF2F2] dark:hover:bg-[#450A0A]/40 border border-[#E8E5DF] dark:border-[#2D323F] hover:border-[#FCA5A5] dark:hover:border-[#7F1D1D] text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#B91C1C] dark:hover:text-[#FCA5A5] text-xs font-medium transition-all"
+              >
+                <LogOut className="w-3.5 h-3.5 shrink-0" />
+                <span className="hidden lg:inline text-xs">Sign Out</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Mobile Navigation Row */}
-        <div className="flex md:hidden overflow-x-auto space-x-1 py-2 border-t border-[#E8E5DF] dark:border-[#2D323F] scrollbar-none -mx-4 px-4">
+        <div className="flex md:hidden overflow-x-auto space-x-1 py-2 border-t border-[#E8E5DF] dark:border-[#2D323F] scrollbar-none -mx-4 px-4 items-center">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = effectiveTab === item.id;
@@ -307,6 +355,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             );
           })}
+
+          {user && (
+            <button
+              onClick={() => logout()}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors shrink-0 text-[#B91C1C] dark:text-[#FCA5A5] bg-[#FEF2F2] dark:bg-[#450A0A]/30 border border-[#FCA5A5] dark:border-[#7F1D1D] hover:bg-[#FEE2E2]"
+            >
+              <LogOut className="w-3.5 h-3.5 shrink-0" />
+              <span>Sign Out</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
