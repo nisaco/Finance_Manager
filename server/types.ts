@@ -3,6 +3,7 @@ export interface User {
   username: string;
   email: string;
   passwordHash: string;
+  role: 'admin' | 'user';
   agreedToTermsAt: string;
   createdAt: string;
 }
@@ -39,6 +40,9 @@ export interface Budget {
   category: string;
   limit: number;
   currency: string;
+  isExceeded?: boolean;
+  cappedSpent?: number;
+  status?: 'normal' | 'exceeded_locked';
 }
 
 export interface Goal {
@@ -49,6 +53,11 @@ export interface Goal {
   current: number;
   currency: string;
   deadline?: string;
+  status?: 'active' | 'pending_withdrawal' | 'withdrawn' | 'locked';
+  vaultType?: 'high_yield_vault' | 'locked_savings' | 'emergency_stash' | 'flexible_goal';
+  interestRateApr?: number;
+  isLocked?: boolean;
+  lockPeriodDays?: number;
   paystackDestination: {
     type: 'paystack_recipient' | 'none';
     recipientCode?: string;
@@ -70,6 +79,35 @@ export interface Debt {
   currency: string;
   dueDate?: string;
   note: string;
+  createdAt: string;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName?: string;
+  profileId: string;
+  goalId: string;
+  goalName: string;
+  vaultAmount: number;
+  isEarlyWithdrawal: boolean;
+  standardFeePercent: number; // 2%
+  earlyPenaltyPercent: number; // 10% if early, else 0%
+  totalFeePercent: number; // 2% or 12%
+  feeAmount: number;
+  netPayoutAmount: number;
+  currency: string;
+  payoutDetails: {
+    bankOrProvider: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  adminNotes?: string;
+  approvedAt?: string;
+  paystackTransferReference?: string;
   createdAt: string;
 }
 

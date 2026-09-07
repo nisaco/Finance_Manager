@@ -9,6 +9,7 @@ import {
   Debt,
   FundTransfer,
   AuditLog,
+  WithdrawalRequest,
   LedgerDatabase,
 } from './types.js';
 
@@ -39,6 +40,8 @@ export class LedgerMongoDbManager {
   private memGoals: Goal[] = [];
   private memDebts: Debt[] = [];
   private memTransfers: FundTransfer[] = [];
+  private memWithdrawals: WithdrawalRequest[] = [];
+  private memAIMessages: { userId: string; timestamp: number }[] = [];
   private memAuditLogs: AuditLog[] = [];
   private memPinHash: string = '';
 
@@ -351,17 +354,27 @@ export class LedgerMongoDbManager {
   // ==========================================
   // MULTI-USER MANAGEMENT & AUTHENTICATION
   // ==========================================
+  private normalizeUser(user: User | null): User | null {
+    if (!user) return null;
+    const isAdmin = user.email.toLowerCase() === 'jnkpappoe@gmail.com' || user.role === 'admin';
+    return {
+      ...user,
+      role: isAdmin ? 'admin' : 'user',
+    };
+  }
+
   public async findUserById(id: string): Promise<User | null> {
     try {
       const db = await this.getDb();
       if (db) {
         const user = await db.collection<User>('users').findOne({ id }, { projection: { _id: 0 } });
-        if (user) return user;
+        if (user) return this.normalizeUser(user);
       }
     } catch (err) {
       console.error('[DATABASE] findUserById error:', err);
     }
-    return this.memUsers.find((u) => u.id === id) || null;
+    const mem = this.memUsers.find((u) => u.id === id) || null;
+    return this.normalizeUser(mem);
   }
 
   public async findUserByUsername(username: string): Promise<User | null> {
@@ -372,12 +385,13 @@ export class LedgerMongoDbManager {
         const user = await db
           .collection<User>('users')
           .findOne({ username: { $regex: `^${cleanUsername}$`, $options: 'i' } }, { projection: { _id: 0 } });
-        if (user) return user;
+        if (user) return this.normalizeUser(user);
       }
     } catch (err) {
       console.error('[DATABASE] findUserByUsername error:', err);
     }
-    return this.memUsers.find((u) => u.username.toLowerCase() === cleanUsername) || null;
+    const mem = this.memUsers.find((u) => u.username.toLowerCase() === cleanUsername) || null;
+    return this.normalizeUser(mem);
   }
 
   public async findUserByEmail(email: string): Promise<User | null> {
@@ -388,12 +402,13 @@ export class LedgerMongoDbManager {
         const user = await db
           .collection<User>('users')
           .findOne({ email: { $regex: `^${cleanEmail}$`, $options: 'i' } }, { projection: { _id: 0 } });
-        if (user) return user;
+        if (user) return this.normalizeUser(user);
       }
     } catch (err) {
       console.error('[DATABASE] findUserByEmail error:', err);
     }
-    return this.memUsers.find((u) => u.email.toLowerCase() === cleanEmail) || null;
+    const mem = this.memUsers.find((u) => u.email.toLowerCase() === cleanEmail) || null;
+    return this.normalizeUser(mem);
   }
 
   public async findUserByUsernameOrEmail(identifier: string): Promise<User | null> {
@@ -409,11 +424,15 @@ export class LedgerMongoDbManager {
     passwordHash: string,
     agreedToTermsAt: string
   ): Promise<User> {
+    const count = await this.getUsersCount();
+    const isFirstUserOrAdminEmail = email.trim().toLowerCase() === 'jnkpappoe@gmail.com' || count === 0;
+
     const newUser: User = {
       id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       username: username.trim().toLowerCase(),
       email: email.trim().toLowerCase(),
       passwordHash,
+      role: isFirstUserOrAdminEmail ? 'admin' : 'user',
       agreedToTermsAt,
       createdAt: new Date().toISOString(),
     };
@@ -431,7 +450,7 @@ export class LedgerMongoDbManager {
 
     // Automatically create a default initial "Personal" profile for this user
     await this.createProfile('Personal', '#1A1A1A', 'GHS', 'personal', false, undefined, newUser.id);
-    await this.logAudit('user.registered', 'user', newUser.id, { username: newUser.username, email: newUser.email });
+    await this.logAudit('user.registered', 'user', newUser.id, { username: newUser.username, email: newUser.email, role: newUser.role });
 
     return newUser;
   }
@@ -444,6 +463,326 @@ export class LedgerMongoDbManager {
       }
     } catch {}
     return this.memUsers.length;
+  }
+
+  // Admin User Management ("God Mode")
+  public async getAllUsersWithStats(): Promise<any[]> {
+    let allUsers: User[] = [];
+    try {
+      const db = await this.getDb();
+      if (db) {
+        const users = await db.collection<User>('users').find({}, { projection: { passwordHash: 0, _id: 0 } }).toArray();
+        allUsers = users.map(u => this.normalizeUser(u)!);
+      }
+    } catch (err) {
+      console.error('getAllUsersWithStats DB error:', err);
+    }
+
+    if (allUsers.length === 0) {
+      allUsers = this.memUsers.map(u => {
+        const { passwordHash, ...safe } = u;
+        return this.normalizeUser(safe as User)!;
+      });
+    }
+
+    // Enhance each user with their stats
+    const enriched = await Promise.all(
+      allUsers.map(async (u) => {
+        const userProfiles = await this.getProfiles(u.id);
+        const profileIds = userProfiles.map(p => p.id);
+
+        let txCount = 0;
+        let totalVaults = 0;
+        let goalCount = 0;
+
+        try {
+          const db = await this.getDb();
+          if (db && profileIds.length > 0) {
+            txCount = await db.collection('transactions').countDocuments({ profileId: { $in: profileIds } });
+            const goals = await db.collection<Goal>('goals').find({ profileId: { $in: profileIds } }).toArray();
+            goalCount = goals.length;
+            totalVaults = goals.reduce((sum, g) => sum + (g.current || 0), 0);
+          } else {
+            txCount = this.memTransactions.filter(t => profileIds.includes(t.profileId)).length;
+            const goals = this.memGoals.filter(g => profileIds.includes(g.profileId));
+            goalCount = goals.length;
+            totalVaults = goals.reduce((sum, g) => sum + (g.current || 0), 0);
+          }
+        } catch {}
+
+        return {
+          id: u.id,
+          username: u.username,
+          email: u.email,
+          role: u.role,
+          agreedToTermsAt: u.agreedToTermsAt,
+          createdAt: u.createdAt,
+          profilesCount: userProfiles.length,
+          transactionsCount: txCount,
+          goalsCount: goalCount,
+          totalVaultsSaved: totalVaults,
+        };
+      })
+    );
+
+    return enriched;
+  }
+
+  public async updateUserRole(userId: string, role: 'admin' | 'user'): Promise<boolean> {
+    const memUser = this.memUsers.find(u => u.id === userId);
+    if (memUser) {
+      memUser.role = role;
+    }
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').updateOne({ id: userId }, { $set: { role } });
+        return true;
+      }
+    } catch (err) {
+      console.error('updateUserRole error:', err);
+    }
+    return Boolean(memUser);
+  }
+
+  public async deleteUser(userId: string): Promise<boolean> {
+    this.memUsers = this.memUsers.filter(u => u.id !== userId);
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').deleteOne({ id: userId });
+        // Clean up profiles
+        const userProfs = await db.collection<Profile>('profiles').find({ userId }).toArray();
+        const pIds = userProfs.map(p => p.id);
+        await db.collection('profiles').deleteMany({ userId });
+        if (pIds.length > 0) {
+          await db.collection('transactions').deleteMany({ profileId: { $in: pIds } });
+          await db.collection('budgets').deleteMany({ profileId: { $in: pIds } });
+          await db.collection('goals').deleteMany({ profileId: { $in: pIds } });
+          await db.collection('debts').deleteMany({ profileId: { $in: pIds } });
+        }
+        return true;
+      }
+    } catch (err) {
+      console.error('deleteUser error:', err);
+    }
+    return true;
+  }
+
+  // ==========================================
+  // SAVINGS VAULT & WITHDRAWAL REQUESTS
+  // ==========================================
+  public async createWithdrawalRequest(data: Omit<WithdrawalRequest, 'id' | 'createdAt' | 'status'>): Promise<WithdrawalRequest> {
+    const newReq: WithdrawalRequest = {
+      ...data,
+      id: `wdr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+
+    this.memWithdrawals.push(newReq);
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('withdrawals').insertOne(newReq as any);
+      }
+    } catch (err) {
+      console.error('createWithdrawalRequest error:', err);
+    }
+
+    await this.logAudit('vault.withdrawal_requested', 'withdrawal', newReq.id, {
+      goalId: data.goalId,
+      vaultAmount: data.vaultAmount,
+      totalFeePercent: data.totalFeePercent,
+      feeAmount: data.feeAmount,
+      netPayoutAmount: data.netPayoutAmount,
+      isEarly: data.isEarlyWithdrawal,
+    });
+
+    return newReq;
+  }
+
+  public async getWithdrawalRequests(userId?: string): Promise<WithdrawalRequest[]> {
+    try {
+      const db = await this.getDb();
+      if (db) {
+        const query = userId ? { userId } : {};
+        return await db.collection<WithdrawalRequest>('withdrawals').find(query, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
+      }
+    } catch (err) {
+      console.error('getWithdrawalRequests DB error:', err);
+    }
+
+    if (userId) {
+      return this.memWithdrawals.filter(w => w.userId === userId).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    }
+    return this.memWithdrawals.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  public async getWithdrawalRequestById(id: string): Promise<WithdrawalRequest | null> {
+    try {
+      const db = await this.getDb();
+      if (db) {
+        return await db.collection<WithdrawalRequest>('withdrawals').findOne({ id }, { projection: { _id: 0 } });
+      }
+    } catch {}
+    return this.memWithdrawals.find(w => w.id === id) || null;
+  }
+
+  public async updateWithdrawalRequest(id: string, updates: Partial<WithdrawalRequest>): Promise<WithdrawalRequest | null> {
+    const idx = this.memWithdrawals.findIndex(w => w.id === id);
+    if (idx !== -1) {
+      this.memWithdrawals[idx] = { ...this.memWithdrawals[idx], ...updates };
+    }
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        const { _id, ...safeUpdates } = updates as any;
+        await db.collection('withdrawals').updateOne({ id }, { $set: safeUpdates });
+        return await db.collection<WithdrawalRequest>('withdrawals').findOne({ id }, { projection: { _id: 0 } });
+      }
+    } catch (err) {
+      console.error('updateWithdrawalRequest error:', err);
+    }
+
+    return this.memWithdrawals.find(w => w.id === id) || null;
+  }
+
+  public async getAdminPlatformStats(): Promise<{
+    totalUsers: number;
+    totalVaultsAmount: number;
+    totalPendingWithdrawals: number;
+    totalApprovedWithdrawals: number;
+    totalFeesCollected: number;
+    totalTransactionsCount: number;
+  }> {
+    const totalUsers = await this.getUsersCount();
+    const withdrawals = await this.getWithdrawalRequests();
+
+    const pending = withdrawals.filter(w => w.status === 'pending');
+    const approved = withdrawals.filter(w => w.status === 'approved');
+    const totalFeesCollected = approved.reduce((sum, w) => sum + (w.feeAmount || 0), 0);
+
+    let totalVaults = 0;
+    let txCount = 0;
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        const goals = await db.collection<Goal>('goals').find({}).toArray();
+        totalVaults = goals.reduce((sum, g) => sum + (g.current || 0), 0);
+        txCount = await db.collection('transactions').countDocuments();
+      } else {
+        totalVaults = this.memGoals.reduce((sum, g) => sum + (g.current || 0), 0);
+        txCount = this.memTransactions.length;
+      }
+    } catch {}
+
+    return {
+      totalUsers,
+      totalVaultsAmount: totalVaults,
+      totalPendingWithdrawals: pending.length,
+      totalApprovedWithdrawals: approved.length,
+      totalFeesCollected,
+      totalTransactionsCount: txCount,
+    };
+  }
+
+  // ==========================================
+  // AI RATE LIMITING (40 msgs in 8 hrs, 4 hr cooldown)
+  // ==========================================
+  public checkAndRecordAIMessage(userId: string): { allowed: boolean; quota: any; message?: string } {
+    const now = Date.now();
+    const windowMs = 8 * 60 * 60 * 1000; // 8 hours
+    const cooldownMs = 4 * 60 * 60 * 1000; // 4 hours
+    const maxMessages = 40;
+
+    // Prune entries older than 8 hours
+    this.memAIMessages = this.memAIMessages.filter(m => now - m.timestamp < windowMs);
+
+    const userMsgs = this.memAIMessages
+      .filter(m => m.userId === userId)
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    // If already sent 40 messages in the window
+    if (userMsgs.length >= maxMessages) {
+      const fortiethTime = userMsgs[maxMessages - 1].timestamp;
+      const unlockTime = fortiethTime + cooldownMs;
+
+      if (now < unlockTime) {
+        const remainingMs = unlockTime - now;
+        const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+        const mins = Math.ceil((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+        return {
+          allowed: false,
+          quota: {
+            usedCount: userMsgs.length,
+            maxCount: maxMessages,
+            remaining: 0,
+            windowHours: 8,
+            cooldownHours: 4,
+            isLocked: true,
+            lockedUntil: new Date(unlockTime).toISOString(),
+            message: `Message limit reached (40 messages in 8 hours). AI assistant is cooling down. Ready in ${hours}h ${mins}m.`,
+          },
+        };
+      }
+    }
+
+    // Allowed! Record current message
+    this.memAIMessages.push({ userId, timestamp: now });
+    const currentCount = userMsgs.length + 1;
+    const isNowLocked = currentCount >= maxMessages;
+    const lockedUntil = isNowLocked ? new Date(now + cooldownMs).toISOString() : null;
+
+    return {
+      allowed: true,
+      quota: {
+        usedCount: currentCount,
+        maxCount: maxMessages,
+        remaining: Math.max(0, maxMessages - currentCount),
+        windowHours: 8,
+        cooldownHours: 4,
+        isLocked: isNowLocked,
+        lockedUntil,
+      },
+    };
+  }
+
+  public getAIMessageQuota(userId: string): any {
+    const now = Date.now();
+    const windowMs = 8 * 60 * 60 * 1000;
+    const cooldownMs = 4 * 60 * 60 * 1000;
+    const maxMessages = 40;
+
+    this.memAIMessages = this.memAIMessages.filter(m => now - m.timestamp < windowMs);
+    const userMsgs = this.memAIMessages
+      .filter(m => m.userId === userId)
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    let isLocked = false;
+    let lockedUntil: string | null = null;
+
+    if (userMsgs.length >= maxMessages) {
+      const fortiethTime = userMsgs[maxMessages - 1].timestamp;
+      const unlockTime = fortiethTime + cooldownMs;
+      if (now < unlockTime) {
+        isLocked = true;
+        lockedUntil = new Date(unlockTime).toISOString();
+      }
+    }
+
+    return {
+      usedCount: userMsgs.length,
+      maxCount: maxMessages,
+      remaining: isLocked ? 0 : Math.max(0, maxMessages - userMsgs.length),
+      windowHours: 8,
+      cooldownHours: 4,
+      isLocked,
+      lockedUntil,
+    };
   }
 
   // Profiles

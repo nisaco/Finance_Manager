@@ -2,6 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
+  role: 'admin' | 'user';
   agreedToTermsAt: string;
   createdAt: string;
 }
@@ -40,6 +41,10 @@ export interface Budget {
   spent?: number;
   percentage?: number;
   remaining?: number;
+  rawSpent?: number;
+  cappedSpent?: number;
+  isExceeded?: boolean;
+  status?: 'normal' | 'exceeded_locked';
 }
 
 export interface Goal {
@@ -50,6 +55,11 @@ export interface Goal {
   current: number;
   currency: string;
   deadline?: string;
+  status?: 'active' | 'pending_withdrawal' | 'withdrawn' | 'locked';
+  vaultType?: 'high_yield_vault' | 'locked_savings' | 'emergency_stash' | 'flexible_goal';
+  interestRateApr?: number;
+  isLocked?: boolean;
+  lockPeriodDays?: number;
   paystackDestination: {
     type: 'paystack_recipient' | 'none';
     recipientCode?: string;
@@ -59,6 +69,46 @@ export interface Goal {
     accountNumber?: string;
   };
   createdAt: string;
+}
+
+export interface WithdrawalRequest {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName?: string;
+  profileId: string;
+  goalId: string;
+  goalName: string;
+  vaultAmount: number;
+  isEarlyWithdrawal: boolean;
+  standardFeePercent: number; // 2%
+  earlyPenaltyPercent: number; // 10% if early, else 0%
+  totalFeePercent: number; // 2% or 12%
+  feeAmount: number;
+  netPayoutAmount: number;
+  currency: string;
+  payoutDetails: {
+    bankOrProvider: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  status: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  adminNotes?: string;
+  approvedAt?: string;
+  paystackTransferReference?: string;
+  createdAt: string;
+}
+
+export interface AIMessageQuota {
+  usedCount: number;
+  maxCount: number; // 40
+  remaining: number;
+  windowHours: number; // 8
+  cooldownHours: number; // 4
+  isLocked: boolean;
+  lockedUntil?: string | null;
+  message?: string;
 }
 
 export interface Debt {
@@ -133,4 +183,19 @@ export interface AuditLog {
   entityId?: string;
   meta?: Record<string, any>;
   createdAt: string;
+}
+
+export interface UserWithStats extends User {
+  profilesCount: number;
+  transactionsCount: number;
+  totalBalance?: number;
+}
+
+export interface AdminPlatformStats {
+  totalUsers: number;
+  totalProfiles?: number;
+  totalTransactions?: number;
+  pendingWithdrawalsCount: number;
+  totalSavingsVaultAmount: number;
+  totalFeesCollected: number;
 }

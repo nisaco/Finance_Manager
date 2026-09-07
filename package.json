@@ -27,6 +27,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.3",
+    "jspdf": "^4.2.1",
     "katex": "^0.18.7",
     "lucide-react": "^0.546.0",
     "mongodb": "^7.6.0",
@@ -36,6 +37,7 @@
     "recharts": "^3.10.1",
     "vite": "^6.2.3",
     "ws": "^8.21.3",
+    "xlsx": "^0.18.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

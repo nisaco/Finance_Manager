@@ -360,6 +360,31 @@ When speaking:
           session.sendRealtimeInput({
             text: payload.text,
           });
+
+          // Generate fast text transcription mirror so the UI always has the transcription clearly visible
+          (async () => {
+            try {
+              const aiFast = getGenAI();
+              const mirrorRes = await aiFast.models.generateContent({
+                model: 'gemini-3.1-flash-lite',
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [
+                      {
+                        text: `You are Fima, an expert financial intelligence assistant. Give a concise, warm, natural spoken reply (1-2 sentences) to: "${payload.text}". If math is needed, show the formula clearly.`,
+                      },
+                    ],
+                  },
+                ],
+              });
+              if (mirrorRes.text && clientWs.readyState === WebSocket.OPEN) {
+                clientWs.send(JSON.stringify({ type: 'text', text: mirrorRes.text.trim() }));
+              }
+            } catch (err) {
+              console.warn('[Voice Text Mirror Fallback]:', err);
+            }
+          })();
         }
         // Client Close Signal
         else if (payload.type === 'close') {

@@ -9,6 +9,7 @@ import { createServer as createViteServer } from 'vite';
 import { dbManager } from './server/db.js';
 import {
   authMiddleware,
+  adminMiddleware,
   optionalAuthMiddleware,
   checkRateLimit,
   registerFailedAttempt,
@@ -277,6 +278,15 @@ async function startServer() {
         event.data,
         event.data.gateway_response || 'Paystack confirmed transfer success'
       );
+    } else if (event?.event === 'charge.success' && event?.data) {
+      // Direct checkout deposit payment successful!
+      const reference = event.data.reference;
+      await dbManager.updateTransferStatus(
+        reference,
+        'success',
+        event.data,
+        event.data.gateway_response || 'Paystack card/MoMo payment confirmed'
+      );
     } else if ((event?.event === 'transfer.failed' || event?.event === 'transfer.reversed') && event?.data) {
       const reference = event.data.reference;
       await dbManager.updateTransferStatus(
@@ -394,23 +404,93 @@ async function startServer() {
     if (!profileId || !type || !amount || !currency || !category) {
       return res.status(400).json({ error: 'Missing required transaction fields' });
     }
+    const numAmount = Number(amount);
     const tx = await dbManager.createTransaction({
       profileId,
       type,
-      amount: Number(amount),
+      amount: numAmount,
       currency,
       category,
       date: date || new Date().toISOString().split('T')[0],
       note: note || '',
       recurring: recurring || 'none',
     });
-    res.status(201).json(tx);
+
+    // Check if an expense causes a budget to breach 100% + 5% (105% hard stop)
+    let budgetExceededAlert = null;
+    if (type === 'expense') {
+      try {
+        const budgets = await dbManager.getBudgets(profileId);
+        const matchedBudget = budgets.find(
+          (b) => b.category.toLowerCase().trim() === category.toLowerCase().trim()
+        );
+        if (matchedBudget && matchedBudget.limit > 0) {
+          const now = new Date();
+          const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const allTxs = await dbManager.getTransactions(profileId);
+          const totalCategoryExpenses = allTxs
+            .filter((t) => t.type === 'expense' && t.date.startsWith(currentYearMonth) && t.category.toLowerCase().trim() === category.toLowerCase().trim())
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const maxCap = matchedBudget.limit * 1.05; // 105% cap
+          if (totalCategoryExpenses >= maxCap) {
+            budgetExceededAlert = {
+              category: matchedBudget.category,
+              limit: matchedBudget.limit,
+              rawSpent: totalCategoryExpenses,
+              cappedSpent: Number(maxCap.toFixed(2)),
+              currency: matchedBudget.currency,
+              isExceeded: true,
+              message: `⚠️ Budget threshold exceeded! Expenditures for "${matchedBudget.category}" reached 105% (${maxCap.toLocaleString()} ${matchedBudget.currency}). Budget calculations are now frozen at 105%—further expenses will not be counted in this budget.`,
+            };
+          }
+        }
+      } catch (err) {
+        console.error('Budget check error:', err);
+      }
+    }
+
+    res.status(201).json({ ...tx, budgetExceededAlert });
   });
 
   app.patch('/api/transactions/:id', async (req: Request, res: Response) => {
     const updated = await dbManager.updateTransaction(req.params.id, req.body);
     if (!updated) return res.status(404).json({ error: 'Transaction not found' });
-    res.json(updated);
+
+    let budgetExceededAlert = null;
+    if (updated.type === 'expense') {
+      try {
+        const budgets = await dbManager.getBudgets(updated.profileId);
+        const matchedBudget = budgets.find(
+          (b) => b.category.toLowerCase().trim() === updated.category.toLowerCase().trim()
+        );
+        if (matchedBudget && matchedBudget.limit > 0) {
+          const now = new Date();
+          const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          const allTxs = await dbManager.getTransactions(updated.profileId);
+          const totalCategoryExpenses = allTxs
+            .filter((t) => t.type === 'expense' && t.date.startsWith(currentYearMonth) && t.category.toLowerCase().trim() === updated.category.toLowerCase().trim())
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const maxCap = matchedBudget.limit * 1.05;
+          if (totalCategoryExpenses >= maxCap) {
+            budgetExceededAlert = {
+              category: matchedBudget.category,
+              limit: matchedBudget.limit,
+              rawSpent: totalCategoryExpenses,
+              cappedSpent: Number(maxCap.toFixed(2)),
+              currency: matchedBudget.currency,
+              isExceeded: true,
+              message: `⚠️ Budget threshold exceeded! Expenditures for "${matchedBudget.category}" reached 105% (${maxCap.toLocaleString()} ${matchedBudget.currency}). Budget calculations are now frozen at 105%—further expenses will not be counted in this budget.`,
+            };
+          }
+        }
+      } catch (err) {
+        console.error('Budget check error on patch:', err);
+      }
+    }
+
+    res.json({ ...updated, budgetExceededAlert });
   });
 
   app.delete('/api/transactions/:id', async (req: Request, res: Response) => {
@@ -505,14 +585,26 @@ async function startServer() {
     const txs = allTxs.filter((t) => t.type === 'expense' && t.date.startsWith(currentYearMonth));
 
     const budgetsWithSpent = budgets.map((b) => {
-      const spent = txs
-        .filter((t) => t.category.toLowerCase() === b.category.toLowerCase())
+      const rawSpent = txs
+        .filter((t) => t.category.toLowerCase().trim() === b.category.toLowerCase().trim())
         .reduce((sum, t) => sum + t.amount, 0);
+
+      const maxLimit = b.limit * 1.05; // 100% + 5%
+      const isExceeded = b.limit > 0 && rawSpent >= maxLimit;
+      // When exceeded, freeze spent at 105% (further expenditures are NOT calculated into the budget)
+      const cappedSpent = isExceeded ? Number(maxLimit.toFixed(2)) : Number(rawSpent.toFixed(2));
+      const percentage = b.limit > 0 ? (isExceeded ? 105 : Math.round((rawSpent / b.limit) * 100)) : 0;
+      const remaining = isExceeded ? 0 : Math.max(0, Number((b.limit - rawSpent).toFixed(2)));
+
       return {
         ...b,
-        spent,
-        percentage: b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0,
-        remaining: Math.max(0, b.limit - spent),
+        spent: cappedSpent,
+        rawSpent: Number(rawSpent.toFixed(2)),
+        cappedSpent,
+        isExceeded,
+        status: isExceeded ? 'exceeded_locked' : 'normal',
+        percentage,
+        remaining,
       };
     });
 
@@ -551,7 +643,19 @@ async function startServer() {
   });
 
   app.post('/api/goals', async (req: Request, res: Response) => {
-    const { profileId, name, target, currency, deadline, paystackDestination, current } = req.body;
+    const {
+      profileId,
+      name,
+      target,
+      currency,
+      deadline,
+      paystackDestination,
+      current,
+      vaultType,
+      interestRateApr,
+      isLocked,
+      lockPeriodDays,
+    } = req.body;
     if (!profileId || !name || !target) {
       return res.status(400).json({ error: 'Missing required goal fields' });
     }
@@ -562,6 +666,10 @@ async function startServer() {
       currency: currency || 'GHS',
       deadline,
       current: Number(current || 0),
+      vaultType: vaultType || 'locked_savings',
+      interestRateApr: interestRateApr !== undefined ? Number(interestRateApr) : 6.5,
+      isLocked: isLocked !== undefined ? Boolean(isLocked) : true,
+      lockPeriodDays: lockPeriodDays ? Number(lockPeriodDays) : undefined,
       paystackDestination: paystackDestination || { type: 'none' },
     });
     res.status(201).json(goal);
@@ -644,6 +752,202 @@ async function startServer() {
   app.get('/api/goals/:id/transfers', async (req: Request, res: Response) => {
     const transfers = await dbManager.getTransfers(req.params.id);
     res.json(transfers);
+  });
+
+  // ==========================================
+  // SAVINGS VAULT WITHDRAWALS (Admin Controlled Payouts + 2% standard & 10% early penalty)
+  // ==========================================
+
+  app.post('/api/goals/:id/withdraw-request', authMiddleware, async (req: any, res: Response) => {
+    try {
+      const goal = await dbManager.getGoal(req.params.id);
+      if (!goal) return res.status(404).json({ error: 'Savings Vault not found' });
+      if ((goal.current || 0) <= 0) {
+        return res.status(400).json({ error: 'Cannot withdraw from an empty savings vault' });
+      }
+
+      const { bankOrProvider, accountNumber, accountName } = req.body;
+      if (!bankOrProvider || !accountNumber || !accountName) {
+        return res.status(400).json({ error: 'Bank/Mobile Money provider, account number, and recipient name are required for payout' });
+      }
+
+      const now = new Date();
+      const deadline = goal.deadline ? new Date(goal.deadline) : null;
+      // Early withdrawal if deadline is set and in the future
+      const isEarlyWithdrawal = Boolean(deadline && now < deadline);
+      const standardFeePercent = 2; // 2% standard fee
+      const earlyPenaltyPercent = isEarlyWithdrawal ? 10 : 0; // 10% penalty if early
+      const totalFeePercent = standardFeePercent + earlyPenaltyPercent; // 2% or 12%
+
+      const vaultAmount = Number(goal.current.toFixed(2));
+      const feeAmount = Number(((vaultAmount * totalFeePercent) / 100).toFixed(2));
+      const netPayoutAmount = Number((vaultAmount - feeAmount).toFixed(2));
+
+      const withdrawalRequest = await dbManager.createWithdrawalRequest({
+        userId: req.user.userId,
+        userEmail: req.user.email,
+        userName: req.user.username,
+        profileId: goal.profileId,
+        goalId: goal.id,
+        goalName: goal.name,
+        vaultAmount,
+        isEarlyWithdrawal,
+        standardFeePercent,
+        earlyPenaltyPercent,
+        totalFeePercent,
+        feeAmount,
+        netPayoutAmount,
+        currency: goal.currency || 'GHS',
+        payoutDetails: {
+          bankOrProvider: bankOrProvider.trim(),
+          accountNumber: accountNumber.trim(),
+          accountName: accountName.trim(),
+        },
+      });
+
+      // Mark goal status as pending_withdrawal
+      await dbManager.updateGoal(goal.id, { status: 'pending_withdrawal' });
+
+      res.status(201).json(withdrawalRequest);
+    } catch (err: any) {
+      console.error('Withdrawal request error:', err);
+      res.status(500).json({ error: err.message || 'Failed to submit withdrawal request' });
+    }
+  });
+
+  app.get('/api/withdrawals', authMiddleware, async (req: any, res: Response) => {
+    try {
+      const isAdmin = req.user.role === 'admin';
+      const userId = isAdmin && req.query.all === 'true' ? undefined : req.user.userId;
+      const requests = await dbManager.getWithdrawalRequests(userId);
+      res.json(requests);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch withdrawals' });
+    }
+  });
+
+  // ==========================================
+  // ADMIN "GOD MODE" ENDPOINTS
+  // ==========================================
+
+  app.get('/api/admin/stats', adminMiddleware, async (_req: any, res: Response) => {
+    try {
+      const stats = await dbManager.getAdminPlatformStats();
+      res.json(stats);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch platform stats' });
+    }
+  });
+
+  app.get('/api/admin/users', adminMiddleware, async (_req: any, res: Response) => {
+    try {
+      const users = await dbManager.getAllUsersWithStats();
+      res.json(users);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch platform users' });
+    }
+  });
+
+  app.patch('/api/admin/users/:id/role', adminMiddleware, async (req: any, res: Response) => {
+    try {
+      const { role } = req.body;
+      if (role !== 'admin' && role !== 'user') {
+        return res.status(400).json({ error: 'Role must be either "admin" or "user"' });
+      }
+      const success = await dbManager.updateUserRole(req.params.id, role);
+      if (!success) return res.status(404).json({ error: 'User not found' });
+      res.json({ success: true, role });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to update user role' });
+    }
+  });
+
+  app.delete('/api/admin/users/:id', adminMiddleware, async (req: any, res: Response) => {
+    try {
+      if (req.params.id === req.user.id || req.params.id === req.user.userId) {
+        return res.status(400).json({ error: 'Cannot delete your own administrator account' });
+      }
+      await dbManager.deleteUser(req.params.id);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to delete user' });
+    }
+  });
+
+  app.get('/api/admin/withdrawals', adminMiddleware, async (_req: any, res: Response) => {
+    try {
+      const requests = await dbManager.getWithdrawalRequests();
+      res.json(requests);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch withdrawal requests' });
+    }
+  });
+
+  app.post('/api/admin/withdrawals/:id/approve', adminMiddleware, async (req: any, res: Response) => {
+    try {
+      const { paystackReference, notes } = req.body;
+      const request = await dbManager.getWithdrawalRequestById(req.params.id);
+      if (!request) return res.status(404).json({ error: 'Withdrawal request not found' });
+      if (request.status !== 'pending') {
+        return res.status(400).json({ error: `Withdrawal request is already ${request.status}` });
+      }
+
+      const ref = paystackReference || `LEDGER_PAY_${Date.now()}`;
+      const updated = await dbManager.updateWithdrawalRequest(req.params.id, {
+        status: 'approved',
+        approvedAt: new Date().toISOString(),
+        paystackTransferReference: ref,
+        adminNotes: notes || '',
+      });
+
+      // Clear vault balance and mark withdrawn
+      const goal = await dbManager.getGoal(request.goalId);
+      if (goal) {
+        await dbManager.updateGoal(goal.id, {
+          current: 0,
+          status: 'withdrawn',
+        });
+      }
+
+      // Record transfer in database
+      await dbManager.createTransfer({
+        profileId: request.profileId,
+        goalId: request.goalId,
+        amount: request.netPayoutAmount,
+        currency: request.currency,
+        direction: 'withdrawal',
+        paystackReference: ref,
+        status: 'success',
+        gatewayResponse: `Disbursed ${request.currency} ${request.netPayoutAmount} to ${request.payoutDetails.bankOrProvider} (${request.payoutDetails.accountNumber})`,
+      });
+
+      res.json({ success: true, request: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to approve withdrawal request' });
+    }
+  });
+
+  app.post('/api/admin/withdrawals/:id/reject', adminMiddleware, async (req: any, res: Response) => {
+    try {
+      const { reason } = req.body;
+      const request = await dbManager.getWithdrawalRequestById(req.params.id);
+      if (!request) return res.status(404).json({ error: 'Withdrawal request not found' });
+
+      const updated = await dbManager.updateWithdrawalRequest(req.params.id, {
+        status: 'rejected',
+        rejectionReason: reason || 'Declined by platform administrator',
+      });
+
+      // Unlock goal status back to active
+      const goal = await dbManager.getGoal(request.goalId);
+      if (goal) {
+        await dbManager.updateGoal(goal.id, { status: 'active' });
+      }
+
+      res.json({ success: true, request: updated });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to reject withdrawal request' });
+    }
   });
 
   // ==========================================
@@ -886,6 +1190,37 @@ async function startServer() {
     res.json(result);
   });
 
+  app.post('/api/paystack/initialize-deposit', optionalAuthMiddleware, async (req: any, res: Response) => {
+    const { email, amount, currency, goalId, profileId, callbackUrl } = req.body;
+    if (!amount || Number(amount) <= 0 || !goalId || !profileId) {
+      return res.status(400).json({ error: 'amount, goalId, and profileId are required' });
+    }
+
+    const userEmail = email || req.user?.email || 'saver@ledgerapp.io';
+    try {
+      const initResult = await paystackService.initializeDeposit({
+        email: userEmail,
+        amount: Number(amount),
+        currency: currency || 'GHS',
+        goalId,
+        profileId,
+        callbackUrl,
+      });
+      res.json(initResult);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to initialize Paystack deposit' });
+    }
+  });
+
+  app.get('/api/paystack/verify-deposit/:reference', optionalAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+      const result = await paystackService.verifyDeposit(req.params.reference);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Verification failed' });
+    }
+  });
+
   // ==========================================
   // AUDIT LOGS & SETTINGS
   // ==========================================
@@ -958,15 +1293,34 @@ async function startServer() {
   });
 
   // ==========================================
-  // GEMINI AI ADVISOR & SEARCH GROUNDING
+  // GEMINI AI ADVISOR & RATE LIMITING
+  // (40 messages per 8 hours, 4-hour cooldown lock)
   // ==========================================
 
-  app.post('/api/ai/chat', optionalAuthMiddleware, async (req: Request, res: Response) => {
+  app.get('/api/ai/quota', optionalAuthMiddleware, (req: any, res: Response) => {
+    const userId = req.user?.userId || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'default_user';
+    const quota = dbManager.getAIMessageQuota(userId);
+    res.json(quota);
+  });
+
+  app.post('/api/ai/chat', optionalAuthMiddleware, async (req: any, res: Response) => {
     try {
       const { messages, model, enableSearch, profileContext } = req.body;
 
       if (!Array.isArray(messages) || messages.length === 0) {
         return res.status(400).json({ error: 'Messages array is required' });
+      }
+
+      // Check rate limit: 40 messages per 8 hours per user
+      const userId = req.user?.userId || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'default_user';
+      const quotaCheck = dbManager.checkAndRecordAIMessage(userId);
+
+      if (!quotaCheck.allowed) {
+        return res.status(429).json({
+          error: 'AI_RATE_LIMIT_EXCEEDED',
+          message: quotaCheck.quota.message || 'Message limit reached (40 messages in 8 hours). AI assistant is cooling down.',
+          quota: quotaCheck.quota,
+        });
       }
 
       const chatResult = await chatFinancialAdvisor({
@@ -976,7 +1330,10 @@ async function startServer() {
         profileContext,
       });
 
-      res.json(chatResult);
+      res.json({
+        ...chatResult,
+        quota: quotaCheck.quota,
+      });
     } catch (err: any) {
       console.error('[AI Chat Error]:', err);
       res.status(500).json({

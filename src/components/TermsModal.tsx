@@ -48,58 +48,99 @@ export const TermsModal: React.FC<TermsModalProps> = ({
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5 text-sm text-[#374151] dark:text-[#D1D5DB] leading-relaxed">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-sm text-[#374151] dark:text-[#D1D5DB] leading-relaxed">
+          
+          {/* Prominent Legal Disclaimer Callout */}
+          <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 space-y-2 text-xs">
+            <div className="flex items-center space-x-2 font-bold text-sm">
+              <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>IMPORTANT LEGAL NOTICE &amp; NON-BANK STATUS</span>
+            </div>
+            <p className="leading-relaxed">
+              Ledger is a financial management software tool and digital budgeting ledger. <strong>Ledger is NOT a bank, NOT a depository institution, NOT an investment fund, and does NOT generate income or pay interest.</strong> You cannot earn percentages or yields on savings goals. All features are self-directed budgeting mechanisms.
+            </p>
+          </div>
+
           <section className="space-y-2">
-            <h3 className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center gap-1.5">
-              <Shield className="w-4 h-4 text-[#2563EB]" /> 1. Agreement to Terms
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center gap-1.5 text-sm">
+              <Shield className="w-4 h-4 text-emerald-600" /> 1. Non-Banking &amp; Non-Yield Generating Principle
             </h3>
             <p className="text-xs leading-5">
-              By accessing, registering, or using Ledger (&quot;the Service&quot;), you agree to be bound by these Terms and Conditions. If you do not agree with all of these terms, you are expressly prohibited from using the platform and must discontinue access immediately.
+              You explicitly acknowledge and agree that Ledger is solely a technology and ledger management platform. Ledger does not operate as a financial institution or investment advisor. <strong>Savings goals and vaults do NOT earn interest, percentages, capital gains, or yields.</strong> We are not an income generator. Any balance shown in a savings goal represents funds ring-fenced from your own deposits for your personal budgeting milestones.
             </p>
           </section>
 
           <section className="space-y-2">
-            <h3 className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
-              2. User Accounts &amp; Multi-Profile System
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
+              2. Payment Collection &amp; Licensed Custodial Rails
             </h3>
             <p className="text-xs leading-5">
-              Users must provide accurate, complete, and updated registration details, including a valid email address and secure password. Each user account can create and maintain multiple sub-profiles (Personal, Business, Savings, Family). You are solely responsible for maintaining the confidentiality of your credentials, individual profile PINs, and account activities.
+              Ledger does not custody or hold customer funds directly on its own balance sheet. All deposit inflows and withdrawal disbursements are collected, routed, and processed via certified, licensed third-party Payment Service Providers (specifically <strong>Paystack Payments Limited</strong> and partner commercial banks and Mobile Money telecommunication operators including MTN MoMo, Telecel Cash, and AirtelTigo Money). Deposit receipts and transaction references are transmitted electronically to your registered email address.
             </p>
           </section>
 
           <section className="space-y-2">
-            <h3 className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
-              3. Email Usage &amp; Paystack Payment Referencing
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
+              3. User Right to Withdraw Funds &amp; Payout Policy
             </h3>
             <p className="text-xs leading-5">
-              Your registered email address is utilized for financial transaction receipts, automated settlement referencing, and transaction logging through our integration with Paystack financial rails. By signing up, you explicitly authorize Ledger and Paystack to transmit electronic transaction confirmations, receipts, and audit trail notifications to this email address.
+              Users retain unalienable ownership of their deposited principal and are entitled to request the withdrawal of their available savings vault balances at any time via the platform’s <strong>Withdraw Funds / Request Payout</strong> interface. Outbound payouts are settled to the user's verified Mobile Money wallet or nominated commercial bank account. To prevent unauthorized account drainage, all withdrawal requests are subject to automated verification and administrative anti-fraud clearance before disbursement.
             </p>
           </section>
 
           <section className="space-y-2">
-            <h3 className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
-              4. Security, Profile Locking &amp; PIN Verification
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
+              4. Standard Transaction &amp; Disbursement Fees (2.0%)
             </h3>
             <p className="text-xs leading-5">
-              Ledger equips users with optional profile locking mechanisms backed by cryptographic hashing. You agree not to disclose your security PINs to unauthorized third parties. Ledger will not be liable for unauthorized transactions or modifications resulting from compromised credentials on your devices.
+              To cover third-party payment gateway transaction settlement costs, telecommunication network wallet transfer levies, clearing house charges, and technical system infrastructure operations, a non-negotiable <strong>2.0% protocol processing &amp; disbursement fee</strong> is automatically assessed and deducted from the gross requested withdrawal amount at the moment of payout.
             </p>
           </section>
 
           <section className="space-y-2">
-            <h3 className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
-              5. Acceptable Financial Usage
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
+              5. Time-Locked Discipline Vaults &amp; Early Liquidation Penalty (10.0%)
             </h3>
             <p className="text-xs leading-5">
-              You agree not to use the platform for unlawful, fraudulent, money-laundering, or unauthorized payment activities. All ledger entries, goals, and transfer requests must reflect bona fide financial records.
+              Users may voluntarily designate a savings goal as a <strong>Time-Locked Vault</strong> for fixed maturity terms (e.g., 30, 90, 180, or 365 days) as a personal self-discipline commitment against impulsive spending. By setting a locked vault, you explicitly agree to the following enforceable terms:
+            </p>
+            <ul className="text-xs leading-5 list-disc pl-5 space-y-1 text-[#4B5563] dark:text-[#9CA3AF]">
+              <li>
+                <strong>Early Liquidation Penalty:</strong> If you elect to unlock, liquidate, or withdraw funds from a time-locked vault <em>prior to the agreed maturity date</em>, an <strong>Early Liquidation Penalty of 10.0%</strong> of the withdrawn amount shall be deducted from your payout, in addition to the standard 2.0% processing fee (total 12.0% deduction).
+              </li>
+              <li>
+                <strong>Post-Maturity Withdrawals:</strong> If you withdraw funds on or after the scheduled lock maturity date, NO penalty is charged (only the standard 2.0% processing fee applies).
+              </li>
+              <li>
+                <strong>Liquidated Damages Agreement:</strong> You acknowledge that this penalty is not punitive, but represents agreed-upon liquidated damages to enforce your voluntary commitment and offset administrative overheads.
+              </li>
+            </ul>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
+              6. Security, Profile Locks &amp; User Liability
+            </h3>
+            <p className="text-xs leading-5">
+              Ledger equips users with optional multi-profile PIN locks and session safeguards. You are solely responsible for maintaining the confidentiality of your credentials and PIN codes. Ledger will not be liable for any unauthorized transfers, data breaches, or compromised payouts resulting from device theft, shared credentials, or incorrect account/wallet numbers provided by the user.
             </p>
           </section>
 
           <section className="space-y-2">
-            <h3 className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
-              6. Limitation of Liability
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
+              7. Absolute Limitation of Liability &amp; Hold Harmless
             </h3>
             <p className="text-xs leading-5">
-              To the fullest extent permitted by law, Ledger and its affiliates shall not be liable for any indirect, incidental, or consequential damages resulting from system downtime, third-party payment rail delays (including banking network latency), or erroneous financial inputs made by the user.
+              To the fullest extent permissible by applicable law, you agree to <strong>fully indemnify, defend, and hold harmless Ledger, its creators, operators, and affiliates</strong> from and against any claims, losses, damages, liabilities, regulatory inquiries, or expenses (including legal fees) arising out of your use of the platform, third-party payment gateway downtime (including Paystack or telecommunication network outages), inaccurate financial inputs, or delays in payout disbursement. You agree that Ledger’s total aggregate liability shall under no circumstances exceed the total fees collected directly from your account in the preceding 30 days.
+            </p>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
+              8. Compliance with Financial Regulations &amp; Anti-Money Laundering (AML)
+            </h3>
+            <p className="text-xs leading-5">
+              You agree not to utilize Ledger for any unlawful activity, money laundering, terrorist financing, or fraudulent transactions. Ledger and its payment partners reserve the right to freeze suspicious transfers, request proof of identity, or report unlawful conduct to relevant regulatory authorities without prior notice.
             </p>
           </section>
         </div>

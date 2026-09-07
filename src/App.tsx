@@ -24,6 +24,7 @@ import { AuditLogModal } from './components/Modals/AuditLogModal';
 import { ProfileModal } from './components/Modals/ProfileModal';
 import { ProfileLockModal } from './components/Modals/ProfileLockModal';
 import { LiveVoiceModal } from './components/Modals/LiveVoiceModal';
+import { AdminGodModeModal } from './components/Modals/AdminGodModeModal';
 import { TermsModal } from './components/TermsModal';
 import { PrivacyModal } from './components/PrivacyModal';
 
@@ -65,6 +66,7 @@ const MainShell: React.FC = () => {
 
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [auditLogModalOpen, setAuditLogModalOpen] = useState(false);
+  const [adminModalOpen, setAdminModalOpen] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
@@ -131,6 +133,7 @@ const MainShell: React.FC = () => {
         onTabChange={(tab) => setActiveTab(tab as any)}
         onOpenNewTx={handleOpenNewTx}
         onOpenLiveVoice={() => setLiveVoiceModalOpen(true)}
+        onOpenAdminModal={() => setAdminModalOpen(true)}
       />
 
       {/* Main Page Content Area */}
@@ -182,7 +185,10 @@ const MainShell: React.FC = () => {
         {activeTab === 'ai-advisor' && <AIAdvisorPage />}
 
         {activeTab === 'settings' && (
-          <SettingsPage onOpenAuditLogs={() => setAuditLogModalOpen(true)} />
+          <SettingsPage
+            onOpenAuditLogs={() => setAuditLogModalOpen(true)}
+            onOpenAdminModal={() => setAdminModalOpen(true)}
+          />
         )}
       </main>
 
@@ -270,6 +276,11 @@ const MainShell: React.FC = () => {
       <LiveVoiceModal
         isOpen={liveVoiceModalOpen}
         onClose={() => setLiveVoiceModalOpen(false)}
+      />
+
+      <AdminGodModeModal
+        isOpen={adminModalOpen}
+        onClose={() => setAdminModalOpen(false)}
       />
 
       <TermsModal

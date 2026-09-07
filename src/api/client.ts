@@ -10,6 +10,10 @@ import {
   MonthlyTrend,
   PaystackBank,
   AuditLog,
+  WithdrawalRequest,
+  UserWithStats,
+  AdminPlatformStats,
+  AIMessageQuota,
 } from '../types';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -218,6 +222,15 @@ export const api = {
       body: JSON.stringify({ name, accountNumber, bankCode, currency }),
     }),
   verifyTransfer: (reference: string) => request<FundTransfer>(`/api/paystack/verify/${reference}`),
+  initializeDeposit: (data: { email?: string; amount: number; currency?: string; goalId: string; profileId: string }) =>
+    request<{ authorizationUrl: string; accessCode: string; reference: string; simulated: boolean }>('/api/paystack/initialize-deposit', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  verifyDeposit: (reference: string) =>
+    request<{ status: 'success' | 'failed' | 'pending'; message: string; transfer: FundTransfer | null; goal?: any }>(
+      `/api/paystack/verify-deposit/${reference}`
+    ),
 
   // Settings & System
   getSettings: (profileId: string) =>
@@ -296,8 +309,50 @@ export const api = {
       modelUsed: string;
       groundingSources?: { title?: string; uri?: string }[];
       searchQueries?: string[];
+      quota?: AIMessageQuota;
     }>('/api/ai/chat', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  getAIQuota: () => request<AIMessageQuota>('/api/ai/quota'),
+
+  // Savings Vault Withdrawals
+  requestVaultWithdrawal: (
+    goalId: string,
+    payoutDetails: {
+      bankOrProvider: string;
+      accountNumber: string;
+      accountName: string;
+    }
+  ) =>
+    request<WithdrawalRequest>(`/api/goals/${goalId}/withdraw-request`, {
+      method: 'POST',
+      body: JSON.stringify(payoutDetails),
+    }),
+  getWithdrawals: (all?: boolean) =>
+    request<WithdrawalRequest[]>(`/api/withdrawals${all ? '?all=true' : ''}`),
+
+  // Admin "God Mode"
+  getAdminStats: () => request<AdminPlatformStats>('/api/admin/stats'),
+  getAdminUsers: () => request<UserWithStats[]>('/api/admin/users'),
+  updateUserRole: (id: string, role: 'admin' | 'user') =>
+    request<{ success: boolean; role: 'admin' | 'user' }>(`/api/admin/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    }),
+  deleteUser: (id: string) =>
+    request<{ success: boolean }>(`/api/admin/users/${id}`, {
+      method: 'DELETE',
+    }),
+  getAdminWithdrawals: () => request<WithdrawalRequest[]>('/api/admin/withdrawals'),
+  approveAdminWithdrawal: (id: string, data: { paystackReference?: string; notes?: string }) =>
+    request<{ success: boolean; request: WithdrawalRequest }>(`/api/admin/withdrawals/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  rejectAdminWithdrawal: (id: string, reason?: string) =>
+    request<{ success: boolean; request: WithdrawalRequest }>(`/api/admin/withdrawals/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
     }),
 };

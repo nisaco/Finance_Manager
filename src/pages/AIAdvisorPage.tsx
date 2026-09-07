@@ -27,10 +27,14 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Clock,
+  X,
+  ArrowRight,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/client';
+import { AIMessageQuota } from '../types';
 import { LiveVoiceModal } from '../components/Modals/LiveVoiceModal';
 import { FormattedMessage } from '../components/FormattedMessage';
 
@@ -104,6 +108,13 @@ export const AIAdvisorPage: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [showLedgerSidebar, setShowLedgerSidebar] = useState<boolean>(false);
+  const [quota, setQuota] = useState<AIMessageQuota | null>(null);
+
+  useEffect(() => {
+    api.getAIQuota().then(setQuota).catch((err) => {
+      console.warn('Could not load initial AI quota:', err);
+    });
+  }, []);
 
   // Safe calculated ledger metrics
   const currency = activeProfile?.displayCurrency || 'GHS';
@@ -314,6 +325,10 @@ export const AIAdvisorPage: React.FC = () => {
         profileContext: buildProfileContext(),
       });
 
+      if (response.quota) {
+        setQuota(response.quota);
+      }
+
       const modelMessage: Message = {
         id: Math.random().toString(36).substring(2, 9),
         role: 'model',
@@ -327,12 +342,22 @@ export const AIAdvisorPage: React.FC = () => {
       setMessages((prev) => [...prev, modelMessage]);
     } catch (err: any) {
       console.error('Chat error:', err);
+      const isRateLimit = err.status === 429 || err.message?.includes('429') || err.message?.toLowerCase().includes('rate limit') || err.message?.toLowerCase().includes('quota');
+      
+      if (err.quota) {
+        setQuota(err.quota);
+      } else {
+        api.getAIQuota().then(setQuota).catch(() => {});
+      }
+
       const errorMessage: Message = {
         id: Math.random().toString(36).substring(2, 9),
         role: 'model',
-        content: `I ran into an issue retrieving that: ${
-          err.message || 'There was a temporary service error.'
-        }\n\nPlease try again or switch to another model tier.`,
+        content: isRateLimit
+          ? `⏳ **AI Rate Limit Reached (40 messages / 8 hours)**\n\nYou have used your allocated 40 advisory messages for this 8-hour window to ensure stable service for all users. Please wait for your quota to reset before sending further prompts.`
+          : `I ran into an issue retrieving that: ${
+              err.message || 'There was a temporary service error.'
+            }\n\nPlease try again or switch to another model tier.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         modelUsed: selectedModel,
       };
@@ -417,50 +442,66 @@ export const AIAdvisorPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E8E5DF] dark:border-[#2D323F] pb-4">
+    <div className="space-y-3">
+      {/* Top Header: Gemini-Style Navigation & Intelligence Controls */}
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] flex items-center justify-center shadow-xs">
-            <Sparkles className="w-5 h-5 text-emerald-400 dark:text-emerald-600" />
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#1A1A1A] to-[#3B4252] text-white dark:from-[#F3F4F6] dark:to-[#D1D5DB] dark:text-[#111317] flex items-center justify-center shadow-xs">
+            <Sparkles className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <h1 className="font-display text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6] tracking-tight">
-                Fima
+              <h1 className="font-display text-lg sm:text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6] tracking-tight">
+                Fima AI
               </h1>
-              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-mono font-semibold">
-                Finance Manager AI
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-mono font-semibold">
+                Finance Strategist
               </span>
             </div>
-            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-              Intelligent wealth strategist, full ledger analyst &amp; comprehensive knowledge assistant
+            <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] hidden sm:block">
+              Full-context financial advisory powered by Gemini intelligence
             </p>
           </div>
         </div>
 
-        {/* Global Action Tools */}
-        <div className="flex items-center space-x-2">
-          {/* Mobile Ledger Scope Toggle */}
-          <button
-            onClick={() => setShowLedgerSidebar(!showLedgerSidebar)}
-            className="lg:hidden flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1A1D24] text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] shadow-xs"
-            title="Toggle ledger metrics panel"
-          >
-            <Layers className="w-3.5 h-3.5 text-emerald-600" />
-            <span>{showLedgerSidebar ? 'Hide Scope' : 'Ledger Scope'}</span>
-          </button>
-
-          {/* Voice Launcher Button */}
-          <button
-            onClick={() => setIsLiveVoiceOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
-            title="Start real-time voice dialogue with Fima"
-          >
-            <Mic className="w-3.5 h-3.5" />
-            <span>Voice Fima</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
-          </button>
+        {/* Action Controls */}
+        <div className="flex items-center space-x-2 flex-wrap">
+          {/* Intelligence Model Selector */}
+          <div className="flex items-center bg-[#F7F5F2] dark:bg-[#1E222C] p-0.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F]">
+            <button
+              onClick={() => setSelectedModel('gemini-3.5-flash')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                selectedModel === 'gemini-3.5-flash'
+                  ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-semibold'
+                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
+              }`}
+              title="Balanced model for general reasoning & web search"
+            >
+              Balanced
+            </button>
+            <button
+              onClick={() => setSelectedModel('gemini-3.1-pro-preview')}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                selectedModel === 'gemini-3.1-pro-preview'
+                  ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-semibold'
+                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
+              }`}
+              title="Deep strategic reasoning & complex financial math"
+            >
+              Deep Reasoning
+            </button>
+            <button
+              onClick={() => setSelectedModel('gemini-3.1-flash-lite')}
+              className={`hidden sm:block px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                selectedModel === 'gemini-3.1-flash-lite'
+                  ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-semibold'
+                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
+              }`}
+              title="Fast calculations & quick answers"
+            >
+              Fast
+            </button>
+          </div>
 
           {/* Search Grounding Toggle */}
           <button
@@ -468,7 +509,7 @@ export const AIAdvisorPage: React.FC = () => {
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
               enableSearch
                 ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 shadow-2xs'
-                : 'bg-white dark:bg-[#1A1D24] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
+                : 'bg-white dark:bg-[#1E222C] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
             }`}
             title="Ground answers with live Google Search data"
           >
@@ -477,7 +518,7 @@ export const AIAdvisorPage: React.FC = () => {
                 enableSearch ? 'text-blue-600 dark:text-blue-400 animate-pulse' : ''
               }`}
             />
-            <span>Search</span>
+            <span className="hidden sm:inline">Search</span>
             {enableSearch && (
               <span className="px-1 py-0.2 rounded bg-blue-600 text-white text-[9px] font-bold">
                 ON
@@ -485,215 +526,255 @@ export const AIAdvisorPage: React.FC = () => {
             )}
           </button>
 
-          {/* Reset / New Thread */}
+          {/* Ledger Scope Drawer Trigger */}
+          <button
+            onClick={() => setShowLedgerSidebar(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1E222C] text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] hover:bg-[#F7F5F2] dark:hover:bg-[#262B37] transition-all shadow-xs"
+            title="Inspect active ledger figures & metrics"
+          >
+            <Wallet className="w-3.5 h-3.5 text-emerald-600" />
+            <span className="hidden md:inline font-mono-num">
+              {profileName} • {currency} {netBalance.toLocaleString()}
+            </span>
+            <span className="md:hidden">Ledger</span>
+          </button>
+
+          {/* Voice Fima Launcher Button */}
+          <button
+            onClick={() => setIsLiveVoiceOpen(true)}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
+            title="Start borderless voice dialogue with Fima"
+          >
+            <Mic className="w-3.5 h-3.5" />
+            <span>Voice</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
+          </button>
+
+          {/* New Chat Session */}
           <button
             onClick={handleResetConversation}
-            className="p-2 rounded-xl bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-[#F3F4F6] transition-colors"
-            title="Start a new chat session with Fima"
+            className="p-2 rounded-xl bg-white dark:bg-[#1E222C] border border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-[#F3F4F6] transition-colors"
+            title="Start new conversation thread"
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Main Container: Chat Thread + Scope Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Chat Area (3 Columns) */}
-        <div className="lg:col-span-3 flex flex-col bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl shadow-xs h-[calc(100vh-210px)] min-h-[580px] max-h-[820px] overflow-hidden">
-          {/* Subheader: Model & Intelligence Modes */}
-          <div className="p-3 border-b border-[#E8E5DF] dark:border-[#2D323F] bg-[#FDFCFB] dark:bg-[#14161B] flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div className="flex items-center space-x-2">
-              <span className="text-[#6B7280] dark:text-[#9CA3AF] font-bold text-[10px] tracking-wider uppercase">
-                Intelligence:
-              </span>
-              <div className="flex items-center space-x-1 bg-[#F7F5F2] dark:bg-[#22252E] p-0.5 rounded-lg border border-[#E8E5DF] dark:border-[#2D323F]">
-                <button
-                  onClick={() => setSelectedModel('gemini-3.5-flash')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
-                    selectedModel === 'gemini-3.5-flash'
-                      ? 'bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] shadow-2xs font-semibold'
-                      : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                  }`}
-                  title="General intelligence & search grounding"
-                >
-                  Balanced
-                </button>
-                <button
-                  onClick={() => setSelectedModel('gemini-3.1-pro-preview')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
-                    selectedModel === 'gemini-3.1-pro-preview'
-                      ? 'bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] shadow-2xs font-semibold'
-                      : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                  }`}
-                  title="Deep strategic reasoning & complex financial math"
-                >
-                  Deep Reasoning
-                </button>
-                <button
-                  onClick={() => setSelectedModel('gemini-3.1-flash-lite')}
-                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition-all ${
-                    selectedModel === 'gemini-3.1-flash-lite'
-                      ? 'bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] shadow-2xs font-semibold'
-                      : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                  }`}
-                  title="Ultra-fast calculations and quick answers"
-                >
-                  Fast Mode
-                </button>
+      {/* Main Full-Width Gemini-Style Context Window */}
+      <div className="w-full bg-white dark:bg-[#13161F] border border-[#E8E5DF] dark:border-[#252935] rounded-3xl shadow-xs h-[calc(100vh-190px)] min-h-[620px] flex flex-col overflow-hidden relative">
+        {/* Messages Stream (Centered max-w-4xl like Gemini) */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
+          <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-6 space-y-7">
+            {/* Gemini Hero Greeting (Rendered when fresh or on welcome) */}
+            {messages.length <= 1 && (
+              <div className="pt-4 pb-6 text-center max-w-2xl mx-auto space-y-4 animate-in fade-in duration-300">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shadow-2xs">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6]">
+                    Hello, {user?.name?.split(' ')[0] || profileName}
+                  </h2>
+                  <p className="text-sm sm:text-base text-[#6B7280] dark:text-[#9CA3AF] mt-1 font-normal">
+                    How can I assist with your finances or answer questions today?
+                  </p>
+                </div>
+
+                {/* 4 Gemini Prompt Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 text-left">
+                  {QUICK_PROMPTS.map((qp, idx) => {
+                    const Icon = qp.icon;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          if (qp.enableSearch) setEnableSearch(true);
+                          handleSendMessage(qp.prompt, qp.enableSearch);
+                        }}
+                        className="p-3.5 rounded-2xl border border-[#E8E5DF] dark:border-[#252A36] bg-[#FDFCFB] dark:bg-[#1A1E29] hover:bg-[#F7F5F2] dark:hover:bg-[#232836] transition-all group shadow-2xs hover:shadow-xs active:scale-[0.99]"
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center space-x-2">
+                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] group-hover:underline">
+                              {qp.title}
+                            </span>
+                          </div>
+                          <ArrowRight className="w-3.5 h-3.5 text-[#9CA3AF] group-hover:text-[#1A1A1A] dark:group-hover:text-white transition-colors" />
+                        </div>
+                        <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] line-clamp-2 leading-relaxed">
+                          {qp.prompt}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-center space-x-3 text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-              <label className="flex items-center space-x-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={includeFinancialContext}
-                  onChange={(e) => setIncludeFinancialContext(e.target.checked)}
-                  className="rounded text-[#1A1A1A] focus:ring-0 w-3.5 h-3.5"
-                />
-                <span>Sync Active Ledger Data</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Messages Scroll View */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#FDFCFB]/50 dark:bg-[#14161B]/30 scrollbar-thin">
+            {/* Conversation Messages */}
             {messages.map((msg) => {
               const isUser = msg.role === 'user';
+
+              if (isUser) {
+                return (
+                  <div key={msg.id} className="flex justify-end animate-in fade-in duration-150">
+                    <div className="max-w-[85%] sm:max-w-[75%] rounded-3xl rounded-tr-md bg-[#1A1A1A] dark:bg-[#F3F4F6] text-white dark:text-[#111317] px-5 py-3.5 text-sm leading-relaxed shadow-xs">
+                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <div className="text-[10px] text-white/50 dark:text-[#111317]/50 text-right mt-1.5 font-mono-num">
+                        {msg.timestamp}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <div
                   key={msg.id}
-                  className={`flex items-start space-x-2.5 ${isUser ? 'justify-end' : 'justify-start'}`}
+                  className="flex items-start space-x-3 sm:space-x-4 max-w-full animate-in fade-in duration-200"
                 >
-                  {!isUser && (
-                    <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] dark:bg-[#F3F4F6] text-white dark:text-[#111317] flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600" />
-                    </div>
-                  )}
+                  {/* Fima Sparkle Avatar */}
+                  <div className="w-8 h-8 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/20 shadow-2xs">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
 
-                  <div className="max-w-[88%] sm:max-w-[80%] space-y-1">
-                    {/* Header bar of bubble */}
-                    <div
-                      className={`flex items-center space-x-1.5 text-[10px] text-[#6B7280] dark:text-[#9CA3AF] ${
-                        isUser ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      <span className="font-bold">
-                        {isUser ? 'You' : 'Fima'}
+                  {/* Fima Content Presentation */}
+                  <div className="flex-1 space-y-2.5 overflow-hidden">
+                    {/* Header info */}
+                    <div className="flex items-center space-x-2 text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                      <span className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        Fima
                       </span>
+                      {msg.modelUsed && (
+                        <>
+                          <span>•</span>
+                          <span className="px-1.5 py-0.2 rounded bg-[#F7F5F2] dark:bg-[#222734] text-[10px] font-mono-num">
+                            {msg.modelUsed}
+                          </span>
+                        </>
+                      )}
                       <span>•</span>
                       <span className="font-mono-num">{msg.timestamp}</span>
-                      {!isUser && (
-                        <div className="flex items-center space-x-1 ml-1">
-                          <button
-                            onClick={() => handleToggleSpeak(msg.id, msg.content)}
-                            className={`p-1 rounded-md transition-colors ${
-                              speakingMessageId === msg.id
-                                ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60'
-                                : 'hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                            }`}
-                            title={
-                              speakingMessageId === msg.id ? 'Stop reading aloud' : 'Read answer aloud'
-                            }
-                          >
-                            {speakingMessageId === msg.id ? (
-                              <VolumeX className="w-3 h-3 text-emerald-600 animate-pulse" />
-                            ) : (
-                              <Volume2 className="w-3 h-3" />
-                            )}
-                          </button>
-                          <button
-                            onClick={() => handleCopyMessage(msg.id, msg.content)}
-                            className="p-1 hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] transition-colors"
-                            title="Copy response"
-                          >
-                            {copiedId === msg.id ? (
-                              <Check className="w-3 h-3 text-emerald-600" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </button>
-                        </div>
-                      )}
                     </div>
 
-                    {/* Message Bubble with Formatted Math & Markdown */}
-                    <div
-                      className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
-                        isUser
-                          ? 'bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] rounded-tr-none'
-                          : 'bg-white dark:bg-[#22252E] text-[#1A1A1A] dark:text-[#F3F4F6] border border-[#E8E5DF] dark:border-[#2D323F] rounded-tl-none shadow-2xs'
-                      }`}
-                    >
-                      <FormattedMessage content={msg.content} className="text-xs" />
+                    {/* Markdown Body */}
+                    <div className="text-sm leading-relaxed text-[#1A1A1A] dark:text-[#E5E7EB] space-y-2">
+                      <FormattedMessage content={msg.content} className="text-sm" />
+                    </div>
 
-                      {/* Google Search Queries if executed */}
-                      {msg.searchQueries && msg.searchQueries.length > 0 && (
-                        <div className="mt-3 pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F] space-y-1">
-                          <span className="text-[10px] uppercase font-bold tracking-wider text-[#6B7280] dark:text-[#9CA3AF] flex items-center space-x-1">
-                            <Search className="w-3 h-3 text-blue-500" />
-                            <span>Live Web Research:</span>
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {msg.searchQueries.map((q, idx) => (
-                              <span
-                                key={idx}
-                                className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[10px] font-mono-num"
-                              >
-                                "{q}"
+                    {/* Search Queries if executed */}
+                    {msg.searchQueries && msg.searchQueries.length > 0 && (
+                      <div className="pt-2 border-t border-[#E8E5DF] dark:border-[#252A36] space-y-1.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#6B7280] dark:text-[#9CA3AF] flex items-center space-x-1">
+                          <Search className="w-3 h-3 text-blue-500" />
+                          <span>Web Grounding Inquiries:</span>
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {msg.searchQueries.map((q, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-mono-num"
+                            >
+                              "{q}"
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Web Grounding Citations */}
+                    {msg.groundingSources && msg.groundingSources.length > 0 && (
+                      <div className="pt-2 border-t border-[#E8E5DF] dark:border-[#252A36] space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center space-x-1">
+                          <Globe className="w-3 h-3" />
+                          <span>Grounded Sources:</span>
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {msg.groundingSources.map((src, idx) => (
+                            <a
+                              key={idx}
+                              href={src.uri}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="flex items-center justify-between p-2 rounded-xl bg-[#F7F5F2] dark:bg-[#1C202B] hover:bg-[#E8E5DF] dark:hover:bg-[#252A38] border border-[#E8E5DF] dark:border-[#252A36] text-xs text-[#1A1A1A] dark:text-[#F3F4F6] transition-colors truncate group"
+                            >
+                              <span className="truncate pr-2 font-medium group-hover:underline">
+                                {src.title || src.uri}
                               </span>
-                            ))}
-                          </div>
+                              <ExternalLink className="w-3.5 h-3.5 shrink-0 text-[#6B7280]" />
+                            </a>
+                          ))}
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      {/* Web Grounding Citations */}
-                      {msg.groundingSources && msg.groundingSources.length > 0 && (
-                        <div className="mt-3 pt-2.5 border-t border-[#E8E5DF] dark:border-[#2D323F] space-y-1.5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center space-x-1">
-                            <Globe className="w-3 h-3" />
-                            <span>Grounded Web Citations:</span>
-                          </span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                            {msg.groundingSources.map((src, idx) => (
-                              <a
-                                key={idx}
-                                href={src.uri}
-                                target="_blank"
-                                rel="noreferrer noopener"
-                                className="flex items-center justify-between p-1.5 rounded-lg bg-[#F7F5F2] dark:bg-[#1A1D24] hover:bg-[#E8E5DF] dark:hover:bg-[#2D323F] border border-[#E8E5DF] dark:border-[#2D323F] text-[11px] text-[#1A1A1A] dark:text-[#F3F4F6] transition-colors truncate group"
-                              >
-                                <span className="truncate pr-1 font-medium group-hover:underline">
-                                  {src.title || src.uri}
-                                </span>
-                                <ExternalLink className="w-3 h-3 shrink-0 text-[#6B7280]" />
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                    {/* Action Row Under Response */}
+                    <div className="flex items-center space-x-2 pt-1">
+                      <button
+                        onClick={() => handleToggleSpeak(msg.id, msg.content)}
+                        className={`px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1 transition-colors ${
+                          speakingMessageId === msg.id
+                            ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 font-semibold'
+                            : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F]'
+                        }`}
+                        title={speakingMessageId === msg.id ? 'Stop audio playback' : 'Read aloud'}
+                      >
+                        {speakingMessageId === msg.id ? (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                            <span>Stop</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5" />
+                            <span>Listen</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => handleCopyMessage(msg.id, msg.content)}
+                        className="px-2.5 py-1 rounded-lg text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F] flex items-center space-x-1 transition-colors"
+                        title="Copy answer"
+                      >
+                        {copiedId === msg.id ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-emerald-600 font-semibold">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </div>
               );
             })}
 
+            {/* Gemini Thinking / Loading State */}
             {isLoading && (
-              <div className="flex items-start space-x-2.5">
-                <div className="w-7 h-7 rounded-lg bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] flex items-center justify-center shrink-0 mt-0.5">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400 dark:text-emerald-600 animate-spin" />
+              <div className="flex items-start space-x-3 sm:space-x-4 animate-in fade-in duration-200">
+                <div className="w-8 h-8 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/20">
+                  <Sparkles className="w-4 h-4 animate-spin text-emerald-500" />
                 </div>
-                <div className="p-3.5 rounded-2xl rounded-tl-none bg-white dark:bg-[#22252E] border border-[#E8E5DF] dark:border-[#2D323F] text-xs shadow-2xs space-y-2">
-                  <div className="flex items-center space-x-2 text-[#6B7280] dark:text-[#9CA3AF]">
+                <div className="space-y-2 py-1">
+                  <div className="flex items-center space-x-2 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
                     <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-500" />
                     <span>
                       {enableSearch
-                        ? 'Fima is searching live web data & evaluating ledger context...'
-                        : 'Fima is calculating formulas and formulating insights...'}
+                        ? 'Searching live web data & analyzing ledger context...'
+                        : 'Thinking and formulating response...'}
                     </span>
                   </div>
-                  <div className="flex space-x-1">
+                  <div className="flex space-x-1.5 pt-0.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" />
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.2s]" />
                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.4s]" />
@@ -701,111 +782,172 @@ export const AIAdvisorPage: React.FC = () => {
                 </div>
               </div>
             )}
+
             <div ref={messagesEndRef} />
-          </div>
-
-          {/* Quick Mathematical Formulas Carousel */}
-          <div className="px-3 py-1.5 border-t border-[#E8E5DF]/70 dark:border-[#2D323F]/70 bg-[#FAF9F7] dark:bg-[#16181F] flex items-center space-x-1.5 overflow-x-auto scrollbar-none">
-            <span className="text-[10px] font-bold text-[#6B7280] dark:text-[#9CA3AF] uppercase tracking-wider shrink-0 flex items-center space-x-1">
-              <Zap className="w-3 h-3 text-amber-500" />
-              <span>Formulas:</span>
-            </span>
-            {FORMULA_SHORTCUTS.map((fs, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSendMessage(fs.prompt)}
-                disabled={isLoading}
-                className="shrink-0 px-2.5 py-1 rounded-lg bg-white dark:bg-[#22252E] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[#1A1A1A] dark:text-[#F3F4F6] hover:text-emerald-700 dark:hover:text-emerald-300 border border-[#E8E5DF] dark:border-[#2D323F] text-[11px] font-medium transition-all shadow-2xs whitespace-nowrap active:scale-95 disabled:opacity-40"
-              >
-                {fs.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Chat Input Bar */}
-          <div className="p-3 border-t border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1A1D24] space-y-2">
-            <div className="flex items-center space-x-2">
-              <textarea
-                ref={textareaRef}
-                value={inputPrompt}
-                onChange={(e) => setInputPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                rows={2}
-                placeholder={`Ask Fima anything: formulas, budget audit, debt payoffs, or general knowledge... (Press Enter)`}
-                className="flex-1 bg-[#F7F5F2] dark:bg-[#22252E] border border-[#E8E5DF] dark:border-[#2D323F] focus:border-[#1A1A1A] dark:focus:border-[#F3F4F6] rounded-xl p-2.5 text-xs text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] resize-none outline-none transition-all"
-              />
-
-              <div className="flex flex-col space-y-1.5 shrink-0">
-                <button
-                  onClick={() => handleSendMessage()}
-                  disabled={!inputPrompt.trim() || isLoading}
-                  className="p-3 bg-[#1A1A1A] hover:bg-[#333333] dark:bg-[#F3F4F6] dark:hover:bg-[#E5E7EB] text-white dark:text-[#111317] rounded-xl font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-xs active:scale-95 flex items-center justify-center"
-                  title="Send message to Fima"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsLiveVoiceOpen(true)}
-                  className="p-2 bg-[#F7F5F2] dark:bg-[#22252E] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[#6B7280] hover:text-emerald-600 dark:text-[#9CA3AF] dark:hover:text-emerald-400 border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl transition-all flex items-center justify-center"
-                  title="Open Fima Voice Dialogue"
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Micro Status Bar */}
-            <div className="flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-              <div className="flex items-center space-x-3">
-                <span className="flex items-center space-x-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>
-                    Profile: <strong>{profileName}</strong> ({currency})
-                  </span>
-                </span>
-                {enableSearch && (
-                  <span className="text-blue-600 dark:text-blue-400 font-semibold flex items-center space-x-1">
-                    <Globe className="w-3 h-3" />
-                    <span>Search Grounding</span>
-                  </span>
-                )}
-              </div>
-              <span className="hidden sm:inline text-[10px] font-mono-num text-[#9CA3AF]">
-                Shift + Enter for line break
-              </span>
-            </div>
-
-            {/* Faint subtle footer */}
-            <p className="text-[10px] text-[#9CA3AF]/60 dark:text-[#6B7280]/60 text-center tracking-wider pt-1 border-t border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
-              Fima • Finance Manager AI • powered by gemini
-            </p>
           </div>
         </div>
 
-        {/* Right Column: Ledger Financial Scope & Quick Inquiries (Collapsible on mobile) */}
-        <div className={`space-y-4 ${showLedgerSidebar ? 'block' : 'hidden lg:block'}`}>
-          {/* Active Financial Scope Card */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl p-4 shadow-xs space-y-3">
-            <div className="flex items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-2.5">
-              <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center space-x-1.5">
-                <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Live Ledger Scope</span>
-              </span>
-              <span className="px-1.5 py-0.5 rounded bg-[#F7F5F2] dark:bg-[#22252E] text-[10px] font-mono-num font-bold text-[#6B7280]">
-                {currency}
+        {/* Quick Formulas Carousel */}
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 pb-2 flex items-center space-x-1.5 overflow-x-auto scrollbar-none">
+          <span className="text-[10px] font-bold text-[#6B7280] dark:text-[#9CA3AF] uppercase tracking-wider shrink-0 flex items-center space-x-1 mr-1">
+            <Zap className="w-3 h-3 text-amber-500" />
+            <span>Formulas:</span>
+          </span>
+          {FORMULA_SHORTCUTS.map((fs, idx) => (
+            <button
+              key={idx}
+              onClick={() => handleSendMessage(fs.prompt)}
+              disabled={isLoading}
+              className="shrink-0 px-2.5 py-1 rounded-full bg-[#F7F5F2] dark:bg-[#1E232E] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[#1A1A1A] dark:text-[#F3F4F6] hover:text-emerald-700 dark:hover:text-emerald-300 border border-[#E8E5DF] dark:border-[#292F3E] text-[11px] font-medium transition-all shadow-2xs whitespace-nowrap active:scale-95 disabled:opacity-40"
+            >
+              {fs.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Gemini Floating Input Bar Capsule */}
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 pb-4">
+          <div className="rounded-3xl bg-[#FDFCFB] dark:bg-[#1A1E28] border border-[#E8E5DF] dark:border-[#2C3242] shadow-md focus-within:border-[#1A1A1A] dark:focus-within:border-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all p-3 space-y-2">
+            {/* Rate limit warning banner */}
+            {quota && quota.remainingMessages <= 0 && (
+              <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span>
+                    <strong>Rate Limit Active:</strong> You have used your 40 messages for this 8-hour window.
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono-num text-amber-700 dark:text-amber-300">
+                  Resets in rolling window
+                </span>
+              </div>
+            )}
+
+            {/* Input Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={inputPrompt}
+              onChange={(e) => setInputPrompt(e.target.value)}
+              disabled={quota !== null && quota.remainingMessages <= 0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              rows={2}
+              placeholder={
+                quota && quota.remainingMessages <= 0
+                  ? 'Hourly quota reached. Please wait for the window to reset...'
+                  : 'Ask Fima anything: budget audit, compound formulas, debt payoffs, or financial advice...'
+              }
+              className="w-full bg-transparent text-xs sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] resize-none outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed px-1"
+            />
+
+            {/* Controls Bar Inside Capsule */}
+            <div className="flex items-center justify-between pt-1 border-t border-[#E8E5DF]/60 dark:border-[#2C3242]/60">
+              {/* Left Capsule Controls */}
+              <div className="flex items-center space-x-3 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                <label className="flex items-center space-x-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeFinancialContext}
+                    onChange={(e) => setIncludeFinancialContext(e.target.checked)}
+                    className="rounded text-[#1A1A1A] dark:text-emerald-500 focus:ring-0 w-3.5 h-3.5"
+                  />
+                  <span className="text-[11px] font-medium hidden sm:inline">
+                    Sync Active Ledger
+                  </span>
+                </label>
+
+                {enableSearch && (
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold flex items-center space-x-1 text-[11px]">
+                    <Globe className="w-3 h-3" />
+                    <span>Search On</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Right Capsule Action Buttons */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setIsLiveVoiceOpen(true)}
+                  className="p-2 rounded-full hover:bg-[#F7F5F2] dark:hover:bg-[#252A38] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-white transition-colors"
+                  title="Speak with Fima in borderless voice mode"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => handleSendMessage()}
+                  disabled={!inputPrompt.trim() || isLoading || (quota !== null && quota.remainingMessages <= 0)}
+                  className="p-2 sm:px-3 sm:py-2 bg-[#1A1A1A] hover:bg-[#333333] dark:bg-[#F3F4F6] dark:hover:bg-white text-white dark:text-[#111317] rounded-full sm:rounded-xl font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-xs active:scale-95 flex items-center space-x-1.5"
+                  title="Send prompt to Fima"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span className="text-xs hidden sm:inline">Send</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Micro Footer Status & Disclaimer */}
+          <div className="flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF] px-2 pt-1.5">
+            <div className="flex items-center space-x-2 font-mono-num">
+              <Clock className="w-3 h-3 text-amber-500" />
+              <span>
+                Quota: <strong>{quota ? quota.remainingMessages : 40}</strong>/40 msgs
               </span>
             </div>
+            <p className="text-[10px] text-[#9CA3AF] text-right truncate">
+              Fima is an AI financial assistant. Verify financial decisions.
+            </p>
+          </div>
+        </div>
+      </div>
 
-            <div className="space-y-2 text-xs font-mono-num">
+      {/* Slide-Over Drawer: Active Ledger Financial Scope */}
+      {showLedgerSidebar && (
+        <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowLedgerSidebar(false)}
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+          />
+
+          {/* Drawer Panel */}
+          <aside className="relative z-10 w-full max-w-md bg-white dark:bg-[#1A1D24] h-full shadow-2xl p-6 overflow-y-auto space-y-5 animate-in slide-in-from-right duration-200 border-l border-[#E8E5DF] dark:border-[#2D323F]">
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#E8E5DF] dark:border-[#2D323F]">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-sm text-[#1A1A1A] dark:text-[#F3F4F6]">
+                    Live Ledger Scope
+                  </h3>
+                  <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                    {profileName} ({currency})
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowLedgerSidebar(false)}
+                className="p-1.5 rounded-xl hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] text-[#6B7280] dark:text-[#9CA3AF]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Financial Metrics */}
+            <div className="space-y-2 text-xs font-mono-num bg-[#FDFCFB] dark:bg-[#14161B] p-4 rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F]">
               <div className="flex justify-between items-center">
                 <span className="text-[#6B7280] dark:text-[#9CA3AF]">Net Balance:</span>
                 <span
-                  className={`font-bold ${netBalance >= 0 ? 'text-[#15803D]' : 'text-[#DC2626]'}`}
+                  className={`font-bold text-sm ${
+                    netBalance >= 0 ? 'text-[#15803D]' : 'text-[#DC2626]'
+                  }`}
                 >
                   {currency} {netBalance.toLocaleString()}
                 </span>
@@ -823,9 +965,9 @@ export const AIAdvisorPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Active Budgets:</span>
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Savings Rate:</span>
                 <span className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
-                  {budgets.length} categories
+                  {savingsRate}%
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -842,65 +984,57 @@ export const AIAdvisorPage: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F]">
-              Fima has direct visibility into these figures to compute exact budgets and payoff
-              projections.
-            </p>
-          </div>
-
-          {/* Suggested Inquiries Card */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl p-4 shadow-xs space-y-3">
-            <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] block border-b border-[#E8E5DF] dark:border-[#2D323F] pb-2">
-              Explore with Fima
-            </span>
-
-            <div className="space-y-2">
-              {QUICK_PROMPTS.map((qp, idx) => {
-                const Icon = qp.icon;
-                return (
+            {/* Quick Inquiries */}
+            <div className="space-y-3">
+              <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] block">
+                Suggested Financial Audits
+              </span>
+              <div className="space-y-2">
+                {QUICK_PROMPTS.map((qp, idx) => (
                   <button
                     key={idx}
                     onClick={() => {
+                      setShowLedgerSidebar(false);
                       if (qp.enableSearch) setEnableSearch(true);
                       handleSendMessage(qp.prompt, qp.enableSearch);
                     }}
                     className="w-full text-left p-2.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] hover:border-[#1A1A1A] dark:hover:border-[#F3F4F6] bg-[#FDFCFB] dark:bg-[#14161B] hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] transition-all group"
                   >
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Icon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] group-hover:underline truncate">
-                        {qp.title}
-                      </span>
+                    <div className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] group-hover:underline">
+                      {qp.title}
                     </div>
-                    <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] line-clamp-2">
+                    <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] line-clamp-2 mt-0.5">
                       {qp.prompt}
                     </p>
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Voice Feature Quick Card */}
-          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl p-4 space-y-2.5">
-            <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
-              <Mic className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-pulse" />
-              <span>Fima Live Voice &amp; Text</span>
+            {/* Voice Mode Callout */}
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
+              <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
+                <Mic className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+                <span>Switch to Voice Fima</span>
+              </div>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
+                Connect hands-free with an immersive, full-screen borderless voice interface.
+              </p>
+              <button
+                onClick={() => {
+                  setShowLedgerSidebar(false);
+                  setIsLiveVoiceOpen(true);
+                }}
+                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-2xs"
+              >
+                Launch Voice Session
+              </button>
             </div>
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
-              Prefer speaking? Connect directly to talk with Fima aloud or text in real-time with continuous speech playback.
-            </p>
-            <button
-              onClick={() => setIsLiveVoiceOpen(true)}
-              className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-2xs"
-            >
-              Open Voice Session
-            </button>
-          </div>
+          </aside>
         </div>
-      </div>
+      )}
 
-      {/* Live Voice Modal */}
+      {/* Live Voice Modal (ChatGPT-Style Full-Screen Borderless) */}
       <LiveVoiceModal
         isOpen={isLiveVoiceOpen}
         onClose={() => setIsLiveVoiceOpen(false)}

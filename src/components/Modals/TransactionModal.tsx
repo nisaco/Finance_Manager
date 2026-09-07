@@ -83,7 +83,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     setIsSubmitting(true);
     try {
       if (initialData) {
-        await api.updateTransaction(initialData.id, {
+        const res: any = await api.updateTransaction(initialData.id, {
           type,
           amount: numAmount,
           currency,
@@ -92,9 +92,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           note,
           recurring,
         });
-        notify('Transaction updated successfully');
+        if (res?.budgetExceededAlert?.message) {
+          notify(res.budgetExceededAlert.message, 'error');
+        } else {
+          notify('Transaction updated successfully');
+        }
       } else {
-        await api.createTransaction({
+        const res: any = await api.createTransaction({
           profileId: activeProfile.id,
           type,
           amount: numAmount,
@@ -104,7 +108,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           note,
           recurring,
         });
-        notify('Transaction added to ledger');
+        if (res?.budgetExceededAlert?.message) {
+          notify(res.budgetExceededAlert.message, 'error');
+        } else {
+          notify('Transaction added to ledger');
+        }
       }
       await refreshData();
       onClose();

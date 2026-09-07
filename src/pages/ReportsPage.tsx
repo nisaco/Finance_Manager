@@ -7,6 +7,10 @@ import {
   Layers,
   ArrowUpRight,
   ArrowDownRight,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Check,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -26,13 +30,15 @@ import { useLedger } from '../context/LedgerContext';
 import { api } from '../api/client';
 import { MonthlyTrend, CategoryBreakdown } from '../types';
 import { TOKENS, formatCurrency, getCategoryColor } from '../design/tokens';
+import { exportFinancialReportPdf, exportFinancialReportExcel } from '../utils/exportReports';
 
 export const ReportsPage: React.FC = () => {
-  const { activeProfile, summary } = useLedger();
+  const { activeProfile, summary, transactions, budgets, goals, debts, showNotification } = useLedger();
   const [trends, setTrends] = useState<MonthlyTrend[]>([]);
   const [breakdown, setBreakdown] = useState<CategoryBreakdown[]>([]);
   const [reportType, setReportType] = useState<'expense' | 'income'>('expense');
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState<'pdf' | 'excel' | null>(null);
 
   const currency = activeProfile?.displayCurrency || 'GHS';
 
@@ -75,20 +81,97 @@ export const ReportsPage: React.FC = () => {
     return null;
   };
 
+  const handleExportPdf = () => {
+    if (!activeProfile) return;
+    setIsExporting('pdf');
+    try {
+      exportFinancialReportPdf({
+        profile: activeProfile,
+        transactions,
+        budgets,
+        goals,
+        debts,
+        summary: {
+          totalIncome: summary?.totalIncome || 0,
+          totalExpense: summary?.totalExpense || 0,
+          netBalance: summary?.netBalance || 0,
+          savingsRate: summary?.savingsRate,
+        },
+      });
+      showNotification('Financial Report PDF downloaded successfully', 'success');
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      showNotification('Failed to generate PDF report', 'error');
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  const handleExportExcel = () => {
+    if (!activeProfile) return;
+    setIsExporting('excel');
+    try {
+      exportFinancialReportExcel({
+        profile: activeProfile,
+        transactions,
+        budgets,
+        goals,
+        debts,
+        summary: {
+          totalIncome: summary?.totalIncome || 0,
+          totalExpense: summary?.totalExpense || 0,
+          netBalance: summary?.netBalance || 0,
+          savingsRate: summary?.savingsRate,
+        },
+      });
+      showNotification('Excel financial spreadsheet (.xlsx) downloaded successfully', 'success');
+    } catch (err: any) {
+      console.error('Excel export error:', err);
+      showNotification('Failed to generate Excel file', 'error');
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       
-      {/* Header */}
-      <div>
-        <div className="flex items-center space-x-2">
-          <PieIcon className="w-5 h-5 text-[#1A1A1A]" />
-          <h1 className="font-display text-2xl font-bold text-[#1A1A1A]">
-            Financial Analytics & Reporting
-          </h1>
+      {/* Header with Export Actions */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center space-x-2">
+            <PieIcon className="w-5 h-5 text-[#1A1A1A] dark:text-white" />
+            <h1 className="font-display text-2xl font-bold text-[#1A1A1A] dark:text-white">
+              Financial Analytics & Reporting
+            </h1>
+          </div>
+          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mt-0.5">
+            {activeProfile?.name} • Automated cash flow breakdown, budgets health, and formal report export
+          </p>
         </div>
-        <p className="text-xs text-[#6B7280] font-mono-num mt-0.5">
-          {activeProfile?.name} • Automated cash flow breakdown and 6-month historical trends
-        </p>
+
+        {/* Export Buttons */}
+        <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={handleExportPdf}
+            disabled={isExporting !== null}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-[#1E2128] hover:bg-[#F7F5F2] dark:hover:bg-[#252830] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl text-xs font-semibold text-[#1A1A1A] dark:text-white transition-all shadow-xs disabled:opacity-50"
+            title="Download formatted PDF financial statement"
+          >
+            <FileText className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+            <span>{isExporting === 'pdf' ? 'Generating PDF...' : 'Export PDF'}</span>
+          </button>
+
+          <button
+            onClick={handleExportExcel}
+            disabled={isExporting !== null}
+            className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-700/60 rounded-xl text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-all shadow-xs disabled:opacity-50"
+            title="Download detailed Excel spreadsheet (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>{isExporting === 'excel' ? 'Generating Excel...' : 'Export Excel (.xlsx)'}</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}

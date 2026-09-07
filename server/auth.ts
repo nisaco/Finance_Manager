@@ -23,6 +23,7 @@ export interface AuthTokenPayload {
   userId: string;
   username: string;
   email: string;
+  role?: 'admin' | 'user';
 }
 
 export function generateToken(payload: AuthTokenPayload): string {
@@ -54,7 +55,7 @@ export function extractToken(req: Request): string | null {
   return null;
 }
 
-export function authMiddleware(req: any, res: Response, next: NextFunction): void {
+export async function authMiddleware(req: any, res: Response, next: NextFunction): Promise<void> {
   const token = extractToken(req);
   if (!token) {
     res.status(401).json({ error: 'Authentication required. Please sign in.' });
@@ -67,7 +68,41 @@ export function authMiddleware(req: any, res: Response, next: NextFunction): voi
     return;
   }
 
-  req.user = payload;
+  // Fetch full normalized user to always have up-to-date role
+  const user = await dbManager.findUserById(payload.userId);
+  if (user) {
+    req.user = {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+    };
+  } else {
+    req.user = payload;
+  }
+  next();
+}
+
+export async function adminMiddleware(req: any, res: Response, next: NextFunction): Promise<void> {
+  const token = extractToken(req);
+  if (!token) {
+    res.status(401).json({ error: 'Authentication required. Please sign in as an administrator.' });
+    return;
+  }
+
+  const payload = verifyToken(token);
+  if (!payload) {
+    res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' });
+    return;
+  }
+
+  const user = await dbManager.findUserById(payload.userId);
+  if (!user || user.role !== 'admin') {
+    res.status(403).json({ error: 'Access denied: Admin "God Mode" privileges required.' });
+    return;
+  }
+
+  req.user = user;
   next();
 }
 

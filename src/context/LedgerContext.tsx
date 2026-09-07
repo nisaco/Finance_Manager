@@ -31,9 +31,11 @@ interface LedgerContextType {
   summary: SummaryReport | null;
   isLoading: boolean;
   refreshData: () => Promise<void>;
-  notify: (msg: string, type?: 'success' | 'error' | 'info') => void;
-  notification: { message: string; type: 'success' | 'error' | 'info' } | null;
+  notify: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
+  showNotification: (msg: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
+  notification: { message: string; type: 'success' | 'error' | 'info' | 'warning' } | null;
   clearNotification: () => void;
+  loadData: () => Promise<void>;
 }
 
 const LedgerContext = createContext<LedgerContextType | undefined>(undefined);
@@ -48,7 +50,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [debts, setDebts] = useState<Debt[]>([]);
   const [summary, setSummary] = useState<SummaryReport | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
 
   // Profile Lock & Modals State
   const [unlockedProfileIds, setUnlockedProfileIds] = useState<string[]>(() => {
@@ -63,11 +65,11 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
 
-  const notify = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const notify = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
     setNotification({ message, type });
     setTimeout(() => {
       setNotification((curr) => (curr?.message === message ? null : curr));
-    }, 4500);
+    }, 5500);
   };
 
   const clearNotification = () => setNotification(null);
@@ -267,7 +269,9 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         summary,
         isLoading,
         refreshData,
+        loadData: refreshData,
         notify,
+        showNotification: notify,
         notification,
         clearNotification,
       }}

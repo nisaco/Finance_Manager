@@ -111,21 +111,33 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
           budgets.map((b) => {
             const spent = b.spent || 0;
             const pct = b.percentage || 0;
-            const isOver = pct >= 100;
+            const isFrozen = b.status === 'exceeded_locked' || b.isExceeded;
+            const isOver = pct >= 100 || isFrozen;
             const isNear = pct >= 80 && !isOver;
 
             return (
               <div
                 key={b.id}
-                className={`bg-white border rounded-xl p-4 sm:p-5 shadow-sm space-y-4 transition-all ${
-                  isOver ? 'border-[#DC2626]' : isNear ? 'border-[#EA580C]' : 'border-[#E8E5DF]'
+                className={`bg-white dark:bg-[#1E2128] border rounded-xl p-4 sm:p-5 shadow-sm space-y-3.5 transition-all ${
+                  isFrozen
+                    ? 'border-[#DC2626] ring-1 ring-[#DC2626]/20'
+                    : isOver
+                    ? 'border-[#DC2626]'
+                    : isNear
+                    ? 'border-[#EA580C]'
+                    : 'border-[#E8E5DF] dark:border-[#2D323F]'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="font-bold text-sm text-[#1A1A1A]">{b.category}</h3>
-                    <div className="flex items-center space-x-1.5 mt-1">
-                      {isOver ? (
+                    <h3 className="font-bold text-sm text-[#1A1A1A] dark:text-white">{b.category}</h3>
+                    <div className="flex items-center space-x-1.5 mt-1 flex-wrap gap-y-1">
+                      {isFrozen ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-num bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-300 dark:border-red-800 font-bold">
+                          <ShieldAlert className="w-3 h-3 mr-1" />
+                          105% Hard Stop (Frozen)
+                        </span>
+                      ) : isOver ? (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono-num bg-[#DC2626]/10 text-[#DC2626] border border-[#DC2626]/20 font-bold">
                           <ShieldAlert className="w-2.5 h-2.5 mr-1" />
                           Exceeded Limit
@@ -147,14 +159,14 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
                   <div className="flex items-center space-x-1">
                     <button
                       onClick={() => onEditBudget(b)}
-                      className="p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded transition-colors"
+                      className="p-1 text-[#6B7280] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F7F5F2] dark:hover:bg-[#2D323F] rounded transition-colors"
                       title="Edit Budget"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDelete(b.id)}
-                      className="p-1 text-[#6B7280] hover:text-[#DC2626] hover:bg-[#FEE2E2] rounded transition-colors"
+                      className="p-1 text-[#6B7280] hover:text-[#DC2626] hover:bg-[#FEE2E2] dark:hover:bg-red-950/40 rounded transition-colors"
                       title="Delete Budget"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -162,22 +174,42 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
                   </div>
                 </div>
 
+                {isFrozen && (
+                  <div className="p-2.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 rounded-lg text-[11px] text-red-800 dark:text-red-300">
+                    <p className="font-semibold flex items-center">
+                      <ShieldAlert className="w-3.5 h-3.5 mr-1 shrink-0 text-red-600 dark:text-red-400" />
+                      Budget Exceeded & Frozen (105% Capped)
+                    </p>
+                    <p className="text-[10px] text-red-700 dark:text-red-400 mt-0.5">
+                      Subsequent expenditures in {b.category} are disregarded from this budget's calculations.
+                    </p>
+                  </div>
+                )}
+
                 {/* Numbers */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs font-mono-num">
-                    <span className="text-[#6B7280]">Spent:</span>
-                    <span className="font-bold text-[#1A1A1A]">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">
+                      {isFrozen ? 'Capped Spent (105%):' : 'Spent:'}
+                    </span>
+                    <span className="font-bold text-[#1A1A1A] dark:text-white">
                       {formatCurrency(spent, b.currency)}
                     </span>
                   </div>
+                  {isFrozen && b.rawSpent && b.rawSpent > spent && (
+                    <div className="flex justify-between text-[11px] font-mono-num text-[#9CA3AF]">
+                      <span>Total Real Outflow:</span>
+                      <span className="line-through">{formatCurrency(b.rawSpent, b.currency)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-xs font-mono-num">
-                    <span className="text-[#6B7280]">Limit:</span>
-                    <span className="text-[#6B7280]">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Limit:</span>
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">
                       {formatCurrency(b.limit, b.currency)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs font-mono-num pt-1 border-t border-[#E8E5DF]">
-                    <span className="text-[#6B7280]">Remaining:</span>
+                  <div className="flex justify-between text-xs font-mono-num pt-1 border-t border-[#E8E5DF] dark:border-[#2D323F]">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Remaining:</span>
                     <span className={`font-bold ${isOver ? 'text-[#DC2626]' : 'text-[#15803D]'}`}>
                       {formatCurrency(Math.max(0, b.limit - spent), b.currency)}
                     </span>
@@ -186,19 +218,19 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({
 
                 {/* Progress Bar */}
                 <div className="space-y-1">
-                  <div className="w-full bg-[#F7F5F2] rounded-full h-2 overflow-hidden border border-[#E8E5DF]">
+                  <div className="w-full bg-[#F7F5F2] dark:bg-[#121418] rounded-full h-2 overflow-hidden border border-[#E8E5DF] dark:border-[#2D323F]">
                     <div
                       className={`h-full rounded-full transition-all ${
                         isOver
                           ? 'bg-[#DC2626]'
                           : isNear
                           ? 'bg-[#EA580C]'
-                          : 'bg-[#1A1A1A]'
+                          : 'bg-[#1A1A1A] dark:bg-white'
                       }`}
                       style={{ width: `${Math.min(pct, 100)}%` }}
                     />
                   </div>
-                  <div className="text-right text-[10px] font-mono-num text-[#6B7280]">
+                  <div className="text-right text-[10px] font-mono-num text-[#6B7280] dark:text-[#9CA3AF]">
                     {pct}% of monthly allocation
                   </div>
                 </div>

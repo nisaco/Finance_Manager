@@ -24,6 +24,7 @@ import {
   LogOut,
   FileText,
   UserCheck,
+  Crown,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -34,9 +35,10 @@ import { api } from '../api/client';
 
 interface SettingsPageProps {
   onOpenAuditLogs: () => void;
+  onOpenAdminModal?: () => void;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) => {
+export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onOpenAdminModal }) => {
   const { user, logout } = useAuth();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -269,6 +271,55 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
                 </button>
                 <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin God Mode Operations Section (Visible only to admin user) */}
+      {user?.role === 'admin' && onOpenAdminModal && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-transparent border border-amber-300 dark:border-amber-700/60 rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-800/60 pb-3">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-xs">
+                <Crown className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h2 className="font-display text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                    Admin God-Mode Console
+                  </h2>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono-num font-bold bg-amber-500 text-white uppercase tracking-wider">
+                    Super Admin
+                  </span>
+                </div>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  Central administrative authority for Savings Vault payouts, protocol fees (2% &amp; 10%), user accounts, and AI quota limits.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={onOpenAdminModal}
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition-all active:scale-95 shrink-0"
+            >
+              <Crown className="w-4 h-4" />
+              <span>Launch God Mode</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-white/60 dark:bg-[#1E2330]/60 border border-amber-200/60 dark:border-amber-900/40">
+              <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+              <span>Approve / Reject Vault Withdrawals</span>
+            </div>
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-white/60 dark:bg-[#1E2330]/60 border border-amber-200/60 dark:border-amber-900/40">
+              <Coins className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Track 2% Standard &amp; 10% Early Fees</span>
+            </div>
+            <div className="flex items-center space-x-2 p-2 rounded-lg bg-white/60 dark:bg-[#1E2330]/60 border border-amber-200/60 dark:border-amber-900/40">
+              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span>Full System &amp; Quota Oversight</span>
             </div>
           </div>
         </div>

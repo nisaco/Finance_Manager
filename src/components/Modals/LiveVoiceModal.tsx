@@ -384,7 +384,12 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
               ];
             });
           } else if (data.type === 'error') {
-            setErrorMessage(data.error);
+            const rawErr = String(data.error || '');
+            if (rawErr.includes('429') || rawErr.toLowerCase().includes('rate limit') || rawErr.toLowerCase().includes('quota')) {
+              setErrorMessage('AI Quota Limit Reached (40 messages / 8 hours). Please wait for your allocation window to reset before reconnecting to voice dialogue.');
+            } else {
+              setErrorMessage(data.error);
+            }
             setStatus('error');
           }
         } catch (err) {
@@ -447,8 +452,8 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
     }
   };
 
-  const handleSendTextMessage = () => {
-    const text = textInput.trim();
+  const handleSendTextMessage = (overrideText?: string) => {
+    const text = (overrideText ?? textInput).trim();
     if (!text || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
     // Record user text in transcript
@@ -495,388 +500,387 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
 
   if (!isOpen) return null;
 
+  const latestFimaPhrase = transcripts.filter((t) => t.speaker === 'fima').slice(-1)[0]?.text;
+  const latestUserPhrase = transcripts.filter((t) => t.speaker === 'user').slice(-1)[0]?.text;
+  const currentSubtitle =
+    status === 'speaking'
+      ? latestFimaPhrase
+      : status === 'listening' && latestUserPhrase
+      ? latestUserPhrase
+      : null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#111317]/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Header: Clean, Elegant Fima Branding */}
-        <div className="px-5 py-4 border-b border-[#E8E5DF] dark:border-[#2D323F] flex items-center justify-between bg-[#FDFCFB] dark:bg-[#14161B]">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-xl bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] flex items-center justify-center shadow-xs">
-              <Sparkles className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
+    <div className="fixed inset-0 z-50 bg-[#0A0D12] text-white flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300">
+      {/* Ambient background glow effect */}
+      <div
+        className="absolute inset-0 pointer-events-none transition-all duration-700 opacity-60"
+        style={{
+          background:
+            status === 'speaking'
+              ? 'radial-gradient(circle at 50% 45%, rgba(16, 185, 129, 0.22) 0%, rgba(10, 13, 18, 0) 65%)'
+              : status === 'listening' && audioLevel > 5
+              ? 'radial-gradient(circle at 50% 45%, rgba(59, 130, 246, 0.18) 0%, rgba(10, 13, 18, 0) 65%)'
+              : 'radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.05) 0%, rgba(10, 13, 18, 0) 65%)',
+        }}
+      />
+
+      {/* Top Floating Bar: Minimalist & Borderless */}
+      <header className="relative z-20 flex items-center justify-between px-6 sm:px-10 py-5 sm:py-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-emerald-400">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h2 className="font-display font-bold text-sm tracking-wide text-white">
+                Voice Fima
+              </h2>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="font-display font-bold text-sm text-[#1A1A1A] dark:text-[#F3F4F6]">
-                  Fima Voice &amp; Live Assistant
-                </h3>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              </div>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-                Active: <span className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">{profileName}</span> ({currency})
-              </p>
+            <div className="text-[11px] text-white/50 font-mono-num">
+              {profileName} • {currency}
             </div>
           </div>
+        </div>
 
+        {/* Top Right Actions */}
+        <div className="flex items-center space-x-3">
+          {/* Transcript Drawer Toggle */}
+          <button
+            onClick={() => setShowTranscript(!showTranscript)}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all backdrop-blur-md ${
+              showTranscript
+                ? 'bg-white text-[#0A0D12]'
+                : 'bg-white/10 hover:bg-white/15 text-white/80'
+            }`}
+            title="Toggle full transcript"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Transcript</span>
+            {transcripts.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                {transcripts.length}
+              </span>
+            )}
+          </button>
+
+          {/* Close Voice Session */}
           <button
             onClick={onClose}
-            className="p-1.5 text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-[#F3F4F6] rounded-xl hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] transition-colors"
-            title="Close conversation"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-colors backdrop-blur-md"
+            title="Exit voice session"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
+      </header>
 
-        {/* Central Audio Stage & Orb Visualizer */}
-        <div className="p-6 flex flex-col items-center justify-center text-center space-y-5 bg-gradient-to-b from-[#FDFCFB] via-[#FAF9F6] to-[#F7F5F2] dark:from-[#14161B] dark:via-[#171920] dark:to-[#1A1D24]">
-          {/* Status Capsule */}
-          <div className="inline-flex items-center space-x-2 px-3.5 py-1 rounded-full border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#22252E] text-xs font-mono font-medium shadow-2xs">
-            {status === 'connecting' && (
-              <span className="flex items-center text-amber-600 dark:text-amber-400">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping mr-2" />
-                Connecting to Fima...
-              </span>
-            )}
-            {status === 'speaking' && (
-              <span className="flex items-center text-emerald-600 dark:text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mr-2" />
-                Fima is speaking...
-              </span>
-            )}
-            {status === 'listening' && (
-              <span className="flex items-center text-[#1A1A1A] dark:text-[#F3F4F6]">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2" />
-                Listening to you...
-              </span>
-            )}
-            {status === 'error' && (
-              <span className="flex items-center text-rose-600 dark:text-rose-400">
-                <AlertCircle className="w-3.5 h-3.5 mr-1" />
-                Connection Note
-              </span>
-            )}
-            {status === 'disconnected' && (
-              <span className="flex items-center text-[#6B7280]">Session Paused</span>
-            )}
-          </div>
+      {/* Central Audio Stage & ChatGPT-Style Living Sound Orb */}
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
+        {/* Dynamic Fluid Sound Orb */}
+        <div className="relative flex items-center justify-center w-64 h-64 sm:w-80 sm:h-80 my-auto">
+          {/* Outer Ambient Ripple 1 */}
+          <div
+            className={`absolute rounded-full transition-all duration-500 ease-out ${
+              status === 'speaking'
+                ? 'w-72 h-72 sm:w-96 sm:h-96 bg-emerald-500/20 blur-xl animate-pulse scale-110'
+                : status === 'listening' && audioLevel > 5
+                ? 'w-64 h-64 sm:w-80 sm:h-80 bg-cyan-500/15 blur-lg scale-105'
+                : 'w-48 h-48 sm:w-60 sm:h-60 bg-white/5 blur-md'
+            }`}
+          />
 
-          {/* Luxury Fluid Wave Orb Visualizer */}
-          <div className="relative flex items-center justify-center w-36 h-36">
-            {/* Outer pulsating wave ring */}
-            <div
-              className={`absolute inset-0 rounded-full transition-all duration-300 ${
-                status === 'speaking'
-                  ? 'bg-emerald-500/20 dark:bg-emerald-500/30 scale-125 blur-sm animate-pulse'
-                  : status === 'listening' && audioLevel > 5
-                  ? 'bg-emerald-500/15 scale-110'
-                  : 'bg-black/5 dark:bg-white/5 scale-95'
-              }`}
-            />
-            <div
-              className={`absolute inset-3 rounded-full transition-all duration-300 ${
-                status === 'speaking'
-                  ? 'bg-teal-500/30 dark:bg-teal-400/20 animate-ping'
-                  : status === 'listening' && audioLevel > 10
-                  ? 'bg-emerald-500/20'
-                  : 'bg-transparent'
-              }`}
-            />
+          {/* Outer Ambient Ripple 2 */}
+          <div
+            className={`absolute rounded-full transition-all duration-300 ease-out ${
+              status === 'speaking'
+                ? 'w-56 h-56 sm:w-72 sm:h-72 bg-teal-400/25 blur-md scale-105'
+                : status === 'listening' && audioLevel > 12
+                ? 'w-52 h-52 sm:w-64 sm:h-64 bg-emerald-500/20 blur-sm scale-102'
+                : 'w-40 h-40 sm:w-48 sm:h-48 bg-transparent'
+            }`}
+          />
 
-            {/* Core Orb Button */}
-            <div
-              className={`relative z-10 w-24 h-24 rounded-full flex flex-col items-center justify-center shadow-lg transition-transform ${
-                status === 'speaking'
-                  ? 'bg-emerald-600 text-white scale-105 shadow-emerald-500/30'
-                  : status === 'listening'
-                  ? 'bg-[#1A1A1A] dark:bg-[#F3F4F6] text-white dark:text-[#111317]'
-                  : 'bg-[#6B7280] text-white'
-              }`}
-            >
-              {status === 'speaking' ? (
-                <Volume2 className="w-8 h-8 animate-bounce" />
-              ) : isMuted ? (
-                <MicOff className="w-8 h-8 text-rose-400" />
-              ) : (
-                <Mic className="w-8 h-8" />
-              )}
-            </div>
-          </div>
-
-          {/* Audio Waves Frequency Visualizer */}
-          <div className="flex items-center space-x-1 h-7">
-            {[...Array(14)].map((_, i) => {
-              const height =
-                status === 'speaking'
-                  ? Math.sin(Date.now() / 180 + i) * 12 + 14
-                  : status === 'listening' && !isMuted
-                  ? Math.max(4, Math.min(26, (audioLevel / 100) * (18 + (i % 4) * 4)))
-                  : 4;
-
-              return (
-                <div
-                  key={i}
-                  className={`w-1 rounded-full transition-all duration-75 ${
-                    status === 'speaking'
-                      ? 'bg-emerald-500'
-                      : status === 'listening' && !isMuted && audioLevel > 5
-                      ? 'bg-[#1A1A1A] dark:bg-[#F3F4F6]'
-                      : 'bg-[#E8E5DF] dark:bg-[#2D323F]'
-                  }`}
-                  style={{ height: `${height}px` }}
-                />
-              );
-            })}
-          </div>
-
-          {/* Guidance / Suggestion */}
-          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] max-w-sm leading-relaxed">
-            {status === 'listening' ? (
-              <span>
-                Speak naturally or type below: <span className="italic text-[#1A1A1A] dark:text-[#F3F4F6] font-medium">"What is my net balance?"</span>, <span className="italic text-[#1A1A1A] dark:text-[#F3F4F6] font-medium">"Audit my budgets"</span>, or ask anything.
-              </span>
-            ) : status === 'speaking' ? (
-              <span className="text-emerald-700 dark:text-emerald-400 font-medium">
-                Fima is speaking. Speak or type anytime to interrupt.
-              </span>
+          {/* Core ChatGPT-Style Spherical Orb */}
+          <div
+            className={`relative z-10 rounded-full flex flex-col items-center justify-center transition-all duration-300 shadow-2xl ${
+              status === 'speaking'
+                ? 'w-36 h-36 sm:w-44 sm:h-44 bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 text-white scale-105 shadow-emerald-500/40 ring-4 ring-emerald-400/30'
+                : isMuted
+                ? 'w-32 h-32 sm:w-40 sm:h-40 bg-gradient-to-tr from-rose-900 to-rose-700 text-white shadow-rose-900/30 ring-2 ring-rose-500/30'
+                : status === 'listening'
+                ? 'w-36 h-36 sm:w-44 sm:h-44 bg-gradient-to-tr from-[#1E232F] via-[#2A3142] to-[#394258] text-white shadow-cyan-900/20 ring-2 ring-white/20 scale-100'
+                : 'w-32 h-32 sm:w-40 sm:h-40 bg-[#1A1D24] text-white/60 ring-1 ring-white/10'
+            }`}
+            style={{
+              transform:
+                status === 'listening' && !isMuted && audioLevel > 5
+                  ? `scale(${1 + Math.min(0.2, audioLevel / 250)})`
+                  : undefined,
+            }}
+          >
+            {status === 'speaking' ? (
+              <Volume2 className="w-10 h-10 sm:w-12 sm:h-12 animate-pulse" />
+            ) : isMuted ? (
+              <MicOff className="w-10 h-10 sm:w-12 sm:h-12 text-rose-300" />
+            ) : status === 'connecting' ? (
+              <Radio className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-amber-400" />
             ) : (
-              <span>Ready with your live ledger context.</span>
+              <Mic className="w-10 h-10 sm:w-12 sm:h-12 text-white/90" />
             )}
-          </p>
+          </div>
+        </div>
 
-          {errorMessage && (
-            <div className="w-full p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs text-left flex items-start space-x-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold block">Connection status</span>
-                <span>{errorMessage}</span>
-                <button
-                  onClick={startLiveSession}
-                  className="mt-2 block px-2.5 py-1 rounded-lg bg-rose-600 text-white font-bold text-[11px] hover:bg-rose-700 transition-colors"
-                >
-                  Reconnect
-                </button>
-              </div>
-            </div>
+        {/* Live Visualizer Waves */}
+        <div className="flex items-center justify-center space-x-1.5 h-8 my-2">
+          {[...Array(16)].map((_, i) => {
+            const barHeight =
+              status === 'speaking'
+                ? Math.sin(Date.now() / 150 + i * 0.5) * 12 + 16
+                : status === 'listening' && !isMuted
+                ? Math.max(4, Math.min(28, (audioLevel / 100) * (14 + (i % 4) * 4)))
+                : 4;
+
+            return (
+              <div
+                key={i}
+                className={`w-1 rounded-full transition-all duration-75 ${
+                  status === 'speaking'
+                    ? 'bg-emerald-400'
+                    : status === 'listening' && !isMuted && audioLevel > 5
+                    ? 'bg-white'
+                    : 'bg-white/15'
+                }`}
+                style={{ height: `${barHeight}px` }}
+              />
+            );
+          })}
+        </div>
+
+        {/* State Label */}
+        <div className="mt-2 text-xs font-mono font-medium tracking-wide">
+          {status === 'connecting' && (
+            <span className="text-amber-400 flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+              <span>Connecting to Fima AI...</span>
+            </span>
+          )}
+          {status === 'speaking' && (
+            <span className="text-emerald-400 flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Fima is speaking</span>
+            </span>
+          )}
+          {status === 'listening' && (
+            <span className="text-white/80 flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>{isMuted ? 'Microphone muted' : 'Listening... speak naturally'}</span>
+            </span>
+          )}
+          {status === 'disconnected' && (
+            <span className="text-white/40">Voice session ended</span>
+          )}
+          {status === 'error' && (
+            <span className="text-rose-400">{errorMessage || 'Connection paused'}</span>
           )}
         </div>
 
-        {/* Live Spoken & Typed Transcript Stream */}
-        <div className="border-t border-[#E8E5DF] dark:border-[#2D323F] p-3.5 bg-white dark:bg-[#1A1D24] flex-1 overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between pb-2">
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center space-x-1.5">
-                <MessageSquare className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Live Transcription</span>
-              </span>
-              {transcripts.length > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 text-[10px] font-mono-num font-bold">
-                  {transcripts.length}
-                </span>
-              )}
+        {/* Live Spoken Subtitle (ChatGPT-Style) */}
+        <div className="mt-4 min-h-[44px] max-w-xl mx-auto px-4 flex items-center justify-center">
+          {currentSubtitle ? (
+            <p className="text-sm sm:text-base text-white/90 font-light leading-relaxed animate-in fade-in duration-200 line-clamp-2 italic">
+              "{currentSubtitle}"
+            </p>
+          ) : (
+            <div className="flex flex-wrap justify-center gap-2">
+              {[
+                'Audit my monthly spending',
+                'What is my net balance?',
+                'Review my savings vaults',
+              ].map((suggestion, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setTextInput(suggestion);
+                    handleSendTextMessage(suggestion);
+                  }}
+                  className="px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs border border-white/10 transition-colors backdrop-blur-xs"
+                >
+                  "{suggestion}"
+                </button>
+              ))}
             </div>
+          )}
+        </div>
+      </main>
 
-            <div className="flex items-center space-x-1.5">
-              {transcripts.length > 0 && (
-                <>
-                  <button
-                    onClick={handleCopyTranscript}
-                    className="px-2 py-1 rounded-lg hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] text-[11px] text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] flex items-center space-x-1 transition-colors"
-                    title="Copy transcript"
-                  >
-                    {copiedTranscript ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
-                    <span>{copiedTranscript ? 'Copied' : 'Copy'}</span>
-                  </button>
-                  <button
-                    onClick={() => setTranscripts([])}
-                    className="p-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 text-[#6B7280] dark:text-[#9CA3AF] hover:text-rose-600 transition-colors"
-                    title="Clear transcript"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              )}
-
-              {/* Prominent Show / Hide Toggle Button */}
-              <button
-                onClick={() => setShowTranscript(!showTranscript)}
-                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all shadow-2xs ${
-                  showTranscript
-                    ? 'bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317]'
-                    : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                }`}
-                title={showTranscript ? 'Hide live transcription' : 'Show live transcription'}
-              >
-                {showTranscript ? (
+      {/* Slide-Up Full Transcript Sheet (When Toggled) */}
+      {showTranscript && (
+        <div className="relative z-30 w-full max-w-2xl mx-auto px-4 mb-3 animate-in slide-in-from-bottom duration-200">
+          <div className="bg-[#141820]/95 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-xl max-h-56 sm:max-h-64 flex flex-col">
+            <div className="flex items-center justify-between pb-2.5 border-b border-white/10 text-xs">
+              <div className="flex items-center space-x-2 font-bold text-white/90">
+                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Live Conversation Transcript</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                {transcripts.length > 0 && (
                   <>
-                    <EyeOff className="w-3.5 h-3.5" />
-                    <span>Hide</span>
-                  </>
-                ) : (
-                  <>
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>Show Transcription</span>
+                    <button
+                      onClick={handleCopyTranscript}
+                      className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/70 text-[11px] flex items-center space-x-1"
+                    >
+                      {copiedTranscript ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>{copiedTranscript ? 'Copied' : 'Copy'}</span>
+                    </button>
+                    <button
+                      onClick={() => setTranscripts([])}
+                      className="p-1 rounded-md bg-white/5 hover:bg-rose-950/40 text-white/50 hover:text-rose-400"
+                      title="Clear transcript"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </>
                 )}
-              </button>
+                <button
+                  onClick={() => setShowTranscript(false)}
+                  className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-white/70"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {showTranscript ? (
             <div
               ref={transcriptContainerRef}
-              className="overflow-y-auto max-h-48 sm:max-h-56 min-h-[140px] space-y-2.5 pr-1 text-xs scrollbar-thin transition-all"
+              className="overflow-y-auto flex-1 mt-2 space-y-2 pr-1 text-xs scrollbar-thin"
             >
               {transcripts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center text-[#9CA3AF] space-y-2">
-                  <div className="w-8 h-8 rounded-full bg-[#F7F5F2] dark:bg-[#22252E] flex items-center justify-center">
-                    <Radio className="w-4 h-4 text-emerald-500 animate-pulse" />
-                  </div>
-                  <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                    Speak into your microphone or type below.
-                  </p>
-                  <span className="text-[10px] text-[#9CA3AF]">
-                    Live transcriptions and Fima's spoken answers will stream here clearly.
-                  </span>
+                <div className="py-6 text-center text-white/40">
+                  No speech recorded yet. Speak or type below.
                 </div>
               ) : (
                 transcripts.map((t) => (
                   <div
                     key={t.id}
-                    className={`p-3 rounded-xl border leading-relaxed shadow-2xs transition-all ${
+                    className={`p-2.5 rounded-xl text-xs leading-relaxed ${
                       t.speaker === 'user'
-                        ? 'bg-[#F7F5F2] dark:bg-[#22252E] text-[#1A1A1A] dark:text-[#F3F4F6] border-[#E8E5DF] dark:border-[#2D323F] ml-3'
-                        : 'bg-emerald-50/80 dark:bg-[#1C2522] text-[#1A1A1A] dark:text-[#F3F4F6] border-emerald-200 dark:border-emerald-800/80 mr-3'
+                        ? 'bg-white/10 text-white/90 ml-4'
+                        : 'bg-emerald-950/40 border border-emerald-800/40 text-emerald-200 mr-4'
                     }`}
                   >
-                    <div className="flex justify-between items-center text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mb-1.5 font-mono-num">
-                      <span className="font-bold flex items-center space-x-1.5">
-                        {t.speaker === 'fima' ? (
-                          <>
-                            <span className="w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[9px]">
-                              <Sparkles className="w-2.5 h-2.5" />
-                            </span>
-                            <span className="text-emerald-700 dark:text-emerald-400 font-semibold">
-                              Fima
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="w-4 h-4 rounded-full bg-slate-600 text-white flex items-center justify-center text-[9px]">
-                              <User className="w-2.5 h-2.5" />
-                            </span>
-                            <span className="text-[#4B5563] dark:text-[#9CA3AF] font-semibold">
-                              You
-                            </span>
-                          </>
-                        )}
+                    <div className="flex justify-between text-[10px] text-white/40 mb-1 font-mono-num">
+                      <span className="font-bold text-white/70">
+                        {t.speaker === 'fima' ? 'Fima' : 'You'}
                       </span>
                       <span>{t.timestamp}</span>
                     </div>
-                    <p className="text-xs font-normal whitespace-pre-wrap leading-relaxed">
-                      {t.text}
-                    </p>
+                    <p className="whitespace-pre-wrap">{t.text}</p>
                   </div>
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Bottom Control Bar: Borderless & Circular (ChatGPT Voice Style) */}
+      <footer className="relative z-20 pb-8 sm:pb-10 pt-2 flex flex-col items-center space-y-4">
+        {/* Sleek Optional Text Input Pill */}
+        <div className="w-full max-w-md px-4">
+          <div className="flex items-center bg-white/10 hover:bg-white/15 focus-within:bg-white/15 border border-white/10 rounded-full px-3.5 py-1.5 backdrop-blur-md transition-all">
+            <input
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendTextMessage();
+                }
+              }}
+              placeholder="Type message to Fima..."
+              className="flex-1 bg-transparent text-xs text-white placeholder-white/40 outline-hidden"
+            />
+            <button
+              onClick={() => handleSendTextMessage()}
+              disabled={!textInput.trim() || status === 'disconnected'}
+              className="p-1.5 rounded-full bg-white text-[#0A0D12] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            >
+              <Send className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        {/* Circular Action Buttons */}
+        <div className="flex items-center justify-center space-x-5 sm:space-x-8">
+          {/* Mute Mic Button */}
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg backdrop-blur-md ${
+              isMuted
+                ? 'bg-rose-600/30 border border-rose-500 text-rose-300 ring-2 ring-rose-500/30'
+                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+            }`}
+            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
+          >
+            {isMuted ? (
+              <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-rose-300" />
+            ) : (
+              <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
+            )}
+          </button>
+
+          {/* Transcript Panel Button */}
+          <button
+            onClick={() => setShowTranscript(!showTranscript)}
+            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg backdrop-blur-md ${
+              showTranscript
+                ? 'bg-white text-[#0A0D12]'
+                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+            }`}
+            title={showTranscript ? 'Hide transcript' : 'Show transcript'}
+          >
+            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+
+          {/* Speaker Mute Button */}
+          <button
+            onClick={() => setIsSpeakerMuted(!isSpeakerMuted)}
+            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg backdrop-blur-md ${
+              isSpeakerMuted
+                ? 'bg-amber-600/30 border border-amber-500 text-amber-300 ring-2 ring-amber-500/30'
+                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+            }`}
+            title={isSpeakerMuted ? 'Unmute audio output' : 'Mute audio output'}
+          >
+            {isSpeakerMuted ? (
+              <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
+            ) : (
+              <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
+            )}
+          </button>
+
+          {/* End Call Button */}
+          {status === 'disconnected' ? (
+            <button
+              onClick={startLiveSession}
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-600/40 active:scale-95 transition-all"
+              title="Reconnect to Fima"
+            >
+              <Radio className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
           ) : (
-            <div className="p-3 my-auto rounded-xl bg-[#F7F5F2] dark:bg-[#22252E] border border-[#E8E5DF] dark:border-[#2D323F] flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2 text-[#6B7280] dark:text-[#9CA3AF]">
-                <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse shrink-0" />
-                <span>Transcription is hidden • Audio and voice are active</span>
-              </div>
-              <button
-                onClick={() => setShowTranscript(true)}
-                className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition-colors shadow-2xs shrink-0"
-              >
-                Show Transcript
-              </button>
-            </div>
+            <button
+              onClick={onClose}
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 active:scale-95 transition-all"
+              title="End Voice Call"
+            >
+              <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
           )}
         </div>
-
-        {/* Text Input Row: Text with Fima seamlessly */}
-        <div className="px-3.5 py-2.5 bg-[#FDFCFB] dark:bg-[#14161B] border-t border-[#E8E5DF] dark:border-[#2D323F] flex items-center space-x-2">
-          <input
-            type="text"
-            value={textInput}
-            onChange={(e) => setTextInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendTextMessage();
-              }
-            }}
-            placeholder="Type to Fima or speak aloud..."
-            className="flex-1 bg-white dark:bg-[#22252E] border border-[#E8E5DF] dark:border-[#2D323F] focus:border-[#1A1A1A] dark:focus:border-[#F3F4F6] text-xs px-3 py-2 rounded-xl text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] outline-none transition-all"
-          />
-          <button
-            onClick={handleSendTextMessage}
-            disabled={!textInput.trim() || status === 'disconnected'}
-            className="p-2 bg-[#1A1A1A] hover:bg-[#333333] text-white dark:bg-[#F3F4F6] dark:hover:bg-[#E5E7EB] dark:text-[#111317] rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-xs"
-            title="Send text message to Fima"
-          >
-            <Send className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Footer Voice & Call Controls */}
-        <div className="px-4 py-3 border-t border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1A1D24] flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            {/* Mic Mute Toggle */}
-            <button
-              onClick={() => setIsMuted(!isMuted)}
-              className={`p-2 rounded-xl border transition-all ${
-                isMuted
-                  ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800'
-                  : 'bg-[#F7F5F2] text-[#1A1A1A] border-[#E8E5DF] dark:bg-[#22252E] dark:text-[#F3F4F6] dark:border-[#2D323F] hover:bg-[#E8E5DF]'
-              }`}
-              title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-            >
-              {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </button>
-
-            {/* Speaker Mute Toggle */}
-            <button
-              onClick={() => setIsSpeakerMuted(!isSpeakerMuted)}
-              className={`p-2 rounded-xl border transition-all ${
-                isSpeakerMuted
-                  ? 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800'
-                  : 'bg-[#F7F5F2] text-[#1A1A1A] border-[#E8E5DF] dark:bg-[#22252E] dark:text-[#F3F4F6] dark:border-[#2D323F] hover:bg-[#E8E5DF]'
-              }`}
-              title={isSpeakerMuted ? 'Unmute speaker' : 'Mute speaker'}
-            >
-              {isSpeakerMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </button>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            {status === 'disconnected' ? (
-              <button
-                onClick={startLiveSession}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-2xs"
-              >
-                <Radio className="w-3.5 h-3.5" />
-                <span>Reconnect</span>
-              </button>
-            ) : (
-              <button
-                onClick={onClose}
-                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5 shadow-2xs"
-              >
-                <PhoneOff className="w-3.5 h-3.5" />
-                <span>End Call</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Faint, minimal attribution at the very bottom */}
-        <div className="py-1.5 bg-[#FAF9F6] dark:bg-[#14161B] text-center border-t border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
-          <span className="text-[10px] text-[#9CA3AF]/60 dark:text-[#6B7280]/60 tracking-wider">
-            Fima • Finance Manager AI • powered by gemini
-          </span>
-        </div>
-      </div>
+      </footer>
     </div>
   );
 };
