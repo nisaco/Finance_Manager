@@ -241,11 +241,11 @@ export const GoalModal: React.FC<GoalModalProps> = ({
           <div className="border border-[#E8E5DF] rounded-xl p-4 bg-[#FDFCFB] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-[#1A1A1A] block">
-                  Link Real Banking Vault (Paystack Transfer Rail)
+                <span className="text-xs font-bold text-[#1A1A1A]">
+                  Link Bank or Mobile Money Account
                 </span>
                 <span className="text-[11px] text-[#6B7280] block">
-                  Automatically move funds from your primary account to a savings vault via Paystack.
+                  Link an account to deposit funds directly to this savings goal.
                 </span>
               </div>
               <input

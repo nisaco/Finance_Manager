@@ -87,7 +87,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
             </h1>
           </div>
           <p className="text-xs text-[#6B7280] font-mono-num mt-0.5">
-            {activeProfile?.name} • Backed by Paystack Automated Banking Rails
+            {activeProfile?.name} • Target savings and automated reserve tracking
           </p>
         </div>
 
@@ -233,10 +233,10 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
             <div className="flex justify-between items-center border-b border-[#E8E5DF] pb-3">
               <div>
                 <h3 className="font-display text-base font-bold text-[#1A1A1A]">
-                  Transfer Audit: {selectedGoalForTransfers.name}
+                  Transfer History: {selectedGoalForTransfers.name}
                 </h3>
                 <span className="text-xs text-[#6B7280] font-mono-num">
-                  Paystack banking movements backed by reference hash
+                  Electronic deposit and transfer history
                 </span>
               </div>
               <button
@@ -250,11 +250,11 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
             <div className="overflow-y-auto flex-1 space-y-2.5">
               {loadingTransfers ? (
                 <div className="py-8 text-center text-xs text-[#6B7280]">
-                  Loading transfer audit trail...
+                  Loading transfer history...
                 </div>
               ) : transfers.length === 0 ? (
                 <div className="py-8 text-center text-xs text-[#6B7280]">
-                  No Paystack fund movements recorded yet for this vault.
+                  No deposits or transfers recorded yet for this vault.
                 </div>
               ) : (
                 transfers.map((txf) => (
@@ -300,7 +300,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                           onClick={() => handleVerifySingleTransfer(txf.paystackReference)}
                           className="text-[10px] text-[#1A1A1A] hover:underline font-bold"
                         >
-                          Verify with Paystack Rail
+                          Verify Transfer Status
                         </button>
                       </div>
                     )}

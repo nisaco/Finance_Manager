@@ -11,6 +11,7 @@ import { GoalsPage } from './pages/GoalsPage';
 import { DebtsPage } from './pages/DebtsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AIAdvisorPage } from './pages/AIAdvisorPage';
 
 // Modals
 import { TransactionModal } from './components/Modals/TransactionModal';
@@ -22,6 +23,7 @@ import { CsvImportModal } from './components/Modals/CsvImportModal';
 import { AuditLogModal } from './components/Modals/AuditLogModal';
 import { ProfileModal } from './components/Modals/ProfileModal';
 import { ProfileLockModal } from './components/Modals/ProfileLockModal';
+import { LiveVoiceModal } from './components/Modals/LiveVoiceModal';
 import { TermsModal } from './components/TermsModal';
 import { PrivacyModal } from './components/PrivacyModal';
 
@@ -40,10 +42,11 @@ const MainShell: React.FC = () => {
   } = useLedger();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'transactions' | 'budgets' | 'goals' | 'debts' | 'reports' | 'settings'
+    'overview' | 'transactions' | 'budgets' | 'goals' | 'debts' | 'reports' | 'ai-advisor' | 'settings'
   >('overview');
 
   // Modal states
+  const [liveVoiceModalOpen, setLiveVoiceModalOpen] = useState(false);
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
@@ -127,6 +130,7 @@ const MainShell: React.FC = () => {
         activeTab={activeTab}
         onTabChange={(tab) => setActiveTab(tab as any)}
         onOpenNewTx={handleOpenNewTx}
+        onOpenLiveVoice={() => setLiveVoiceModalOpen(true)}
       />
 
       {/* Main Page Content Area */}
@@ -174,6 +178,8 @@ const MainShell: React.FC = () => {
         )}
 
         {activeTab === 'reports' && <ReportsPage />}
+
+        {activeTab === 'ai-advisor' && <AIAdvisorPage />}
 
         {activeTab === 'settings' && (
           <SettingsPage onOpenAuditLogs={() => setAuditLogModalOpen(true)} />
@@ -261,6 +267,11 @@ const MainShell: React.FC = () => {
         onClose={() => setAuditLogModalOpen(false)}
       />
 
+      <LiveVoiceModal
+        isOpen={liveVoiceModalOpen}
+        onClose={() => setLiveVoiceModalOpen(false)}
+      />
+
       <TermsModal
         isOpen={showTermsModal}
         onClose={() => setShowTermsModal(false)}
@@ -276,7 +287,7 @@ const MainShell: React.FC = () => {
       {/* Footer info banner with legal links */}
       <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] py-4 px-6 text-center text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num transition-colors flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto w-full">
         <div>
-          Ledger • Real-Time Automated Financial Engine • Integrated with Paystack Banking Rails
+          Ledger • Personal &amp; Business Financial Management
         </div>
         <div className="flex items-center space-x-3">
           <button

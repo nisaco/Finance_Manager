@@ -11,9 +11,6 @@ import {
   RefreshCw,
   Plus,
   History,
-  Database,
-  Trash2,
-  Sparkles,
   Sun,
   Moon,
   Monitor,
@@ -88,38 +85,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
   const [restoreJson, setRestoreJson] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
 
-  // Live Database Status State
-  const [dbStatus, setDbStatus] = useState<{
-    connected: boolean;
-    databaseName: string;
-    counts: {
-      profiles: number;
-      transactions: number;
-      budgets: number;
-      goals: number;
-      debts: number;
-      transfers: number;
-    };
-  } | null>(null);
-  const [isLoadingDbStatus, setIsLoadingDbStatus] = useState(false);
-  const [isCleaningData, setIsCleaningData] = useState(false);
-
-  const fetchDbStatus = async () => {
-    setIsLoadingDbStatus(true);
-    try {
-      const res = await api.getDbStatus();
-      setDbStatus(res);
-    } catch {
-      // Fallback
-    } finally {
-      setIsLoadingDbStatus(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDbStatus();
-  }, []);
-
   const handleSaveRates = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeProfile) return;
@@ -165,48 +130,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
       setNewProfileLock(false);
       setNewProfilePin('');
       await fetchProfiles();
-      await fetchDbStatus();
       selectProfile(p.id);
     } catch (err: any) {
       notify(err.message || 'Failed to create profile', 'error');
     } finally {
       setIsCreatingProfile(false);
-    }
-  };
-
-  const handleCleanSampleData = async () => {
-    setIsCleaningData(true);
-    try {
-      const res = await api.cleanSampleData();
-      notify(`Sample data cleared (${res.deleted.deletedTransactions} sample transactions removed)`);
-      await refreshData();
-      await fetchDbStatus();
-    } catch (err: any) {
-      notify(err.message || 'Failed to clean sample data', 'error');
-    } finally {
-      setIsCleaningData(false);
-    }
-  };
-
-  const handleWipeFresh = async () => {
-    if (
-      !confirm(
-        'Warning: This will clear all transactions, budgets, savings goals, and debts from your online MongoDB database so you have a completely fresh slate. Proceed?'
-      )
-    ) {
-      return;
-    }
-
-    setIsCleaningData(true);
-    try {
-      await api.wipeAllData(true);
-      notify('Database cleared. Your ledger is now 100% fresh and clean.');
-      await refreshData();
-      await fetchDbStatus();
-    } catch (err: any) {
-      notify(err.message || 'Failed to wipe database', 'error');
-    } finally {
-      setIsCleaningData(false);
     }
   };
 
@@ -216,11 +144,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
       const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backup, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute('href', dataStr);
-      downloadAnchor.setAttribute('download', `ledger_mongodb_backup_${new Date().toISOString().slice(0, 10)}.json`);
+      downloadAnchor.setAttribute('download', `ledger_backup_${new Date().toISOString().slice(0, 10)}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      notify('Full JSON backup downloaded');
+      notify('Ledger backup downloaded');
     } catch (err: any) {
       notify('Failed to generate backup', 'error');
     }
@@ -228,16 +156,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
 
   const handleRestoreBackup = async () => {
     if (!restoreJson.trim()) return;
-    if (!confirm('Warning: Restoring backup will overwrite current database state. Proceed?')) return;
+    if (!confirm('Warning: Restoring backup will overwrite current data. Proceed?')) return;
 
     setIsRestoring(true);
     try {
       const parsed = JSON.parse(restoreJson);
       await api.restoreBackup(parsed);
-      notify('Ledger database restored successfully');
+      notify('Ledger data restored successfully');
       setRestoreJson('');
       await refreshData();
-      await fetchDbStatus();
     } catch (err: any) {
       notify(err.message || 'Restore failed (invalid JSON format)', 'error');
     } finally {
@@ -251,21 +178,21 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <Settings className="w-5 h-5 text-[#1A1A1A]" />
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A]">
-              Ledger Configuration & System Controls
+            <Settings className="w-5 h-5 text-[#1A1A1A] dark:text-[#F3F4F6]" />
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+              Settings &amp; Preferences
             </h1>
           </div>
-          <p className="text-xs text-[#6B7280] font-mono-num mt-0.5">
-            MongoDB Atlas online database, Profiles, Banking rails, Forex rates, and Data backups
+          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mt-0.5">
+            Profiles, theme appearance, exchange rates, and data backup
           </p>
         </div>
 
         <button
           onClick={onOpenAuditLogs}
-          className="px-3.5 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors w-full sm:w-auto"
+          className="px-3.5 py-2 bg-[#F7F5F2] dark:bg-[#22252E] hover:bg-[#E8E5DF] dark:hover:bg-[#2D323F] text-[#1A1A1A] dark:text-[#F3F4F6] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors w-full sm:w-auto"
         >
-          <History className="w-4 h-4 text-[#6B7280]" />
+          <History className="w-4 h-4 text-[#6B7280] dark:text-[#9CA3AF]" />
           <span>System Audit Trail</span>
         </button>
       </div>
@@ -346,115 +273,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
           </div>
         </div>
       )}
-
-      {/* Online MongoDB Database Status Banner */}
-      <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E8E5DF] pb-3 gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <Database className="w-4 h-4 text-[#1A1A1A]" />
-            <h2 className="font-display text-base font-bold text-[#1A1A1A]">
-              Online MongoDB Atlas Database
-            </h2>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-mono-num font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-              Live & Synchronized
-            </span>
-          </div>
-
-          <button
-            onClick={fetchDbStatus}
-            disabled={isLoadingDbStatus}
-            className="px-2.5 py-1 text-xs font-medium text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded border border-[#E8E5DF] flex items-center justify-center space-x-1 w-full sm:w-auto"
-          >
-            <RefreshCw className={`w-3 h-3 ${isLoadingDbStatus ? 'animate-spin' : ''}`} />
-            <span>Check Status</span>
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF]">
-            <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] block">
-              Cluster Database
-            </span>
-            <span className="text-xs font-bold text-[#1A1A1A] mt-1 block truncate">
-              {dbStatus?.databaseName || 'financial_manager'}
-            </span>
-          </div>
-
-          <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF]">
-            <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] block">
-              Profiles
-            </span>
-            <span className="text-base font-bold font-mono-num text-[#1A1A1A] mt-0.5 block">
-              {dbStatus?.counts?.profiles ?? profiles.length}
-            </span>
-          </div>
-
-          <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF]">
-            <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] block">
-              Transactions
-            </span>
-            <span className="text-base font-bold font-mono-num text-[#1A1A1A] mt-0.5 block">
-              {dbStatus?.counts?.transactions ?? 0}
-            </span>
-          </div>
-
-          <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF]">
-            <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] block">
-              Active Budgets
-            </span>
-            <span className="text-base font-bold font-mono-num text-[#1A1A1A] mt-0.5 block">
-              {dbStatus?.counts?.budgets ?? 0}
-            </span>
-          </div>
-
-          <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF]">
-            <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] block">
-              Savings Goals
-            </span>
-            <span className="text-base font-bold font-mono-num text-[#1A1A1A] mt-0.5 block">
-              {dbStatus?.counts?.goals ?? 0}
-            </span>
-          </div>
-
-          <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF]">
-            <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] block">
-              Active Debts
-            </span>
-            <span className="text-base font-bold font-mono-num text-[#1A1A1A] mt-0.5 block">
-              {dbStatus?.counts?.debts ?? 0}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E8E5DF] text-xs">
-          <p className="text-[11px] text-[#6B7280]">
-            All financial operations query directly from your MongoDB Atlas cluster. No hardcoded sample data exists in memory or storage.
-          </p>
-
-          <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-            <button
-              onClick={handleCleanSampleData}
-              disabled={isCleaningData}
-              className="px-3 py-1.5 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded border border-[#E8E5DF] font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors disabled:opacity-50 w-full sm:w-auto"
-              title="Remove any sample records from the database"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#C9A24B]" />
-              <span>Purge Sample IDs</span>
-            </button>
-
-            <button
-              onClick={handleWipeFresh}
-              disabled={isCleaningData}
-              className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded border border-rose-200 font-semibold text-xs flex items-center justify-center space-x-1.5 transition-colors disabled:opacity-50 w-full sm:w-auto"
-              title="Clear all transactions, debts, goals, and budgets to start 100% fresh"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-              <span>Wipe to 100% Fresh Slate</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Appearance & Display Theme */}
       <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
@@ -766,49 +584,34 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
           </form>
         </div>
 
-        {/* 2. Paystack Real Banking Integration Status */}
+        {/* 2. Payment & Transfer Gateway */}
         <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
           <div className="flex items-center space-x-2 border-b border-[#E8E5DF] pb-3">
             <CreditCard className="w-4 h-4 text-[#1A1A1A]" />
             <h2 className="font-display text-base font-bold text-[#1A1A1A]">
-              Paystack Banking Rails & Webhooks
+              Payment &amp; Transfer Gateway
             </h2>
           </div>
 
           <div className="space-y-3 text-xs">
             <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF] space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280]">Banking Transfer Rail:</span>
+                <span className="text-[#6B7280]">Status:</span>
                 <span className="inline-flex items-center text-[#15803D] font-bold">
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                  Active / Real-Time Production Ready
+                  Active &amp; Connected
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280]">Paystack Secret Key:</span>
-                <span className="font-mono-num font-semibold text-[#1A1A1A]">
-                  {process.env.PAYSTACK_SECRET_KEY ? 'Configured (Live API)' : 'Dev Sandbox / Simulation Mode'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#6B7280]">Supported Settlement Rails:</span>
+                <span className="text-[#6B7280]">Supported Channels:</span>
                 <span className="text-[#1A1A1A] font-mono-num font-semibold">
-                  Ghana Banks, MTN MoMo, Telecel Cash, AirtelTigo
+                  Bank Transfers, Mobile Money (MTN, Telecel, AirtelTigo)
                 </span>
               </div>
-            </div>
-
-            <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF] space-y-1 font-mono-num">
-              <span className="text-[10px] uppercase tracking-wider text-[#6B7280] block font-bold">
-                Webhook Notification URL (HMAC Verified)
-              </span>
-              <code className="text-[#1A1A1A] font-bold text-[11px] block select-all break-all">
-                {typeof window !== 'undefined' ? `${window.location.origin}/api/paystack/webhook` : '/api/paystack/webhook'}
-              </code>
             </div>
 
             <p className="text-[11px] text-[#6B7280] leading-relaxed">
-              When configuring Paystack in your dashboard settings, set the Webhook URL above to receive instantaneous transaction credit updates.
+              Automated savings transfers and deposits are credited directly to your profile ledgers with instant email confirmation.
             </p>
           </div>
         </div>
@@ -888,12 +691,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
           </form>
         </div>
 
-        {/* 4. Complete JSON Database Backup & Migration */}
+        {/* 4. Complete Data Backup & Restore */}
         <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
           <div className="flex items-center space-x-2 border-b border-[#E8E5DF] pb-3">
             <Shield className="w-4 h-4 text-[#1A1A1A]" />
             <h2 className="font-display text-base font-bold text-[#1A1A1A]">
-              Database Backup & Migration
+              Data Backup &amp; Recovery
             </h2>
           </div>
 
@@ -901,10 +704,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
             {/* Export */}
             <div className="space-y-2 p-3 bg-[#FDFCFB] rounded-xl border border-[#E8E5DF]">
               <span className="font-bold text-[#1A1A1A] block">
-                Export Full MongoDB Snapshot
+                Export Ledger Backup
               </span>
               <p className="text-[#6B7280] text-[11px]">
-                Download a clean, structured JSON file of your MongoDB Atlas data including profiles, transactions, debts, goals, and transfer logs.
+                Download a clean, structured JSON file of your financial data including profiles, transactions, debts, goals, and transfer logs.
               </p>
               <button
                 onClick={handleDownloadBackup}
@@ -922,7 +725,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
               </span>
               <textarea
                 rows={2}
-                placeholder="Paste backup JSON payload..."
+                placeholder="Paste backup JSON content..."
                 value={restoreJson}
                 onChange={(e) => setRestoreJson(e.target.value)}
                 className="w-full bg-white text-[#1A1A1A] p-2 rounded border border-[#E8E5DF] text-[11px] font-mono-num focus:outline-none focus:border-[#1A1A1A]"
@@ -933,7 +736,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs }) =
                 className="px-3.5 py-1.5 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded border border-[#E8E5DF] text-xs font-bold flex items-center space-x-1.5 disabled:opacity-50"
               >
                 <Upload className="w-3.5 h-3.5" />
-                <span>Restore Database</span>
+                <span>Restore from Backup</span>
               </button>
             </div>
           </div>

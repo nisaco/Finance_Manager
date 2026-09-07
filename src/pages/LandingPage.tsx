@@ -191,10 +191,10 @@ export const LandingPage: React.FC = () => {
                 <Receipt className="w-4 h-4" />
               </div>
               <h3 className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
-                Paystack Payment Rails
+                Seamless Payments &amp; Receipts
               </h3>
               <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-4">
-                Automated bank transfers and savings goal funding with linked email transaction referencing.
+                Automated bank transfers and savings deposits with automatic email receipts and payment reconciliation.
               </p>
             </div>
 
@@ -478,7 +478,7 @@ export const LandingPage: React.FC = () => {
       <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#111317] py-6 px-4 sm:px-6 lg:px-8 text-xs text-[#6B7280] dark:text-[#9CA3AF] transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            Ledger • Multi-User Financial Architecture • Paystack Integrated
+            Ledger • Personal &amp; Business Financial Management
           </div>
           <div className="flex items-center space-x-5">
             <button

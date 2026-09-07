@@ -1,10 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { dbManager } from './db.js';
 
+let runtimeSecret: string | null = null;
+
 export function getJwtSecret(): string {
-  return process.env.JWT_SECRET || 'ledger-secret-auth-key-2026';
+  if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim() !== '') {
+    return process.env.JWT_SECRET;
+  }
+  if (!runtimeSecret) {
+    runtimeSecret = crypto.randomBytes(32).toString('hex');
+    console.warn('[SECURITY] JWT_SECRET environment variable not provided. Generated a secure ephemeral 256-bit runtime secret.');
+  }
+  return runtimeSecret;
 }
 
 export const COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'ledger_session';

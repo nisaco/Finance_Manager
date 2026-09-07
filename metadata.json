@@ -1,7 +1,9 @@
 {
   "name": "Ledger",
-  "description": "Full-stack personal finance and budget manager with Paystack banking integration, multi-profile tracking, debts, automated savings, and financial analytics.",
-  "requestFramePermissions": [],
+  "description": "Full-stack personal finance and budget manager with AI financial advisor, real-time Live voice conversations, search grounding, Paystack banking integration, multi-profile tracking, debts, and savings.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]

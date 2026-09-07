@@ -107,7 +107,7 @@ export const TicketStubCard: React.FC<TicketStubCardProps> = ({
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-[#15803D] shrink-0" />
-            <span className="font-mono-num font-medium text-[#1A1A1A]">Real-Time Paystack Banking Rail: Active</span>
+            <span className="font-mono-num font-medium text-[#1A1A1A]">Ledger Synchronized</span>
           </div>
           <div className="hidden sm:inline-block text-[#E8E5DF]">|</div>
           <div className="flex items-center space-x-1.5">

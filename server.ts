@@ -1,8 +1,10 @@
 import express, { Request, Response } from 'express';
+import http from 'http';
 import path from 'path';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcryptjs';
+import { WebSocketServer } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { dbManager } from './server/db.js';
 import {
@@ -19,6 +21,7 @@ import {
 } from './server/auth.js';
 import { paystackService } from './server/services/paystack.js';
 import { convertAmount } from './server/services/currency.js';
+import { chatFinancialAdvisor, setupLiveWebSocket } from './server/services/gemini.js';
 
 const PORT = 3000;
 
@@ -33,6 +36,18 @@ async function startServer() {
   validateEnvironment();
 
   const app = express();
+
+  // Disable powered-by disclosure
+  app.disable('x-powered-by');
+
+  // Security Headers Middleware
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
 
   // Basic security and parsing middlewares
   app.use(cors({ origin: true, credentials: true }));
@@ -92,6 +107,13 @@ async function startServer() {
   app.post('/api/auth/register', async (req: Request, res: Response) => {
     const { username, email, password, agreedToTerms } = req.body;
 
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    const regRateKey = `reg_${clientIp}`;
+    const regCheck = checkRateLimit(regRateKey, 10, 60 * 60 * 1000);
+    if (!regCheck.allowed) {
+      return res.status(429).json({ error: 'Too many registration attempts. Please try again in an hour.' });
+    }
+
     if (!username || typeof username !== 'string' || username.trim().length < 3) {
       return res.status(400).json({ error: 'Username must be at least 3 characters long.' });
     }
@@ -145,7 +167,7 @@ async function startServer() {
       });
     } catch (err: any) {
       console.error('Registration error:', err);
-      res.status(500).json({ error: err.message || 'Failed to create user account' });
+      res.status(500).json({ error: 'Failed to create user account. Please try again.' });
     }
   });
 
@@ -156,16 +178,31 @@ async function startServer() {
       return res.status(400).json({ error: 'Username/email and password are required.' });
     }
 
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    const rateLimitKey = `login_${clientIp}_${String(usernameOrEmail).trim().toLowerCase()}`;
+    const rateStatus = checkRateLimit(rateLimitKey, 5, 15 * 60 * 1000);
+    if (!rateStatus.allowed) {
+      const waitMinutes = Math.ceil((rateStatus.remainingMs || 60000) / 60000);
+      return res.status(429).json({
+        error: `Too many failed login attempts. Account temporarily locked for security. Please try again in ${waitMinutes} minute${waitMinutes > 1 ? 's' : ''}.`,
+      });
+    }
+
     try {
       const user = await dbManager.findUserByUsernameOrEmail(usernameOrEmail);
       if (!user) {
+        registerFailedAttempt(rateLimitKey, 5, 15 * 60 * 1000);
         return res.status(401).json({ error: 'Invalid username/email or password.' });
       }
 
       const isPasswordValid = bcrypt.compareSync(password, user.passwordHash);
       if (!isPasswordValid) {
+        registerFailedAttempt(rateLimitKey, 5, 15 * 60 * 1000);
         return res.status(401).json({ error: 'Invalid username/email or password.' });
       }
+
+      // Success - reset failed attempts
+      clearFailedAttempts(rateLimitKey);
 
       const token = generateToken({
         userId: user.id,
@@ -188,7 +225,7 @@ async function startServer() {
       });
     } catch (err: any) {
       console.error('Login error:', err);
-      res.status(500).json({ error: err.message || 'Authentication error' });
+      res.status(500).json({ error: 'Authentication error occurred. Please try again.' });
     }
   });
 
@@ -542,7 +579,7 @@ async function startServer() {
   });
 
   // REAL MONEY GOAL FUNDING VIA PAYSTACK
-  app.post('/api/goals/:id/fund', async (req: Request, res: Response) => {
+  app.post('/api/goals/:id/fund', optionalAuthMiddleware, async (req: Request, res: Response) => {
     const { amount, currency } = req.body;
     const goal = await dbManager.getGoal(req.params.id);
     if (!goal) return res.status(404).json({ error: 'Goal not found' });
@@ -820,7 +857,7 @@ async function startServer() {
     res.json(banks);
   });
 
-  app.post('/api/paystack/resolve-account', async (req: Request, res: Response) => {
+  app.post('/api/paystack/resolve-account', optionalAuthMiddleware, async (req: Request, res: Response) => {
     const { accountNumber, bankCode } = req.body;
     if (!accountNumber || !bankCode) {
       return res.status(400).json({ error: 'accountNumber and bankCode are required' });
@@ -829,7 +866,7 @@ async function startServer() {
     res.json(resolved);
   });
 
-  app.post('/api/paystack/recipient', async (req: Request, res: Response) => {
+  app.post('/api/paystack/recipient', optionalAuthMiddleware, async (req: Request, res: Response) => {
     const { name, accountNumber, bankCode, currency } = req.body;
     if (!name || !accountNumber || !bankCode) {
       return res.status(400).json({ error: 'Recipient name, account number, and bank code are required' });
@@ -843,7 +880,7 @@ async function startServer() {
     res.json(result);
   });
 
-  app.get('/api/paystack/verify/:reference', async (req: Request, res: Response) => {
+  app.get('/api/paystack/verify/:reference', optionalAuthMiddleware, async (req: Request, res: Response) => {
     const result = await paystackService.checkTransferStatus(req.params.reference);
     if (!result) return res.status(404).json({ error: 'Transfer reference not found' });
     res.json(result);
@@ -853,7 +890,7 @@ async function startServer() {
   // AUDIT LOGS & SETTINGS
   // ==========================================
 
-  app.get('/api/audit-logs', async (_req: Request, res: Response) => {
+  app.get('/api/audit-logs', optionalAuthMiddleware, async (_req: Request, res: Response) => {
     const logs = await dbManager.getAuditLogs();
     res.json(logs);
   });
@@ -879,7 +916,7 @@ async function startServer() {
     res.json(status);
   });
 
-  app.post('/api/db/clean-sample-data', async (_req: Request, res: Response) => {
+  app.post('/api/db/clean-sample-data', authMiddleware, async (_req: Request, res: Response) => {
     const result = await dbManager.cleanSampleData();
     res.json({
       success: true,
@@ -888,7 +925,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/db/wipe-all', async (req: Request, res: Response) => {
+  app.post('/api/db/wipe-all', authMiddleware, async (req: Request, res: Response) => {
     const { keepProfiles } = req.body;
     await dbManager.wipeAllData(keepProfiles !== false);
     res.json({
@@ -897,7 +934,7 @@ async function startServer() {
     });
   });
 
-  app.post('/api/migrate', async (req: Request, res: Response) => {
+  app.post('/api/migrate', authMiddleware, async (req: Request, res: Response) => {
     const payload = req.body;
     if (payload && (payload.profiles || payload.data)) {
       if (payload.profiles) {
@@ -908,7 +945,7 @@ async function startServer() {
     res.status(400).json({ error: 'Invalid migration payload shape' });
   });
 
-  app.get('/api/export-all', async (_req: Request, res: Response) => {
+  app.get('/api/export-all', authMiddleware, async (_req: Request, res: Response) => {
     const raw = await dbManager.exportAll();
     const sanitized = {
       ...raw,
@@ -918,6 +955,34 @@ async function startServer() {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', 'attachment; filename="ledger_mongodb_backup.json"');
     res.json(sanitized);
+  });
+
+  // ==========================================
+  // GEMINI AI ADVISOR & SEARCH GROUNDING
+  // ==========================================
+
+  app.post('/api/ai/chat', optionalAuthMiddleware, async (req: Request, res: Response) => {
+    try {
+      const { messages, model, enableSearch, profileContext } = req.body;
+
+      if (!Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ error: 'Messages array is required' });
+      }
+
+      const chatResult = await chatFinancialAdvisor({
+        messages,
+        model,
+        enableSearch: Boolean(enableSearch),
+        profileContext,
+      });
+
+      res.json(chatResult);
+    } catch (err: any) {
+      console.error('[AI Chat Error]:', err);
+      res.status(500).json({
+        error: err.message || 'Failed to process AI conversation request',
+      });
+    }
   });
 
   // ==========================================
@@ -938,10 +1003,50 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  // Create unified HTTP Server to attach WebSocket for Gemini Live API
+  const server = http.createServer(app);
+
+  const liveWss = new WebSocketServer({ noServer: true });
+  setupLiveWebSocket(liveWss);
+
+  const activeWsConnections = new Map<string, number>();
+
+  server.on('upgrade', (request, socket, head) => {
+    const pathname = request.url ? new URL(request.url, `http://${request.headers.host}`).pathname : '';
+    if (pathname === '/api/live' || pathname === '/live') {
+      const clientIp = (request.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || request.socket.remoteAddress || 'unknown';
+      const currentActive = activeWsConnections.get(clientIp) || 0;
+
+      // Rate limit concurrent Live Voice sessions per client IP to prevent quota drainage or memory attacks
+      if (currentActive >= 4) {
+        socket.write('HTTP/1.1 429 Too Many Requests\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      activeWsConnections.set(clientIp, currentActive + 1);
+
+      liveWss.handleUpgrade(request, socket, head, (ws) => {
+        ws.on('close', () => {
+          const active = activeWsConnections.get(clientIp) || 1;
+          if (active <= 1) {
+            activeWsConnections.delete(clientIp);
+          } else {
+            activeWsConnections.set(clientIp, active - 1);
+          }
+        });
+        liveWss.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
+
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`\n======================================================`);
-    console.log(` Ledger Financial Manager (MongoDB Atlas Connected)`);
+    console.log(` Ledger Financial Manager with Gemini AI & Live Audio`);
     console.log(` Running on: http://0.0.0.0:${PORT}`);
+    console.log(` Live Audio WebSocket: ws://0.0.0.0:${PORT}/api/live`);
     console.log(`======================================================\n`);
   });
 }

@@ -283,4 +283,21 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ currentPin, newPin }),
     }),
+
+  // Gemini AI Advisor & Search Grounding
+  sendAIChat: (data: {
+    messages: { role: 'user' | 'model'; content: string }[];
+    model?: string;
+    enableSearch?: boolean;
+    profileContext?: any;
+  }) =>
+    request<{
+      text: string;
+      modelUsed: string;
+      groundingSources?: { title?: string; uri?: string }[];
+      searchQueries?: string[];
+    }>('/api/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
