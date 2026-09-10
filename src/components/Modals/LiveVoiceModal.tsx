@@ -2,10 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic,
   MicOff,
-  Volume2,
-  VolumeX,
-  PhoneOff,
-  Radio,
   Sparkles,
   X,
   AlertCircle,
@@ -21,17 +17,12 @@ import {
 } from 'lucide-react';
 import { useLedger } from '../../context/LedgerContext';
 import { useAuth } from '../../context/AuthContext';
+import { SpatialVoiceOrb } from '../SpatialVoiceOrb';
+import { VoiceTranscriptSidebar, TranscriptItem } from '../VoiceTranscriptSidebar';
 
 interface LiveVoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface TranscriptItem {
-  id: string;
-  speaker: 'fima' | 'user';
-  text: string;
-  timestamp: string;
 }
 
 // Convert Float32Array PCM audio buffer to 16-bit linear PCM byte buffer (base64)
@@ -87,10 +78,9 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
-  const [showTranscript, setShowTranscript] = useState(true);
+  const [showTranscript, setShowTranscript] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
   const [textInput, setTextInput] = useState('');
-  const [copiedTranscript, setCopiedTranscript] = useState(false);
 
   // Audio, WebSocket, and Speech Recognition refs
   const wsRef = useRef<WebSocket | null>(null);
@@ -105,7 +95,6 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
   isMutedRef.current = isMuted;
   const isSpeakerMutedRef = useRef(false);
   isSpeakerMutedRef.current = isSpeakerMuted;
-  const transcriptContainerRef = useRef<HTMLDivElement>(null);
 
   // Safe calculated financial metrics
   const currency = activeProfile?.displayCurrency || 'GHS';
@@ -128,13 +117,6 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
     debts
       .filter((d) => d.direction === 'i_owe')
       .reduce((acc, d) => acc + Math.max(0, d.amount - (d.paid || 0)), 0);
-
-  // Auto-scroll transcripts
-  useEffect(() => {
-    if (transcriptContainerRef.current) {
-      transcriptContainerRef.current.scrollTop = transcriptContainerRef.current.scrollHeight;
-    }
-  }, [transcripts]);
 
   // Cleanup all audio and socket resources
   const stopLiveSession = () => {
@@ -293,7 +275,7 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
               .join(', ')
           : 'None';
 
-      const userLedgerContext = `User: ${user?.name || user?.username || 'User'}. Profile: ${profileName} (${currency}). Net Balance: ${currency} ${netBalance.toLocaleString()}. Month Income: ${currency} ${monthIncome.toLocaleString()}. Month Expenses: ${currency} ${monthExpense.toLocaleString()}. Budgets: ${budgetsText}. Goals: ${goalsText}. Debts: ${debtsText}. Recent transactions: ${recentTxText}.`;
+      const userLedgerContext = `User: ${user?.username || 'User'}. Profile: ${profileName} (${currency}). Net Balance: ${currency} ${netBalance.toLocaleString()}. Month Income: ${currency} ${monthIncome.toLocaleString()}. Month Expenses: ${currency} ${monthExpense.toLocaleString()}. Budgets: ${budgetsText}. Goals: ${goalsText}. Debts: ${debtsText}. Recent transactions: ${recentTxText}.`;
 
       ws.onopen = () => {
         setStatus('listening');
@@ -364,6 +346,25 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
                 setStatus('listening');
               }
             };
+          } else if (data.type === 'user_text' && data.text) {
+            setTranscripts((prev) => {
+              const last = prev[prev.length - 1];
+              if (last && last.speaker === 'user') {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...last, text: (last.text + ' ' + data.text).trim() },
+                ];
+              }
+              return [
+                ...prev,
+                {
+                  id: Math.random().toString(36).substring(2, 9),
+                  speaker: 'user',
+                  text: data.text.trim(),
+                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                },
+              ];
+            });
           } else if (data.type === 'text' && data.text) {
             setTranscripts((prev) => {
               const last = prev[prev.length - 1];
@@ -476,15 +477,23 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
     );
 
     setTextInput('');
+    setShowTranscript(true);
   };
 
-  const handleCopyTranscript = () => {
-    const full = transcripts
-      .map((t) => `[${t.timestamp}] ${t.speaker === 'fima' ? 'Fima' : 'You'}: ${t.text}`)
-      .join('\n');
-    navigator.clipboard.writeText(full);
-    setCopiedTranscript(true);
-    setTimeout(() => setCopiedTranscript(false), 2000);
+  const handleEditPrompt = (id: string, newText: string) => {
+    // 1. Update the prompt in the transcript
+    setTranscripts((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, text: newText } : t))
+    );
+    // 2. Send the edited prompt to Fima session
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'text',
+          text: newText,
+        })
+      );
+    }
   };
 
   useEffect(() => {
@@ -510,24 +519,38 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
       : null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0A0D12] text-white flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300">
-      {/* Ambient background glow effect */}
+    <div className="fixed inset-0 z-50 w-full h-[100dvh] max-h-[100dvh] bg-[#07090E] text-white flex flex-col justify-between overflow-hidden select-none animate-in fade-in duration-300">
+      {/* Siri iOS 18 / Apple Intelligence Perimeter Flow Glow */}
       <div
-        className="absolute inset-0 pointer-events-none transition-all duration-700 opacity-60"
+        className="absolute inset-0 pointer-events-none transition-all duration-700 z-10"
         style={{
-          background:
+          boxShadow:
             status === 'speaking'
-              ? 'radial-gradient(circle at 50% 45%, rgba(16, 185, 129, 0.22) 0%, rgba(10, 13, 18, 0) 65%)'
+              ? 'inset 0 0 90px rgba(16, 185, 129, 0.35), inset 0 0 160px rgba(6, 182, 212, 0.2)'
               : status === 'listening' && audioLevel > 5
-              ? 'radial-gradient(circle at 50% 45%, rgba(59, 130, 246, 0.18) 0%, rgba(10, 13, 18, 0) 65%)'
-              : 'radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.05) 0%, rgba(10, 13, 18, 0) 65%)',
+              ? 'inset 0 0 90px rgba(56, 189, 248, 0.35), inset 0 0 160px rgba(168, 85, 247, 0.2)'
+              : 'inset 0 0 40px rgba(255, 255, 255, 0.04)',
+          opacity: status === 'speaking' || (status === 'listening' && audioLevel > 5) ? 1 : 0.4,
         }}
       />
 
-      {/* Top Floating Bar: Minimalist & Borderless */}
-      <header className="relative z-20 flex items-center justify-between px-6 sm:px-10 py-5 sm:py-6">
+      {/* Ambient background glow effect */}
+      <div
+        className="absolute inset-0 pointer-events-none transition-all duration-700 opacity-70"
+        style={{
+          background:
+            status === 'speaking'
+              ? 'radial-gradient(circle at 50% 45%, rgba(16, 185, 129, 0.25) 0%, rgba(6, 182, 212, 0.15) 40%, rgba(7, 9, 14, 0) 70%)'
+              : status === 'listening' && audioLevel > 5
+              ? 'radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.22) 0%, rgba(147, 51, 234, 0.12) 40%, rgba(7, 9, 14, 0) 70%)'
+              : 'radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.04) 0%, rgba(7, 9, 14, 0) 65%)',
+        }}
+      />
+
+      {/* Top Floating Bar: Responsive & Clean */}
+      <header className="relative z-20 flex items-center justify-between px-4 sm:px-8 py-3 sm:py-5 shrink-0">
         <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center text-emerald-400">
+          <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-emerald-400 shadow-md">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
@@ -545,20 +568,26 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
 
         {/* Top Right Actions */}
         <div className="flex items-center space-x-3">
-          {/* Transcript Drawer Toggle */}
+          {/* Transcript Sidebar Toggle */}
           <button
             onClick={() => setShowTranscript(!showTranscript)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all backdrop-blur-md ${
+            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all backdrop-blur-xl border ${
               showTranscript
-                ? 'bg-white text-[#0A0D12]'
-                : 'bg-white/10 hover:bg-white/15 text-white/80'
+                ? 'bg-white text-[#0A0D12] border-white shadow-md font-semibold'
+                : 'bg-white/10 hover:bg-white/15 text-white/80 border-white/10'
             }`}
-            title="Toggle full transcript"
+            title={showTranscript ? 'Close transcript sidebar' : 'Open live transcript sidebar'}
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span>Transcript</span>
             {transcripts.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+              <span
+                className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                  showTranscript
+                    ? 'bg-[#0A0D12] text-white'
+                    : 'bg-emerald-500 text-white animate-pulse'
+                }`}
+              >
                 {transcripts.length}
               </span>
             )}
@@ -567,7 +596,7 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
           {/* Close Voice Session */}
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-colors backdrop-blur-md"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/80 hover:text-white flex items-center justify-center transition-all backdrop-blur-xl border border-white/10 active:scale-95"
             title="Exit voice session"
           >
             <X className="w-4 h-4" />
@@ -575,90 +604,22 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
         </div>
       </header>
 
-      {/* Central Audio Stage & ChatGPT-Style Living Sound Orb */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
-        {/* Dynamic Fluid Sound Orb */}
-        <div className="relative flex items-center justify-center w-64 h-64 sm:w-80 sm:h-80 my-auto">
-          {/* Outer Ambient Ripple 1 */}
-          <div
-            className={`absolute rounded-full transition-all duration-500 ease-out ${
-              status === 'speaking'
-                ? 'w-72 h-72 sm:w-96 sm:h-96 bg-emerald-500/20 blur-xl animate-pulse scale-110'
-                : status === 'listening' && audioLevel > 5
-                ? 'w-64 h-64 sm:w-80 sm:h-80 bg-cyan-500/15 blur-lg scale-105'
-                : 'w-48 h-48 sm:w-60 sm:h-60 bg-white/5 blur-md'
-            }`}
+      {/* Central Spatial Stage: Siri Spatial Sound Entity */}
+      <main className={`relative z-20 flex-1 min-h-0 flex flex-col items-center justify-center px-4 text-center py-2 ${
+        showTranscript ? 'overflow-hidden pointer-events-none' : 'overflow-y-auto'
+      }`}>
+        {/* Living Spatial Voice Orb */}
+        <div className="my-auto py-2 sm:py-3">
+          <SpatialVoiceOrb
+            status={status}
+            isMuted={isMuted}
+            audioLevel={audioLevel}
+            onOrbClick={() => setIsMuted(!isMuted)}
           />
-
-          {/* Outer Ambient Ripple 2 */}
-          <div
-            className={`absolute rounded-full transition-all duration-300 ease-out ${
-              status === 'speaking'
-                ? 'w-56 h-56 sm:w-72 sm:h-72 bg-teal-400/25 blur-md scale-105'
-                : status === 'listening' && audioLevel > 12
-                ? 'w-52 h-52 sm:w-64 sm:h-64 bg-emerald-500/20 blur-sm scale-102'
-                : 'w-40 h-40 sm:w-48 sm:h-48 bg-transparent'
-            }`}
-          />
-
-          {/* Core ChatGPT-Style Spherical Orb */}
-          <div
-            className={`relative z-10 rounded-full flex flex-col items-center justify-center transition-all duration-300 shadow-2xl ${
-              status === 'speaking'
-                ? 'w-36 h-36 sm:w-44 sm:h-44 bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-400 text-white scale-105 shadow-emerald-500/40 ring-4 ring-emerald-400/30'
-                : isMuted
-                ? 'w-32 h-32 sm:w-40 sm:h-40 bg-gradient-to-tr from-rose-900 to-rose-700 text-white shadow-rose-900/30 ring-2 ring-rose-500/30'
-                : status === 'listening'
-                ? 'w-36 h-36 sm:w-44 sm:h-44 bg-gradient-to-tr from-[#1E232F] via-[#2A3142] to-[#394258] text-white shadow-cyan-900/20 ring-2 ring-white/20 scale-100'
-                : 'w-32 h-32 sm:w-40 sm:h-40 bg-[#1A1D24] text-white/60 ring-1 ring-white/10'
-            }`}
-            style={{
-              transform:
-                status === 'listening' && !isMuted && audioLevel > 5
-                  ? `scale(${1 + Math.min(0.2, audioLevel / 250)})`
-                  : undefined,
-            }}
-          >
-            {status === 'speaking' ? (
-              <Volume2 className="w-10 h-10 sm:w-12 sm:h-12 animate-pulse" />
-            ) : isMuted ? (
-              <MicOff className="w-10 h-10 sm:w-12 sm:h-12 text-rose-300" />
-            ) : status === 'connecting' ? (
-              <Radio className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-amber-400" />
-            ) : (
-              <Mic className="w-10 h-10 sm:w-12 sm:h-12 text-white/90" />
-            )}
-          </div>
-        </div>
-
-        {/* Live Visualizer Waves */}
-        <div className="flex items-center justify-center space-x-1.5 h-8 my-2">
-          {[...Array(16)].map((_, i) => {
-            const barHeight =
-              status === 'speaking'
-                ? Math.sin(Date.now() / 150 + i * 0.5) * 12 + 16
-                : status === 'listening' && !isMuted
-                ? Math.max(4, Math.min(28, (audioLevel / 100) * (14 + (i % 4) * 4)))
-                : 4;
-
-            return (
-              <div
-                key={i}
-                className={`w-1 rounded-full transition-all duration-75 ${
-                  status === 'speaking'
-                    ? 'bg-emerald-400'
-                    : status === 'listening' && !isMuted && audioLevel > 5
-                    ? 'bg-white'
-                    : 'bg-white/15'
-                }`}
-                style={{ height: `${barHeight}px` }}
-              />
-            );
-          })}
         </div>
 
         {/* State Label */}
-        <div className="mt-2 text-xs font-mono font-medium tracking-wide">
+        <div className="mt-3 sm:mt-5 text-xs font-mono font-medium tracking-wide">
           {status === 'connecting' && (
             <span className="text-amber-400 flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
@@ -668,13 +629,13 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
           {status === 'speaking' && (
             <span className="text-emerald-400 flex items-center space-x-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Fima is speaking</span>
+              <span>Fima is speaking • Tap orb to mute</span>
             </span>
           )}
           {status === 'listening' && (
             <span className="text-white/80 flex items-center space-x-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>{isMuted ? 'Microphone muted' : 'Listening... speak naturally'}</span>
+              <span className={`w-2 h-2 rounded-full ${isMuted ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
+              <span>{isMuted ? 'Microphone muted • Tap orb to unmute' : 'Listening... speak naturally'}</span>
             </span>
           )}
           {status === 'disconnected' && (
@@ -685,14 +646,14 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
           )}
         </div>
 
-        {/* Live Spoken Subtitle (ChatGPT-Style) */}
-        <div className="mt-4 min-h-[44px] max-w-xl mx-auto px-4 flex items-center justify-center">
+        {/* Live Spoken Subtitle (Siri / Assistant Style) */}
+        <div className="mt-2 sm:mt-3 min-h-[36px] max-w-xl mx-auto px-4 flex items-center justify-center">
           {currentSubtitle ? (
-            <p className="text-sm sm:text-base text-white/90 font-light leading-relaxed animate-in fade-in duration-200 line-clamp-2 italic">
+            <p className="text-sm sm:text-base text-white/90 font-light leading-relaxed animate-in fade-in duration-200 line-clamp-2 italic drop-shadow-sm">
               "{currentSubtitle}"
             </p>
           ) : (
-            <div className="flex flex-wrap justify-center gap-2">
+            <div className="flex flex-wrap justify-center gap-1.5">
               {[
                 'Audit my monthly spending',
                 'What is my net balance?',
@@ -704,7 +665,7 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
                     setTextInput(suggestion);
                     handleSendTextMessage(suggestion);
                   }}
-                  className="px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-xs border border-white/10 transition-colors backdrop-blur-xs"
+                  className="px-3 py-1 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-xs border border-white/10 transition-all backdrop-blur-md active:scale-95 shadow-xs"
                 >
                   "{suggestion}"
                 </button>
@@ -714,81 +675,57 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
         </div>
       </main>
 
-      {/* Slide-Up Full Transcript Sheet (When Toggled) */}
-      {showTranscript && (
-        <div className="relative z-30 w-full max-w-2xl mx-auto px-4 mb-3 animate-in slide-in-from-bottom duration-200">
-          <div className="bg-[#141820]/95 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-xl max-h-56 sm:max-h-64 flex flex-col">
-            <div className="flex items-center justify-between pb-2.5 border-b border-white/10 text-xs">
-              <div className="flex items-center space-x-2 font-bold text-white/90">
-                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Live Conversation Transcript</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                {transcripts.length > 0 && (
-                  <>
-                    <button
-                      onClick={handleCopyTranscript}
-                      className="px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/70 text-[11px] flex items-center space-x-1"
-                    >
-                      {copiedTranscript ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                      <span>{copiedTranscript ? 'Copied' : 'Copy'}</span>
-                    </button>
-                    <button
-                      onClick={() => setTranscripts([])}
-                      className="p-1 rounded-md bg-white/5 hover:bg-rose-950/40 text-white/50 hover:text-rose-400"
-                      title="Clear transcript"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => setShowTranscript(false)}
-                  className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-white/70"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
+      {/* Dedicated Opaque Transcript Sidebar & Backdrop */}
+      <VoiceTranscriptSidebar
+        isOpen={showTranscript}
+        onClose={() => setShowTranscript(false)}
+        transcripts={transcripts}
+        onClearTranscripts={() => setTranscripts([])}
+        status={status}
+        onSendMessage={(text) => handleSendTextMessage(text)}
+        onEditPrompt={handleEditPrompt}
+      />
 
-            <div
-              ref={transcriptContainerRef}
-              className="overflow-y-auto flex-1 mt-2 space-y-2 pr-1 text-xs scrollbar-thin"
-            >
-              {transcripts.length === 0 ? (
-                <div className="py-6 text-center text-white/40">
-                  No speech recorded yet. Speak or type below.
-                </div>
-              ) : (
-                transcripts.map((t) => (
-                  <div
-                    key={t.id}
-                    className={`p-2.5 rounded-xl text-xs leading-relaxed ${
-                      t.speaker === 'user'
-                        ? 'bg-white/10 text-white/90 ml-4'
-                        : 'bg-emerald-950/40 border border-emerald-800/40 text-emerald-200 mr-4'
-                    }`}
-                  >
-                    <div className="flex justify-between text-[10px] text-white/40 mb-1 font-mono-num">
-                      <span className="font-bold text-white/70">
-                        {t.speaker === 'fima' ? 'Fima' : 'You'}
-                      </span>
-                      <span>{t.timestamp}</span>
-                    </div>
-                    <p className="whitespace-pre-wrap">{t.text}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Siri Capsule Dock: Pinned and 100% Guaranteed Visible */}
+      <footer className="relative z-30 shrink-0 w-full max-w-xl mx-auto px-3 sm:px-4 pb-3 sm:pb-6 pt-1 flex flex-col items-center">
+        {/* Reconnect Prompt if Disconnected */}
+        {status === 'disconnected' && (
+          <button
+            onClick={startLiveSession}
+            className="mb-2.5 px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-lg shadow-emerald-600/30 transition-all active:scale-95"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Tap to Reconnect Fima</span>
+          </button>
+        )}
 
-      {/* Floating Bottom Control Bar: Borderless & Circular (ChatGPT Voice Style) */}
-      <footer className="relative z-20 pb-8 sm:pb-10 pt-2 flex flex-col items-center space-y-4">
-        {/* Sleek Optional Text Input Pill */}
-        <div className="w-full max-w-md px-4">
-          <div className="flex items-center bg-white/10 hover:bg-white/15 focus-within:bg-white/15 border border-white/10 rounded-full px-3.5 py-1.5 backdrop-blur-md transition-all">
+        {/* Siri Frosted Glass Dock */}
+        <div className="w-full flex items-center bg-white/[0.08] hover:bg-white/[0.12] focus-within:bg-white/[0.14] border border-white/15 rounded-full p-1.5 sm:p-2 backdrop-blur-3xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] transition-all">
+          {/* Left: Siri Voice Mic Toggle Button */}
+          <button
+            onClick={() => setIsMuted(!isMuted)}
+            className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full shrink-0 flex items-center justify-center transition-all active:scale-95 shadow-md ${
+              isMuted
+                ? 'bg-rose-500/30 border border-rose-500 text-rose-300 ring-2 ring-rose-500/20'
+                : status === 'speaking'
+                ? 'bg-gradient-to-tr from-emerald-500 to-teal-400 text-white animate-pulse shadow-emerald-500/40'
+                : status === 'listening'
+                ? 'bg-white/15 hover:bg-white/20 text-emerald-400 border border-emerald-400/40 shadow-cyan-500/20'
+                : 'bg-white/10 hover:bg-white/20 text-white/80 border border-white/10'
+            }`}
+            title={isMuted ? 'Microphone muted • Click to speak' : 'Microphone active • Click to mute'}
+          >
+            {isMuted ? (
+              <MicOff className="w-4 h-4 sm:w-5 sm:h-5 text-rose-300" />
+            ) : status === 'speaking' ? (
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            ) : (
+              <Mic className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            )}
+          </button>
+
+          {/* Center: "Type to Siri" Input Field */}
+          <div className="flex-1 px-3 min-w-0">
             <input
               type="text"
               value={textInput}
@@ -799,86 +736,50 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
                   handleSendTextMessage();
                 }
               }}
-              placeholder="Type message to Fima..."
-              className="flex-1 bg-transparent text-xs text-white placeholder-white/40 outline-hidden"
+              placeholder="Type to Fima..."
+              className="w-full bg-transparent text-xs sm:text-sm text-white placeholder-white/40 outline-hidden font-normal tracking-wide"
             />
-            <button
-              onClick={() => handleSendTextMessage()}
-              disabled={!textInput.trim() || status === 'disconnected'}
-              className="p-1.5 rounded-full bg-white text-[#0A0D12] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-            >
-              <Send className="w-3 h-3" />
-            </button>
           </div>
-        </div>
 
-        {/* Circular Action Buttons */}
-        <div className="flex items-center justify-center space-x-5 sm:space-x-8">
-          {/* Mute Mic Button */}
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg backdrop-blur-md ${
-              isMuted
-                ? 'bg-rose-600/30 border border-rose-500 text-rose-300 ring-2 ring-rose-500/30'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-            }`}
-            title={isMuted ? 'Unmute microphone' : 'Mute microphone'}
-          >
-            {isMuted ? (
-              <MicOff className="w-5 h-5 sm:w-6 sm:h-6 text-rose-300" />
-            ) : (
-              <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
-            )}
-          </button>
+          {/* Right Controls: Send / WhatsApp Transcript / Dismiss */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0 pr-1">
+            {/* Send Button (if user typed text) */}
+            {textInput.trim() ? (
+              <button
+                onClick={() => handleSendTextMessage()}
+                disabled={status === 'disconnected'}
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white text-[#0A0D12] hover:scale-105 active:scale-95 flex items-center justify-center transition-all shadow-md cursor-pointer"
+                title="Send text prompt"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            ) : null}
 
-          {/* Transcript Panel Button */}
-          <button
-            onClick={() => setShowTranscript(!showTranscript)}
-            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg backdrop-blur-md ${
-              showTranscript
-                ? 'bg-white text-[#0A0D12]'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-            }`}
-            title={showTranscript ? 'Hide transcript' : 'Show transcript'}
-          >
-            <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-
-          {/* Speaker Mute Button */}
-          <button
-            onClick={() => setIsSpeakerMuted(!isSpeakerMuted)}
-            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center transition-all active:scale-95 shadow-lg backdrop-blur-md ${
-              isSpeakerMuted
-                ? 'bg-amber-600/30 border border-amber-500 text-amber-300 ring-2 ring-amber-500/30'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-            }`}
-            title={isSpeakerMuted ? 'Unmute audio output' : 'Mute audio output'}
-          >
-            {isSpeakerMuted ? (
-              <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-amber-300" />
-            ) : (
-              <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
-            )}
-          </button>
-
-          {/* End Call Button */}
-          {status === 'disconnected' ? (
+            {/* Transcript Sidebar Button */}
             <button
-              onClick={startLiveSession}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-600/40 active:scale-95 transition-all"
-              title="Reconnect to Fima"
+              onClick={() => setShowTranscript(!showTranscript)}
+              className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
+                showTranscript
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/30'
+                  : 'bg-white/10 hover:bg-white/20 text-white/80 hover:text-white border border-white/10'
+              }`}
+              title={showTranscript ? 'Close transcript sidebar' : 'Open live transcript sidebar'}
             >
-              <Radio className="w-5 h-5 sm:w-6 sm:h-6" />
+              <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              {transcripts.length > 0 && !showTranscript && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 border border-[#0A0D12] animate-pulse" />
+              )}
             </button>
-          ) : (
+
+            {/* Dismiss / Close Assistant (like swiping away Siri) */}
             <button
               onClick={onClose}
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-600/40 active:scale-95 transition-all"
-              title="End Voice Call"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition-all active:scale-95 border border-white/10 cursor-pointer"
+              title="Close Fima Assistant"
             >
-              <PhoneOff className="w-5 h-5 sm:w-6 sm:h-6" />
+              <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
-          )}
+          </div>
         </div>
       </footer>
     </div>

@@ -7,12 +7,14 @@ interface ProfileLockModalProps {
   profile: Profile | null;
   isOpen: boolean;
   onClose: () => void;
+  onUnlockSuccess?: () => void;
 }
 
 export const ProfileLockModal: React.FC<ProfileLockModalProps> = ({
   profile,
   isOpen,
   onClose,
+  onUnlockSuccess,
 }) => {
   const { unlockProfile } = useLedger();
   const [pin, setPin] = useState('');
@@ -54,6 +56,7 @@ export const ProfileLockModal: React.FC<ProfileLockModalProps> = ({
     try {
       const success = await unlockProfile(profile.id, pinToSubmit);
       if (success) {
+        onUnlockSuccess?.();
         onClose();
       } else {
         setError('Incorrect PIN for this profile');

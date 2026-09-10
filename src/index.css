@@ -3,39 +3,113 @@
 
 @layer base {
   :root {
+    --font-serif: "Plus Jakarta Sans", "Inter", -apple-system, sans-serif;
+    --font-mono: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+
+    /* Modern Clean Light Theme Palette (Default) */
+    --bg-primary: #F8FAFC;
+    --bg-surface: #FFFFFF;
+    --bg-surface-alt: #F1F5F9;
+    --bg-surface-elevated: #FFFFFF;
+    --border-primary: #E2E8F0;
+    --border-subtle: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    
+    --ticket-notch: transparent;
+    --receipt-leader: #CBD5E1;
+    --scrollbar-track: #F8FAFC;
+    --scrollbar-thumb: #E2E8F0;
+    --scrollbar-hover: #94A3B8;
+
+    --btn-primary-bg: #0F172A;
+    --btn-primary-hover: #1E293B;
+    --btn-primary-text: #FFFFFF;
+
+    --status-income: #16A34A;
+    --status-expense: #DC2626;
+    --status-danger: #EF4444;
+  }
+
+  /* Style: Nordic Slate */
+  [data-ui-style="slate"] {
+    --bg-primary: #F1F5F9;
+    --bg-surface: #FFFFFF;
+    --bg-surface-alt: #E2E8F0;
+    --border-primary: #CBD5E1;
+    --border-subtle: #94A3B8;
+    --text-primary: #0F172A;
+    --text-secondary: #334155;
+    --text-muted: #64748B;
+    --btn-primary-bg: #3B82F6;
+    --btn-primary-hover: #2563EB;
+  }
+
+  /* Style: Minimalist Mono */
+  [data-ui-style="minimal"] {
+    --bg-primary: #FAFAFA;
+    --bg-surface: #FFFFFF;
+    --bg-surface-alt: #F4F4F5;
+    --border-primary: #E4E4E7;
+    --border-subtle: #D4D4D8;
+    --text-primary: #18181B;
+    --text-secondary: #52525B;
+    --text-muted: #71717A;
+    --btn-primary-bg: #18181B;
+    --btn-primary-hover: #27272A;
+  }
+
+  /* Style: Classic Editorial (Warm Paper & Serif) */
+  [data-ui-style="editorial"] {
     --font-serif: "Fraunces", Georgia, serif;
     --font-mono: "IBM Plex Mono", monospace;
     --font-sans: "Manrope", system-ui, -apple-system, sans-serif;
-
-    /* Light Theme Palette */
     --bg-primary: #FDFCFB;
     --bg-surface: #FFFFFF;
     --bg-surface-alt: #F7F5F2;
-    --bg-surface-elevated: #FFFFFF;
     --border-primary: #E8E5DF;
     --border-subtle: #D5D0C7;
     --text-primary: #1A1A1A;
     --text-secondary: #4B5563;
     --text-muted: #6B7280;
-    
     --ticket-notch: #FDFCFB;
     --receipt-leader: #D5D0C7;
-    --scrollbar-track: #FDFCFB;
-    --scrollbar-thumb: #E8E5DF;
-    --scrollbar-hover: #B5AFA2;
-
     --btn-primary-bg: #1A1A1A;
     --btn-primary-hover: #333333;
-    --btn-primary-text: #FFFFFF;
-
-    --status-income: #15803D;
-    --status-expense: #B91C1C;
-    --status-danger: #DC2626;
   }
 
   [data-theme="dark"],
   .dark {
     /* Professional Obsidian/Charcoal Dark Theme */
+    --bg-primary: #0B0F17;
+    --bg-surface: #141B26;
+    --bg-surface-alt: #1E2738;
+    --bg-surface-elevated: #253147;
+    --border-primary: #232F42;
+    --border-subtle: #314059;
+    --text-primary: #F8FAFC;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+
+    --ticket-notch: #0B0F17;
+    --receipt-leader: #314059;
+    --scrollbar-track: #0B0F17;
+    --scrollbar-thumb: #232F42;
+    --scrollbar-hover: #475569;
+
+    --btn-primary-bg: #F8FAFC;
+    --btn-primary-hover: #E2E8F0;
+    --btn-primary-text: #0B0F17;
+
+    --status-income: #22C55E;
+    --status-expense: #EF4444;
+    --status-danger: #F87171;
+  }
+
+  [data-theme="dark"][data-ui-style="editorial"],
+  .dark[data-ui-style="editorial"] {
     --bg-primary: #0F1115;
     --bg-surface: #181A20;
     --bg-surface-alt: #22252E;
@@ -44,21 +118,7 @@
     --border-subtle: #3A404F;
     --text-primary: #F3F4F6;
     --text-secondary: #9CA3AF;
-    --text-muted: #6B7280;
-
     --ticket-notch: #0F1115;
-    --receipt-leader: #3A404F;
-    --scrollbar-track: #0F1115;
-    --scrollbar-thumb: #2D323F;
-    --scrollbar-hover: #4B5563;
-
-    --btn-primary-bg: #F3F4F6;
-    --btn-primary-hover: #E5E7EB;
-    --btn-primary-text: #111317;
-
-    --status-income: #22C55E;
-    --status-expense: #EF4444;
-    --status-danger: #F87171;
   }
 
   html {
@@ -89,7 +149,7 @@
   font-feature-settings: "tnum" 1;
 }
 
-/* Receipt ticket stub notch pattern using CSS variables */
+/* Card container */
 .ticket-stub {
   position: relative;
   background-color: var(--bg-surface);
@@ -97,8 +157,9 @@
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.ticket-stub::before,
-.ticket-stub::after {
+/* Receipt ticket stub notch pattern is ONLY shown if user deliberately chooses Classic Editorial */
+[data-ui-style="editorial"] .ticket-stub::before,
+[data-ui-style="editorial"] .ticket-stub::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -111,18 +172,22 @@
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.ticket-stub::before {
+[data-ui-style="editorial"] .ticket-stub::before {
   left: -8px;
   border-right: 1px solid var(--border-primary);
 }
 
-.ticket-stub::after {
+[data-ui-style="editorial"] .ticket-stub::after {
   right: -8px;
   border-left: 1px solid var(--border-primary);
 }
 
-/* Dotted leader line between item title and amount */
+/* Dotted leader line is ONLY active in editorial style */
 .receipt-leader {
+  display: none;
+}
+[data-ui-style="editorial"] .receipt-leader {
+  display: block;
   flex-grow: 1;
   border-bottom: 1px dotted var(--receipt-leader);
   margin: 0 0.5rem;
@@ -242,3 +307,173 @@
 .dark .bg-black\/50 {
   background-color: rgba(0, 0, 0, 0.75) !important;
 }
+
+/* ========================================================
+   LIVELY 3D EFFECTS, TRANSITIONS & SCROLL ACCENTS
+   ======================================================== */
+html {
+  scroll-behavior: smooth;
+}
+
+.card-3d-hover {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.28s ease, border-color 0.2s ease;
+}
+
+.card-3d-hover:hover {
+  transform: translateY(-3px) scale(1.008);
+  box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.06);
+}
+
+.dark .card-3d-hover:hover {
+  box-shadow: 0 18px 36px -8px rgba(0, 0, 0, 0.6), 0 0 24px -4px rgba(59, 130, 246, 0.12);
+}
+
+@keyframes floatAmbient {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(0.5deg);
+  }
+}
+
+.animate-float-ambient {
+  animation: floatAmbient 6s ease-in-out infinite;
+}
+
+@keyframes pulseAura {
+  0%, 100% {
+    opacity: 0.35;
+    filter: blur(20px);
+  }
+  50% {
+    opacity: 0.7;
+    filter: blur(28px);
+  }
+}
+
+.animate-pulse-aura {
+  animation: pulseAura 4.5s ease-in-out infinite;
+}
+
+@keyframes shimmerWave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmerWave 1.8s infinite linear;
+}
+
+@keyframes spinSmooth {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-smooth {
+  animation: spinSmooth 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Spatial Liquid Orb Animations (Siri / ChatGPT Voice Experience) */
+@keyframes spatialMorph {
+  0% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    border-radius: 55% 45% 38% 62% / 58% 32% 68% 42%;
+    transform: rotate(90deg) scale(1.02);
+  }
+  50% {
+    border-radius: 68% 32% 54% 46% / 40% 65% 35% 60%;
+    transform: rotate(180deg) scale(0.99);
+  }
+  75% {
+    border-radius: 38% 62% 60% 40% / 50% 45% 55% 50%;
+    transform: rotate(270deg) scale(1.03);
+  }
+  100% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes spatialMorphReverse {
+  0% {
+    border-radius: 50% 50% 40% 60% / 60% 40% 60% 40%;
+    transform: rotate(360deg) scale(1.01);
+  }
+  50% {
+    border-radius: 40% 60% 60% 40% / 40% 60% 40% 60%;
+    transform: rotate(180deg) scale(0.98);
+  }
+  100% {
+    border-radius: 50% 50% 40% 60% / 60% 40% 60% 40%;
+    transform: rotate(0deg) scale(1.01);
+  }
+}
+
+@keyframes spatialOrbPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes spatialGlowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 40px rgba(52, 211, 153, 0.5)) drop-shadow(0 0 90px rgba(56, 189, 248, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 65px rgba(52, 211, 153, 0.8)) drop-shadow(0 0 120px rgba(99, 102, 241, 0.6)) drop-shadow(0 0 180px rgba(236, 72, 153, 0.4));
+  }
+}
+
+@keyframes siriBorderFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-spatial-morph {
+  animation: spatialMorph 12s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-spatial-morph-fast {
+  animation: spatialMorph 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-spatial-morph-reverse {
+  animation: spatialMorphReverse 10s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-spatial-glow {
+  animation: spatialGlowPulse 4s ease-in-out infinite;
+}
+
+.animate-siri-border {
+  background-size: 300% 300%;
+  animation: siriBorderFlow 8s ease infinite;
+}
+
+

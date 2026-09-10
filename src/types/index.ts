@@ -1,6 +1,7 @@
 export interface User {
   id: string;
   username: string;
+  name?: string;
   email: string;
   role: 'admin' | 'user';
   agreedToTermsAt: string;
@@ -28,6 +29,7 @@ export interface Transaction {
   category: string;
   date: string;
   note: string;
+  description?: string;
   recurring: 'none' | 'weekly' | 'monthly';
   createdAt: string;
 }
@@ -80,6 +82,10 @@ export interface WithdrawalRequest {
   goalId: string;
   goalName: string;
   vaultAmount: number;
+  requestedAmount?: number;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
   isEarlyWithdrawal: boolean;
   standardFeePercent: number; // 2%
   earlyPenaltyPercent: number; // 10% if early, else 0%
@@ -104,6 +110,7 @@ export interface AIMessageQuota {
   usedCount: number;
   maxCount: number; // 40
   remaining: number;
+  remainingMessages?: number;
   windowHours: number; // 8
   cooldownHours: number; // 4
   isLocked: boolean;
@@ -189,13 +196,23 @@ export interface UserWithStats extends User {
   profilesCount: number;
   transactionsCount: number;
   totalBalance?: number;
+  netBalance?: number;
+  goalsCount?: number;
+  totalVaultsSaved?: number;
 }
 
 export interface AdminPlatformStats {
   totalUsers: number;
   totalProfiles?: number;
   totalTransactions?: number;
+  totalTransactionsCount?: number;
   pendingWithdrawalsCount: number;
+  totalPendingWithdrawals?: number;
+  totalApprovedWithdrawals?: number;
   totalSavingsVaultAmount: number;
+  totalVaultsAmount?: number;
   totalFeesCollected: number;
+  totalLedgerBalance?: number;
+  totalBudgetsCount?: number;
+  totalSavingsGoalsCount?: number;
 }

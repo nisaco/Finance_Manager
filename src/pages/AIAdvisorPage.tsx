@@ -12,7 +12,6 @@ import {
   Scale,
   PiggyBank,
   Wallet,
-  Zap,
   BrainCircuit,
   ChevronRight,
   RefreshCw,
@@ -30,6 +29,11 @@ import {
   Clock,
   X,
   ArrowRight,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  File,
+  Pencil,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useAuth } from '../context/AuthContext';
@@ -37,6 +41,13 @@ import { api } from '../api/client';
 import { AIMessageQuota } from '../types';
 import { LiveVoiceModal } from '../components/Modals/LiveVoiceModal';
 import { FormattedMessage } from '../components/FormattedMessage';
+
+export interface AttachedFile {
+  name: string;
+  type: string;
+  size?: number;
+  data: string; // base64 data URL
+}
 
 interface Message {
   id: string;
@@ -46,6 +57,7 @@ interface Message {
   modelUsed?: string;
   groundingSources?: { title?: string; uri?: string }[];
   searchQueries?: string[];
+  attachments?: AttachedFile[];
 }
 
 const QUICK_PROMPTS = [
@@ -106,15 +118,49 @@ export const AIAdvisorPage: React.FC = () => {
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState<boolean>(false);
   const [includeFinancialContext, setIncludeFinancialContext] = useState<boolean>(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState<string>('');
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Focus textarea when editing a prompt
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.setSelectionRange(
+        editInputRef.current.value.length,
+        editInputRef.current.value.length
+      );
+    }
+  }, [editingId]);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [showLedgerSidebar, setShowLedgerSidebar] = useState<boolean>(false);
   const [quota, setQuota] = useState<AIMessageQuota | null>(null);
 
+  // Lock body scroll when ledger sidebar is active so scrolling only occurs inside the sidebar
   useEffect(() => {
-    api.getAIQuota().then(setQuota).catch((err) => {
-      console.warn('Could not load initial AI quota:', err);
-    });
-  }, []);
+    if (showLedgerSidebar) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [showLedgerSidebar]);
+
+  // File attachment state: max 2 files/pictures/documents per prompt
+  const [attachments, setAttachments] = useState<AttachedFile[]>([]);
+  const [isDraggingFile, setIsDraggingFile] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (activeProfile?.id) {
+      api.getAIQuota(activeProfile.id).then(setQuota).catch((err) => {
+        console.warn('Could not load initial AI quota:', err);
+      });
+    } else {
+      api.getAIQuota().then(setQuota).catch(() => {});
+    }
+  }, [activeProfile?.id]);
 
   // Safe calculated ledger metrics
   const currency = activeProfile?.displayCurrency || 'GHS';
@@ -176,14 +222,39 @@ export const AIAdvisorPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom of thread
+  // Helper to scroll smoothly to the user's last message/prompt
+  const scrollToLastUserPrompt = (msgList: Message[] = messages, behavior: ScrollBehavior = 'smooth') => {
+    const lastUser = [...msgList].reverse().find((m) => m.role === 'user');
+    if (lastUser) {
+      const el = document.getElementById(`message-${lastUser.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior, block: 'start' });
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // When opening the text AI, scroll down to the user's last message/prompt (not the AI's last response)
+  const initialScrollDoneRef = useRef(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const scrolled = scrollToLastUserPrompt(messages, 'smooth');
+      if (scrolled) {
+        initialScrollDoneRef.current = true;
+      } else if (messages.length <= 1) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        initialScrollDoneRef.current = true;
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Optional manual scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
 
   // Persist conversation thread per profile
   useEffect(() => {
@@ -204,6 +275,9 @@ export const AIAdvisorPage: React.FC = () => {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMessages(parsed);
+          setTimeout(() => {
+            scrollToLastUserPrompt(parsed, 'smooth');
+          }, 150);
           return;
         }
       }
@@ -287,23 +361,71 @@ export const AIAdvisorPage: React.FC = () => {
     };
   };
 
+  const handleFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const remainingSlots = 2 - attachments.length;
+    if (remainingSlots <= 0) {
+      alert('Maximum of 2 files, pictures, or documents allowed per prompt.');
+      return;
+    }
+
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+    filesToProcess.forEach((file) => {
+      if (file.size > 8 * 1024 * 1024) {
+        alert(`"${file.name}" exceeds the 8MB limit.`);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64Data = reader.result as string;
+        setAttachments((prev) => {
+          if (prev.length >= 2) return prev;
+          return [
+            ...prev,
+            {
+              name: file.name,
+              type: file.type || 'application/octet-stream',
+              size: file.size,
+              data: base64Data,
+            },
+          ];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSendMessage = async (customText?: string, forceSearch?: boolean) => {
     const textToSend = (customText || inputPrompt).trim();
-    if (!textToSend || isLoading) return;
+    if ((!textToSend && attachments.length === 0) || isLoading) return;
 
     const shouldSearch = forceSearch !== undefined ? forceSearch : enableSearch;
+    const sentAttachments = [...attachments];
 
     const userMessage: Message = {
       id: Math.random().toString(36).substring(2, 9),
       role: 'user',
-      content: textToSend,
+      content: textToSend || (sentAttachments.length > 0 ? 'Please inspect and analyze the attached document / image.' : ''),
+      attachments: sentAttachments.length > 0 ? sentAttachments : undefined,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInputPrompt('');
+    setAttachments([]);
     setIsLoading(true);
+
+    // Smoothly scroll down to this prompt so user sees what they asked
+    setTimeout(() => {
+      const el = document.getElementById(`message-${userMessage.id}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
 
     try {
       // Build conversation payload with memory retention (last 20 messages)
@@ -313,16 +435,22 @@ export const AIAdvisorPage: React.FC = () => {
         .map((m) => ({
           role: m.role,
           content: m.content,
+          attachments: m.attachments,
         }));
 
       // Search grounding requires gemini-3.5-flash per requirements
       const modelToSend = shouldSearch ? 'gemini-3.5-flash' : selectedModel;
 
       const response = await api.sendAIChat({
-        messages: apiMessages.length > 0 ? apiMessages : [{ role: 'user', content: textToSend }],
+        messages: apiMessages.length > 0 ? apiMessages : [{
+          role: 'user',
+          content: textToSend,
+          attachments: sentAttachments,
+        }],
         model: modelToSend,
         enableSearch: shouldSearch,
         profileContext: buildProfileContext(),
+        profileId: activeProfile?.id,
       });
 
       if (response.quota) {
@@ -346,15 +474,124 @@ export const AIAdvisorPage: React.FC = () => {
       
       if (err.quota) {
         setQuota(err.quota);
-      } else {
-        api.getAIQuota().then(setQuota).catch(() => {});
+      } else if (activeProfile?.id) {
+        api.getAIQuota(activeProfile.id).then(setQuota).catch(() => {});
       }
 
       const errorMessage: Message = {
         id: Math.random().toString(36).substring(2, 9),
         role: 'model',
         content: isRateLimit
-          ? `⏳ **AI Rate Limit Reached (40 messages / 8 hours)**\n\nYou have used your allocated 40 advisory messages for this 8-hour window to ensure stable service for all users. Please wait for your quota to reset before sending further prompts.`
+          ? `⏳ **Profile Limit Reached (40 messages in 8 hours)**\n\nYour profile has reached the allocated 40 advisory messages. To ensure uninterrupted service, the limit will automatically reset 4 hours later back to zero.`
+          : `I ran into an issue retrieving that: ${
+              err.message || 'There was a temporary service error.'
+            }\n\nPlease try again or switch to another model tier.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        modelUsed: selectedModel,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => textareaRef.current?.focus(), 50);
+    }
+  };
+
+  const startEditPrompt = (msg: Message) => {
+    setEditingId(msg.id);
+    setEditText(msg.content);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    const trimmed = editText.trim();
+    if (!trimmed || isLoading) return;
+
+    const targetIdx = messages.findIndex((m) => m.id === id);
+    if (targetIdx === -1) return;
+
+    const existingMsg = messages[targetIdx];
+    const updatedUserMessage: Message = {
+      ...existingMsg,
+      content: trimmed,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    // Like Gemini, branch from this prompt: keep messages up to this prompt
+    const truncated = [...messages.slice(0, targetIdx), updatedUserMessage];
+    setMessages(truncated);
+    setEditingId(null);
+    setEditText('');
+    setIsLoading(true);
+
+    // Scroll directly to this edited prompt
+    setTimeout(() => {
+      const el = document.getElementById(`message-${id}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+
+    try {
+      const apiMessages = truncated
+        .filter((m) => m.id !== 'fima-welcome')
+        .slice(-20)
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+          attachments: m.attachments,
+        }));
+
+      const shouldSearch = enableSearch;
+      const modelToSend = shouldSearch ? 'gemini-3.5-flash' : selectedModel;
+
+      const response = await api.sendAIChat({
+        messages:
+          apiMessages.length > 0
+            ? apiMessages
+            : [
+                {
+                  role: 'user',
+                  content: trimmed,
+                  attachments: existingMsg.attachments,
+                },
+              ],
+        model: modelToSend,
+        enableSearch: shouldSearch,
+        profileContext: buildProfileContext(),
+        profileId: activeProfile?.id,
+      });
+
+      if (response.quota) {
+        setQuota(response.quota);
+      }
+
+      const modelMessage: Message = {
+        id: Math.random().toString(36).substring(2, 9),
+        role: 'model',
+        content: response.text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        modelUsed: response.modelUsed || modelToSend,
+        groundingSources: response.groundingSources,
+        searchQueries: response.searchQueries,
+      };
+
+      setMessages((prev) => [...prev, modelMessage]);
+    } catch (err: any) {
+      console.error('Chat error on edited prompt:', err);
+      const isRateLimit =
+        err.status === 429 ||
+        err.message?.includes('429') ||
+        err.message?.toLowerCase().includes('rate limit') ||
+        err.message?.toLowerCase().includes('quota');
+
+      if (err.quota) {
+        setQuota(err.quota);
+      } else if (activeProfile?.id) {
+        api.getAIQuota(activeProfile.id).then(setQuota).catch(() => {});
+      }
+
+      const errorMessage: Message = {
+        id: Math.random().toString(36).substring(2, 9),
+        role: 'model',
+        content: isRateLimit
+          ? `⏳ **Profile Limit Reached (40 messages in 8 hours)**\n\nYour profile has reached the allocated 40 advisory messages. To ensure uninterrupted service, the limit will automatically reset 4 hours later back to zero.`
           : `I ran into an issue retrieving that: ${
               err.message || 'There was a temporary service error.'
             }\n\nPlease try again or switch to another model tier.`,
@@ -411,35 +648,6 @@ export const AIAdvisorPage: React.FC = () => {
     setSpeakingMessageId(id);
     window.speechSynthesis.speak(utterance);
   };
-
-  // Quick mathematical & strategic formula shortcuts
-  const FORMULA_SHORTCUTS = [
-    {
-      label: 'Compound Interest',
-      prompt:
-        'Explain the Compound Interest formula using LaTeX ($$A = P(1 + r/n)^{nt}$$). Define every variable and calculate what my current net balance will grow to in 5 years at 8% annual return.',
-    },
-    {
-      label: 'Debt Payoff Velocity',
-      prompt:
-        'Provide the Debt Amortization formula in LaTeX and calculate the exact monthly payment needed to eliminate my current debts in 12 months.',
-    },
-    {
-      label: 'Rule of 72 Doubling',
-      prompt:
-        'Demonstrate the Rule of 72 formula ($$T \\approx \\frac{72}{r}$$) in LaTeX and estimate how many years it will take for my savings vaults to double at 7%, 10%, and 12% returns.',
-    },
-    {
-      label: '50/30/20 Budget Model',
-      prompt:
-        'Audit my monthly income and expenses against the 50/30/20 budget framework. Show the exact breakdown with formulas and identify any category overages.',
-    },
-    {
-      label: 'Savings Annuity Projection',
-      prompt:
-        'Write the Future Value of an Ordinary Annuity formula in LaTeX ($$\\text{FV} = \\text{PMT} \\left[\\frac{(1 + r)^t - 1}{r}\\right]$$) and project my savings if I invest 15% of my monthly income every month for 10 years at 9% CAGR.',
-    },
-  ];
 
   return (
     <div className="space-y-3">
@@ -618,15 +826,129 @@ export const AIAdvisorPage: React.FC = () => {
             {/* Conversation Messages */}
             {messages.map((msg) => {
               const isUser = msg.role === 'user';
+              const isEditing = editingId === msg.id;
 
               if (isUser) {
                 return (
-                  <div key={msg.id} className="flex justify-end animate-in fade-in duration-150">
-                    <div className="max-w-[85%] sm:max-w-[75%] rounded-3xl rounded-tr-md bg-[#1A1A1A] dark:bg-[#F3F4F6] text-white dark:text-[#111317] px-5 py-3.5 text-sm leading-relaxed shadow-xs">
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                      <div className="text-[10px] text-white/50 dark:text-[#111317]/50 text-right mt-1.5 font-mono-num">
-                        {msg.timestamp}
-                      </div>
+                  <div
+                    key={msg.id}
+                    id={`message-${msg.id}`}
+                    className="flex justify-end animate-in fade-in duration-150 group"
+                  >
+                    <div className="max-w-[85%] sm:max-w-[75%] space-y-1.5 flex flex-col items-end">
+                      {isEditing ? (
+                        <div className="w-full sm:w-[480px] max-w-full bg-[#F7F5F2] dark:bg-[#1A1E29] border border-emerald-500/60 rounded-3xl p-3.5 sm:p-4 shadow-lg space-y-3">
+                          <div className="flex items-center justify-between text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center space-x-1.5">
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Edit Prompt</span>
+                            </span>
+                            <span className="text-[10px] font-mono-num opacity-70">Esc to cancel</span>
+                          </div>
+                          <textarea
+                            ref={editInputRef}
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSaveEdit(msg.id);
+                              } else if (e.key === 'Escape') {
+                                e.preventDefault();
+                                setEditingId(null);
+                              }
+                            }}
+                            rows={3}
+                            className="w-full bg-white dark:bg-[#13161F] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl p-3 text-xs sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] outline-hidden resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                            placeholder="Edit your prompt..."
+                          />
+                          <div className="flex items-center justify-end space-x-2">
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-medium text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleSaveEdit(msg.id)}
+                              disabled={!editText.trim() || isLoading}
+                              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 transition-all flex items-center space-x-1.5 shadow-xs cursor-pointer active:scale-95"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Update &amp; Send</span>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="w-full rounded-3xl rounded-tr-md bg-[#1A1A1A] dark:bg-[#F3F4F6] text-white dark:text-[#111317] px-5 py-3.5 text-sm leading-relaxed shadow-xs space-y-2">
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className="flex flex-wrap gap-2 pb-1">
+                                {msg.attachments.map((att, attIdx) => (
+                                  <div
+                                    key={attIdx}
+                                    className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl bg-white/15 dark:bg-black/15 text-xs text-inherit backdrop-blur-xs border border-white/20 dark:border-black/20"
+                                  >
+                                    {att.type.startsWith('image/') ? (
+                                      <img
+                                        src={att.data}
+                                        alt={att.name}
+                                        className="w-7 h-7 object-cover rounded-md"
+                                      />
+                                    ) : (
+                                      <FileText className="w-4 h-4 shrink-0 text-emerald-400 dark:text-emerald-600" />
+                                    )}
+                                    <div className="flex flex-col min-w-0 max-w-[140px]">
+                                      <span className="text-[11px] font-semibold truncate leading-tight">
+                                        {att.name}
+                                      </span>
+                                      {att.size && (
+                                        <span className="text-[9px] opacity-70 font-mono-num">
+                                          {(att.size / 1024).toFixed(0)} KB
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                            <div className="text-[10px] text-white/50 dark:text-[#111317]/50 text-right mt-1.5 font-mono-num">
+                              {msg.timestamp}
+                            </div>
+                          </div>
+
+                          {/* Gemini-Style Action Bar: Copy & Edit Prompt */}
+                          <div className="flex items-center space-x-1 pr-1">
+                            <button
+                              onClick={() => handleCopyMessage(msg.id, msg.content)}
+                              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F] transition-all cursor-pointer"
+                              title="Copy prompt"
+                            >
+                              {copiedId === msg.id ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span className="text-emerald-600 font-medium">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+
+                            <button
+                              onClick={() => startEditPrompt(msg)}
+                              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F] transition-all cursor-pointer"
+                              title="Edit prompt"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -635,6 +957,7 @@ export const AIAdvisorPage: React.FC = () => {
               return (
                 <div
                   key={msg.id}
+                  id={`message-${msg.id}`}
                   className="flex items-start space-x-3 sm:space-x-4 max-w-full animate-in fade-in duration-200"
                 >
                   {/* Fima Sparkle Avatar */}
@@ -787,38 +1110,94 @@ export const AIAdvisorPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Formulas Carousel */}
-        <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 pb-2 flex items-center space-x-1.5 overflow-x-auto scrollbar-none">
-          <span className="text-[10px] font-bold text-[#6B7280] dark:text-[#9CA3AF] uppercase tracking-wider shrink-0 flex items-center space-x-1 mr-1">
-            <Zap className="w-3 h-3 text-amber-500" />
-            <span>Formulas:</span>
-          </span>
-          {FORMULA_SHORTCUTS.map((fs, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSendMessage(fs.prompt)}
-              disabled={isLoading}
-              className="shrink-0 px-2.5 py-1 rounded-full bg-[#F7F5F2] dark:bg-[#1E232E] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-[#1A1A1A] dark:text-[#F3F4F6] hover:text-emerald-700 dark:hover:text-emerald-300 border border-[#E8E5DF] dark:border-[#292F3E] text-[11px] font-medium transition-all shadow-2xs whitespace-nowrap active:scale-95 disabled:opacity-40"
-            >
-              {fs.label}
-            </button>
-          ))}
-        </div>
-
         {/* Gemini Floating Input Bar Capsule */}
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 pb-4">
-          <div className="rounded-3xl bg-[#FDFCFB] dark:bg-[#1A1E28] border border-[#E8E5DF] dark:border-[#2C3242] shadow-md focus-within:border-[#1A1A1A] dark:focus-within:border-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all p-3 space-y-2">
-            {/* Rate limit warning banner */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            className="hidden"
+            onChange={(e) => {
+              handleFiles(e.target.files);
+              if (e.target) e.target.value = '';
+            }}
+          />
+
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDraggingFile(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setIsDraggingFile(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDraggingFile(false);
+              if (e.dataTransfer.files) {
+                handleFiles(e.dataTransfer.files);
+              }
+            }}
+            className={`rounded-3xl bg-[#FDFCFB] dark:bg-[#1A1E28] border shadow-md focus-within:border-[#1A1A1A] dark:focus-within:border-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all p-3 space-y-2 ${
+              isDraggingFile
+                ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20'
+                : 'border-[#E8E5DF] dark:border-[#2C3242]'
+            }`}
+          >
+            {/* Rate limit warning banner (only shown if profile limit is reached) */}
             {quota && quota.remainingMessages <= 0 && (
               <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <span>
-                    <strong>Rate Limit Active:</strong> You have used your 40 messages for this 8-hour window.
+                    <strong>Profile Limit Reached:</strong> 40 messages limit reached. Automatically resets 4 hours later.
                   </span>
                 </div>
                 <span className="text-[11px] font-mono-num text-amber-700 dark:text-amber-300">
-                  Resets in rolling window
+                  Cooldown active
+                </span>
+              </div>
+            )}
+
+            {/* Attachments Chips Preview */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-1.5 bg-[#F7F5F2] dark:bg-[#202533] rounded-2xl border border-[#E8E5DF] dark:border-[#2C3242]">
+                {attachments.map((att, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center space-x-2 pl-2 pr-1.5 py-1 rounded-xl bg-white dark:bg-[#151821] border border-[#E8E5DF] dark:border-[#2C3242] text-xs shadow-2xs"
+                  >
+                    {att.type.startsWith('image/') ? (
+                      <img
+                        src={att.data}
+                        alt={att.name}
+                        className="w-6 h-6 object-cover rounded"
+                      />
+                    ) : (
+                      <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    )}
+                    <div className="flex flex-col min-w-0 max-w-[130px]">
+                      <span className="truncate text-[11px] font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {att.name}
+                      </span>
+                      <span className="text-[9px] text-[#6B7280] dark:text-[#9CA3AF]">
+                        {att.size ? `${(att.size / 1024).toFixed(0)} KB` : 'File'}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(idx)}
+                      className="p-1 rounded-lg text-[#9CA3AF] hover:text-red-500 hover:bg-[#F7F5F2] dark:hover:bg-[#252A38] transition-colors"
+                      title="Remove attachment"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] self-center px-1 font-mono-num">
+                  {attachments.length}/2 attached
                 </span>
               </div>
             )}
@@ -838,8 +1217,10 @@ export const AIAdvisorPage: React.FC = () => {
               rows={2}
               placeholder={
                 quota && quota.remainingMessages <= 0
-                  ? 'Hourly quota reached. Please wait for the window to reset...'
-                  : 'Ask Fima anything: budget audit, compound formulas, debt payoffs, or financial advice...'
+                  ? 'Profile quota reached. Please wait for the 4-hour window to reset...'
+                  : attachments.length > 0
+                  ? 'Add your question or notes regarding the attached document(s)...'
+                  : 'Ask Fima anything: budget analysis, debt payoffs, savings growth, or investment advice...'
               }
               className="w-full bg-transparent text-xs sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] resize-none outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed px-1"
             />
@@ -848,18 +1229,6 @@ export const AIAdvisorPage: React.FC = () => {
             <div className="flex items-center justify-between pt-1 border-t border-[#E8E5DF]/60 dark:border-[#2C3242]/60">
               {/* Left Capsule Controls */}
               <div className="flex items-center space-x-3 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                <label className="flex items-center space-x-1.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={includeFinancialContext}
-                    onChange={(e) => setIncludeFinancialContext(e.target.checked)}
-                    className="rounded text-[#1A1A1A] dark:text-emerald-500 focus:ring-0 w-3.5 h-3.5"
-                  />
-                  <span className="text-[11px] font-medium hidden sm:inline">
-                    Sync Active Ledger
-                  </span>
-                </label>
-
                 {enableSearch && (
                   <span className="text-blue-600 dark:text-blue-400 font-semibold flex items-center space-x-1 text-[11px]">
                     <Globe className="w-3 h-3" />
@@ -869,7 +1238,26 @@ export const AIAdvisorPage: React.FC = () => {
               </div>
 
               {/* Right Capsule Action Buttons */}
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                {/* Paperclip / File Attachment Button (Max 2 files/pictures/documents) */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={attachments.length >= 2 || isLoading || (quota !== null && quota.remainingMessages <= 0)}
+                  className={`p-2 rounded-full transition-colors flex items-center justify-center ${
+                    attachments.length >= 2
+                      ? 'opacity-40 cursor-not-allowed text-[#9CA3AF]'
+                      : 'hover:bg-[#F7F5F2] dark:hover:bg-[#252A38] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-white'
+                  }`}
+                  title={
+                    attachments.length >= 2
+                      ? 'Maximum 2 attachments reached'
+                      : 'Attach documents, pictures, or files (Max 2)'
+                  }
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+
                 <button
                   onClick={() => setIsLiveVoiceOpen(true)}
                   className="p-2 rounded-full hover:bg-[#F7F5F2] dark:hover:bg-[#252A38] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-white transition-colors"
@@ -880,7 +1268,7 @@ export const AIAdvisorPage: React.FC = () => {
 
                 <button
                   onClick={() => handleSendMessage()}
-                  disabled={!inputPrompt.trim() || isLoading || (quota !== null && quota.remainingMessages <= 0)}
+                  disabled={(!inputPrompt.trim() && attachments.length === 0) || isLoading || (quota !== null && quota.remainingMessages <= 0)}
                   className="p-2 sm:px-3 sm:py-2 bg-[#1A1A1A] hover:bg-[#333333] dark:bg-[#F3F4F6] dark:hover:bg-white text-white dark:text-[#111317] rounded-full sm:rounded-xl font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-xs active:scale-95 flex items-center space-x-1.5"
                   title="Send prompt to Fima"
                 >
@@ -891,13 +1279,10 @@ export const AIAdvisorPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Micro Footer Status & Disclaimer */}
+          {/* Micro Footer Status & Disclaimer (Backdoor quota - hidden from bottom) */}
           <div className="flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF] px-2 pt-1.5">
-            <div className="flex items-center space-x-2 font-mono-num">
-              <Clock className="w-3 h-3 text-amber-500" />
-              <span>
-                Quota: <strong>{quota ? quota.remainingMessages : 40}</strong>/40 msgs
-              </span>
+            <div className="flex items-center space-x-2 text-[10px] text-[#9CA3AF]">
+              <span>Max 2 attachments per prompt (PDF, images, docs, CSV)</span>
             </div>
             <p className="text-[10px] text-[#9CA3AF] text-right truncate">
               Fima is an AI financial assistant. Verify financial decisions.

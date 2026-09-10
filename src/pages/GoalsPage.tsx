@@ -14,8 +14,6 @@ import {
   RefreshCw,
   ArrowDownLeft,
   Lock,
-  Sparkles,
-  TrendingUp,
   Wallet,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
@@ -45,30 +43,39 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
   const [loadingWithdrawals, setLoadingWithdrawals] = useState(false);
   const [transfers, setTransfers] = useState<FundTransfer[]>([]);
   const [loadingTransfers, setLoadingTransfers] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'locked' | 'emergency' | 'milestone'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'active' | 'matured' | 'pending'>('all');
 
   const currency = activeProfile?.displayCurrency || 'GHS';
 
-  // Portfolio calculations (Strictly non-interest, non-yield budgeting)
+  // Portfolio calculations
   const totalSaved = goals.reduce((acc, g) => acc + (g.current || 0), 0);
   const totalTarget = goals.reduce((acc, g) => acc + (g.target || 0), 0);
   const availableToWithdraw = goals
-    .filter((g) => g.status !== 'pending_withdrawal' && g.status !== 'withdrawn')
+    .filter((g) => g.status !== 'pending_withdrawal')
     .reduce((acc, g) => acc + (g.current || 0), 0);
   const fundedGoals = goals.filter(
-    (g) => (g.current || 0) > 0 && g.status !== 'pending_withdrawal' && g.status !== 'withdrawn'
+    (g) => (g.current || 0) > 0 && g.status !== 'pending_withdrawal'
   );
-  const lockedVaultsCount = goals.filter(
-    (g) => g.isLocked || g.vaultType === 'locked_savings' || g.vaultType === 'high_yield_vault'
-  ).length;
-  const paystackLinkedCount = goals.filter(
-    (g) => g.paystackDestination?.type === 'paystack_recipient'
-  ).length;
+
+  const isGoalMatured = (g: Goal): boolean => {
+    if (!g.deadline) return false;
+    const diffMs = new Date(g.deadline).getTime() - Date.now();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24)) <= 0;
+  };
+
+  const getDaysRemaining = (g: Goal): number | null => {
+    if (!g.deadline) return null;
+    const diffMs = new Date(g.deadline).getTime() - Date.now();
+    return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  };
+
+  const maturedCount = goals.filter(isGoalMatured).length;
+  const pendingCount = goals.filter((g) => g.status === 'pending_withdrawal').length;
 
   const filteredGoals = goals.filter((g) => {
-    if (filterType === 'locked') return g.vaultType === 'high_yield_vault' || g.vaultType === 'locked_savings' || g.isLocked;
-    if (filterType === 'emergency') return g.vaultType === 'emergency_stash';
-    if (filterType === 'milestone') return g.vaultType === 'flexible_goal';
+    if (filterType === 'matured') return isGoalMatured(g);
+    if (filterType === 'pending') return g.status === 'pending_withdrawal';
+    if (filterType === 'active') return (g.current || 0) > 0 && g.status !== 'pending_withdrawal';
     return true;
   });
 
@@ -141,11 +148,11 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
           <div className="flex items-center space-x-2">
             <PiggyBank className="w-5 h-5 text-[#1A1A1A] dark:text-white" />
             <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-              Savings Goals &amp; Vaults
+              Savings Vaults
             </h1>
           </div>
           <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mt-0.5">
-            {activeProfile?.name} • Self-directed budgeting milestones &amp; disciplined locked vaults
+            {activeProfile?.name} • Deposit and save anytime • Set an end date to withdraw at 2% or anytime with penalty
           </p>
         </div>
 
@@ -172,9 +179,9 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
           <button
             onClick={() => setIsTermsOpen(true)}
             className="px-3 py-2 bg-white dark:bg-[#1E2128] hover:bg-[#F7F5F2] dark:hover:bg-[#252830] text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white border border-[#E8E5DF] dark:border-[#2D323F] rounded-lg text-xs font-medium shadow-xs transition-all flex items-center justify-center space-x-1"
-            title="View non-bank disclaimers, 2% processing fee, and 10% penalty policy"
+            title="View 2% standard fee and 10% early withdrawal penalty policy"
           >
-            <span>Custody &amp; Fee Terms</span>
+            <span>Fee &amp; Custody Policy</span>
           </button>
 
           <button
@@ -182,7 +189,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
             className="px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] dark:bg-white dark:text-[#1A1A1A] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center space-x-1.5"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span>New Savings Vault</span>
+            <span>Create Savings Vault</span>
           </button>
         </div>
       </div>
@@ -198,13 +205,13 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
             {formatCurrency(totalSaved, currency)}
           </div>
           <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num">
-            Target: {formatCurrency(totalTarget, currency)}
+            Total Target: {formatCurrency(totalTarget, currency)}
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#1E2128] border border-[#E8E5DF] dark:border-[#2D323F] shadow-xs space-y-1">
           <div className="flex items-center justify-between text-[#6B7280] dark:text-[#9CA3AF] text-xs">
-            <span>Available for Withdrawal</span>
+            <span>Available to Withdraw</span>
             <ArrowDownLeft className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div className="text-lg sm:text-xl font-mono-num font-bold text-emerald-600 dark:text-emerald-400">
@@ -217,45 +224,29 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#1E2128] border border-[#E8E5DF] dark:border-[#2D323F] shadow-xs space-y-1">
           <div className="flex items-center justify-between text-[#6B7280] dark:text-[#9CA3AF] text-xs">
-            <span>Time-Locked Vaults</span>
-            <Lock className="w-4 h-4 text-amber-500" />
+            <span>Disbursement Fee</span>
+            <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </div>
           <div className="text-lg sm:text-xl font-mono-num font-bold text-[#1A1A1A] dark:text-white">
-            {lockedVaultsCount} Vaults
+            2% Standard
           </div>
-          <div className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">
-            10% early withdrawal fee rule
+          <div className="text-[10px] text-blue-700 dark:text-blue-400 font-medium">
+            Applies on or after set end date
           </div>
         </div>
 
         <div className="p-4 rounded-xl bg-white dark:bg-[#1E2128] border border-[#E8E5DF] dark:border-[#2D323F] shadow-xs space-y-1">
           <div className="flex items-center justify-between text-[#6B7280] dark:text-[#9CA3AF] text-xs">
-            <span>Disbursement Rails</span>
-            <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span>Early Withdrawal Rule</span>
+            <Lock className="w-4 h-4 text-amber-500" />
           </div>
-          <div className="text-lg sm:text-xl font-mono-num font-bold text-[#1A1A1A] dark:text-white">
-            Paystack &amp; MoMo
+          <div className="text-lg sm:text-xl font-mono-num font-bold text-amber-600 dark:text-amber-400">
+            10% Penalty Fee
           </div>
-          <div className="text-[10px] text-blue-700 dark:text-blue-400 font-medium">
-            Standard 2% protocol fee
+          <div className="text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+            Applies if withdrawn before set date
           </div>
         </div>
-      </div>
-
-      {/* Legal Transparency Strip */}
-      <div className="p-3 rounded-xl bg-[#F7F5F2] dark:bg-[#181A20] border border-[#E8E5DF] dark:border-[#2D323F] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-        <div className="flex items-center space-x-2">
-          <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>
-            <strong>Non-Bank Ledger:</strong> Savings vaults do not earn interest or yield. Funds are protected via licensed PSP rails.
-          </span>
-        </div>
-        <button
-          onClick={() => setIsTermsOpen(true)}
-          className="text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] hover:underline self-start sm:self-auto shrink-0"
-        >
-          View Full Legal Terms &amp; Conditions →
-        </button>
       </div>
 
       {/* Filter Tabs */}
@@ -271,35 +262,37 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
           All Vaults ({goals.length})
         </button>
         <button
-          onClick={() => setFilterType('locked')}
+          onClick={() => setFilterType('active')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-            filterType === 'locked'
+            filterType === 'active'
               ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-xs'
               : 'text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F7F5F2] dark:hover:bg-[#252830]'
           }`}
         >
-          🔒 Time-Locked Vaults ({lockedVaultsCount})
+          Active Funds ({fundedGoals.length})
         </button>
         <button
-          onClick={() => setFilterType('emergency')}
+          onClick={() => setFilterType('matured')}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-            filterType === 'emergency'
+            filterType === 'matured'
               ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-xs'
               : 'text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F7F5F2] dark:hover:bg-[#252830]'
           }`}
         >
-          🛡️ Emergency Reserves
+          Ready for Maturity Payout ({maturedCount})
         </button>
-        <button
-          onClick={() => setFilterType('milestone')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-            filterType === 'milestone'
-              ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-xs'
-              : 'text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F7F5F2] dark:hover:bg-[#252830]'
-          }`}
-        >
-          🎯 Target Milestones
-        </button>
+        {pendingCount > 0 && (
+          <button
+            onClick={() => setFilterType('pending')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              filterType === 'pending'
+                ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] shadow-xs'
+                : 'text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F7F5F2] dark:hover:bg-[#252830]'
+            }`}
+          >
+            Pending Review ({pendingCount})
+          </button>
+        )}
       </div>
 
       {/* Goals Grid */}
@@ -312,25 +305,17 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
               onClick={onOpenNewGoal}
               className="mt-2 text-xs text-[#1A1A1A] dark:text-white hover:underline font-bold inline-block"
             >
-              Establish a New Savings Vault
+              Create a New Savings Vault
             </button>
           </div>
         ) : (
           filteredGoals.map((g) => {
-            const pct = Math.min(100, Math.round((g.current / g.target) * 100));
+            const pct = Math.min(100, Math.round(((g.current || 0) / (g.target || 1)) * 100));
             const isPaystack = g.paystackDestination?.type === 'paystack_recipient';
-            const remaining = Math.max(0, g.target - g.current);
-            const isLocked = g.isLocked || g.vaultType === 'high_yield_vault' || g.vaultType === 'locked_savings';
-            const interestRate = g.interestRateApr || (isLocked ? 7.5 : 0);
+            const remaining = Math.max(0, (g.target || 0) - (g.current || 0));
 
-            // Calculate maturity remaining days
-            let isMatured = false;
-            let daysRemaining: number | null = null;
-            if (g.deadline) {
-              const diffMs = new Date(g.deadline).getTime() - Date.now();
-              daysRemaining = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-              if (daysRemaining <= 0) isMatured = true;
-            }
+            const isMatured = isGoalMatured(g);
+            const daysRemaining = getDaysRemaining(g);
 
             return (
               <div
@@ -346,17 +331,13 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                           {g.name}
                         </h3>
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-num font-bold bg-[#F7F5F2] dark:bg-[#15181E] text-[#6B7280] dark:text-[#9CA3AF] border border-[#E8E5DF] dark:border-[#2D323F] shrink-0">
-                          {g.vaultType === 'high_yield_vault' || g.vaultType === 'locked_savings' || isLocked
-                            ? '🔒 Time-Locked'
-                            : g.vaultType === 'emergency_stash'
-                            ? '🛡️ Emergency'
-                            : '🎯 Milestone'}
+                          Savings Vault
                         </span>
                       </div>
 
                       <div className="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-y-1">
-                        {/* Lock State Pill */}
-                        {isLocked && (
+                        {/* Target Date Pill */}
+                        {g.deadline ? (
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-num font-bold ${
                               isMatured
@@ -364,10 +345,14 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                                 : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
                             }`}
                           >
-                            <Lock className="w-3 h-3 mr-1" />
+                            <Calendar className="w-3 h-3 mr-1" />
                             {isMatured
-                              ? 'Matured & Ready for Payout (2% fee)'
-                              : `Locked (${daysRemaining !== null ? `${daysRemaining}d left` : 'Term Lock'}) • 10% Early Fee`}
+                              ? 'Set Date Reached (2% standard fee)'
+                              : `Set Date: ${formatDate(g.deadline)} (${daysRemaining !== null ? `${daysRemaining}d left` : ''}) • 10% Early Fee`}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-num bg-[#F7F5F2] dark:bg-[#15181E] text-[#6B7280] dark:text-[#9CA3AF] border border-[#E8E5DF] dark:border-[#2D323F]">
+                            Flexible Date • 2% Payout Fee
                           </span>
                         )}
 
@@ -375,11 +360,6 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-num bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 font-bold">
                             <Clock className="w-3 h-3 mr-1" />
                             Payout Pending Admin Approval
-                          </span>
-                        ) : g.status === 'withdrawn' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono-num bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 font-bold">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Funds Withdrawn
                           </span>
                         ) : null}
 
@@ -390,7 +370,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono-num bg-[#F7F5F2] dark:bg-[#15181E] text-[#6B7280] dark:text-[#9CA3AF] border border-[#E8E5DF] dark:border-[#2D323F] font-medium">
-                            Manual Ledger Goal
+                            Manual Vault
                           </span>
                         )}
                       </div>
@@ -419,13 +399,13 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                   {/* Balance & Target Figures */}
                   <div className="mt-3.5 p-3 bg-[#FDFCFB] dark:bg-[#15181E] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] space-y-1">
                     <div className="flex justify-between items-baseline">
-                      <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Current Saved:</span>
+                      <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">Current Saved Balance:</span>
                       <span className="text-base sm:text-lg font-mono-num font-bold text-[#1A1A1A] dark:text-white">
                         {formatCurrency(g.current, g.currency)}
                       </span>
                     </div>
                     <div className="flex justify-between text-xs font-mono-num text-[#6B7280] dark:text-[#9CA3AF] pt-1 border-t border-[#E8E5DF] dark:border-[#2D323F]">
-                      <span>Target: {formatCurrency(g.target, g.currency)}</span>
+                      <span>Target Goal: {formatCurrency(g.target, g.currency)}</span>
                       <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                         Remaining: {formatCurrency(remaining, g.currency)}
                       </span>
@@ -441,11 +421,11 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                       />
                     </div>
                     <div className="flex justify-between text-[11px] font-mono-num text-[#6B7280] dark:text-[#9CA3AF]">
-                      <span className="font-semibold">{pct}% funded</span>
+                      <span className="font-semibold">{pct}% saved</span>
                       {g.deadline && (
                         <span className="flex items-center space-x-1">
                           <Calendar className="w-3 h-3 text-[#6B7280] dark:text-[#9CA3AF]" />
-                          <span>{isLocked ? 'Matures' : 'Due'} {formatDate(g.deadline)}</span>
+                          <span>Set Date: {formatDate(g.deadline)}</span>
                         </span>
                       )}
                     </div>
@@ -459,33 +439,31 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                     className="text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white flex items-center justify-center sm:justify-start space-x-1 font-semibold transition-colors py-1 sm:py-0"
                   >
                     <History className="w-3.5 h-3.5" />
-                    <span>Transfers &amp; Paystack Logs</span>
+                    <span>Deposits &amp; Paystack Logs</span>
                   </button>
 
                   <div className="flex items-center space-x-2 w-full sm:w-auto">
-                    {/* Withdraw Funds Button - Always clearly visible and accessible */}
+                    {/* Withdraw Funds Button */}
                     <button
                       onClick={() => {
-                        if (g.current <= 0) {
+                        if ((g.current || 0) <= 0) {
                           notify('This vault has 0 balance to withdraw. Make a deposit first.', 'info');
                         } else {
                           setSelectedGoalForWithdrawal(g);
                         }
                       }}
-                      disabled={g.status === 'pending_withdrawal' || g.status === 'withdrawn'}
+                      disabled={g.status === 'pending_withdrawal'}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold shadow-xs transition-all flex items-center justify-center space-x-1 active:scale-95 flex-1 sm:flex-initial border ${
                         g.status === 'pending_withdrawal'
                           ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 cursor-not-allowed'
-                          : g.status === 'withdrawn'
-                          ? 'bg-[#F7F5F2] dark:bg-[#15181E] text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] cursor-not-allowed'
-                          : g.current > 0
+                          : (g.current || 0) > 0
                           ? 'bg-white dark:bg-[#1E2128] hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700/70'
                           : 'bg-white dark:bg-[#1E2128] hover:bg-[#F7F5F2] dark:hover:bg-[#252830] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F]'
                       }`}
                       title={
                         g.status === 'pending_withdrawal'
                           ? 'Payout request is currently under review'
-                          : g.current > 0
+                          : (g.current || 0) > 0
                           ? 'Withdraw available funds from this vault'
                           : 'Deposit funds to unlock withdrawal'
                       }
@@ -494,13 +472,15 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                       <span>{g.status === 'pending_withdrawal' ? 'Payout Pending' : 'Withdraw Funds'}</span>
                     </button>
 
+                    {/* Deposit Funds Button - Deposit anytime as many times as you like! */}
                     <button
                       onClick={() => onFundGoal(g)}
-                      disabled={g.status === 'pending_withdrawal' || g.status === 'withdrawn'}
+                      disabled={g.status === 'pending_withdrawal'}
                       className="px-3.5 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] dark:bg-white dark:text-[#1A1A1A] rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center space-x-1.5 active:scale-95 disabled:opacity-40 flex-1 sm:flex-initial"
+                      title="Deposit money into this savings vault"
                     >
                       <Send className="w-3.5 h-3.5" />
-                      <span>Deposit via Paystack</span>
+                      <span>Deposit Funds</span>
                     </button>
                   </div>
                 </div>
@@ -518,7 +498,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
             <div className="flex justify-between items-center border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
               <div>
                 <h3 className="font-display text-base font-bold text-[#1A1A1A] dark:text-white">
-                  Transfer History: {selectedGoalForTransfers.name}
+                  Deposit History: {selectedGoalForTransfers.name}
                 </h3>
                 <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono-num">
                   Paystack deposits and settlements log
@@ -539,7 +519,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                 </div>
               ) : transfers.length === 0 ? (
                 <div className="py-8 text-center text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                  No deposits or transfers recorded yet for this vault.
+                  No deposits recorded yet for this vault.
                 </div>
               ) : (
                 transfers.map((txf) => (

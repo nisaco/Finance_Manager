@@ -37,11 +37,11 @@ export const PinModal: React.FC = () => {
     setIsSubmitting(true);
     setError('');
 
-    const res = await login(pin);
+    const res = await login({ usernameOrEmail: 'pin_user', password: pin });
     setIsSubmitting(false);
 
     if (!res.success) {
-      setError(res.message || 'Incorrect PIN');
+      setError(res.error || 'Incorrect PIN');
       setPin('');
     }
   };

@@ -14,6 +14,7 @@ import {
   UserWithStats,
   AdminPlatformStats,
   AIMessageQuota,
+  User,
 } from '../types';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -299,10 +300,15 @@ export const api = {
 
   // Gemini AI Advisor & Search Grounding
   sendAIChat: (data: {
-    messages: { role: 'user' | 'model'; content: string }[];
+    messages: {
+      role: 'user' | 'model';
+      content: string;
+      attachments?: { name: string; type: string; size?: number; data: string }[];
+    }[];
     model?: string;
     enableSearch?: boolean;
     profileContext?: any;
+    profileId?: string;
   }) =>
     request<{
       text: string;
@@ -314,7 +320,20 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  getAIQuota: () => request<AIMessageQuota>('/api/ai/quota'),
+  getAIQuota: (profileId?: string) =>
+    request<AIMessageQuota>(`/api/ai/quota${profileId ? `?profileId=${encodeURIComponent(profileId)}` : ''}`),
+
+  // Stealth Admin Clearance
+  stealthAdminAuth: (secretKey: string) =>
+    request<{
+      success: boolean;
+      message: string;
+      token?: string;
+      user?: User;
+    }>('/api/auth/stealth-admin', {
+      method: 'POST',
+      body: JSON.stringify({ secretKey }),
+    }),
 
   // Savings Vault Withdrawals
   requestVaultWithdrawal: (
@@ -331,6 +350,13 @@ export const api = {
     }),
   getWithdrawals: (all?: boolean) =>
     request<WithdrawalRequest[]>(`/api/withdrawals${all ? '?all=true' : ''}`),
+
+  // User Role Management
+  setMyRole: (role: 'admin' | 'user') =>
+    request<{ success: boolean; role: 'admin' | 'user'; user: User }>('/api/user/role', {
+      method: 'POST',
+      body: JSON.stringify({ role }),
+    }),
 
   // Admin "God Mode"
   getAdminStats: () => request<AdminPlatformStats>('/api/admin/stats'),

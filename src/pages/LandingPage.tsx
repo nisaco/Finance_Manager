@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { TermsModal } from '../components/TermsModal';
 import { PrivacyModal } from '../components/PrivacyModal';
+import { AuthTransitionOverlay } from '../components/AuthTransitionOverlay';
 import {
   Shield,
   Layers,
@@ -10,7 +11,6 @@ import {
   Lock,
   Mail,
   User as UserIcon,
-  KeyRound,
   CheckCircle2,
   AlertCircle,
   Sun,
@@ -18,13 +18,15 @@ import {
   TrendingUp,
   Receipt,
   Sparkles,
+  Clock,
+  X,
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
-  const { login, register } = useAuth();
+  const { login, register, sessionExpiredMessage, clearSessionExpiredMessage } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('login');
 
   // Signup fields
   const [username, setUsername] = useState('');
@@ -40,6 +42,7 @@ export const LandingPage: React.FC = () => {
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
@@ -74,16 +77,25 @@ export const LandingPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    const result = await register({
-      username: username.trim(),
-      email: email.trim(),
-      password,
-      agreedToTerms,
-    });
-    setIsSubmitting(false);
+    try {
+      const [result] = await Promise.all([
+        register({
+          username: username.trim(),
+          email: email.trim(),
+          password,
+          agreedToTerms,
+        }),
+        new Promise((resolve) => setTimeout(resolve, 850)),
+      ]);
 
-    if (!result.success) {
-      setFormError(result.error || 'Failed to create account.');
+      if (!result.success) {
+        setIsSubmitting(false);
+        setFormError(result.error || 'Failed to create account.');
+      }
+      // If success, keep isSubmitting true until unmount so the smooth auth transition stays fluid
+    } catch {
+      setIsSubmitting(false);
+      setFormError('Failed to create account. Please try again.');
     }
   };
 
@@ -102,14 +114,23 @@ export const LandingPage: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    const result = await login({
-      usernameOrEmail: loginIdentifier.trim(),
-      password: loginPassword,
-    });
-    setIsSubmitting(false);
+    try {
+      const [result] = await Promise.all([
+        login({
+          usernameOrEmail: loginIdentifier.trim(),
+          password: loginPassword,
+        }),
+        new Promise((resolve) => setTimeout(resolve, 800)),
+      ]);
 
-    if (!result.success) {
-      setFormError(result.error || 'Invalid credentials. Please verify and try again.');
+      if (!result.success) {
+        setIsSubmitting(false);
+        setFormError(result.error || 'Invalid credentials. Please verify and try again.');
+      }
+      // If success, keep isSubmitting true until unmount so the smooth auth transition stays fluid
+    } catch {
+      setIsSubmitting(false);
+      setFormError('Authentication failed. Please verify credentials and try again.');
     }
   };
 
@@ -118,7 +139,7 @@ export const LandingPage: React.FC = () => {
       {/* Top Bar */}
       <header className="sticky top-0 z-40 w-full border-b border-[#E8E5DF] dark:border-[#2D323F] bg-[#FAF9F6]/90 dark:bg-[#111317]/90 backdrop-blur-md transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 text-left">
             <div className="w-9 h-9 rounded-xl bg-[#1A1A1A] dark:bg-[#F3F4F6] text-[#FFFFFF] dark:text-[#111317] flex items-center justify-center font-bold text-sm tracking-wider shadow-sm">
               L
             </div>
@@ -227,26 +248,13 @@ export const LandingPage: React.FC = () => {
         {/* Right Side: Auth Form Card */}
         <div className="w-full max-w-md bg-[#FFFFFF] dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl shadow-xl p-6 sm:p-8 transition-colors">
           {/* Mode Switcher Tabs */}
-          <div className="flex p-1 bg-[#F5F4F0] dark:bg-[#1B202C] rounded-xl mb-6">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('signup');
-                setFormError(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'signup'
-                  ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
-                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-              }`}
-            >
-              Sign Up
-            </button>
+          <div className="flex p-1 bg-[#F5F4F0] dark:bg-[#1B202C] rounded-xl mb-5">
             <button
               type="button"
               onClick={() => {
                 setAuthMode('login');
                 setFormError(null);
+                setFormSuccess(null);
               }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
                 authMode === 'login'
@@ -256,19 +264,62 @@ export const LandingPage: React.FC = () => {
             >
               Sign In
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('signup');
+                setFormError(null);
+                setFormSuccess(null);
+              }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
+                authMode === 'signup'
+                  ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
+                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
+              }`}
+            >
+              Sign Up
+            </button>
           </div>
+
+          {/* Session Expired Notice */}
+          {sessionExpiredMessage && (
+            <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs flex items-start justify-between space-x-2 animate-in fade-in">
+              <div className="flex items-start space-x-2">
+                <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <div>
+                  <span className="font-bold block">Session Expired</span>
+                  <span>{sessionExpiredMessage}</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={clearSessionExpiredMessage}
+                className="p-1 text-amber-700 dark:text-amber-300 hover:opacity-75"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Form Header */}
           <div className="mb-5">
-            <h2 className="text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+            <h2 className="text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center gap-2">
               {authMode === 'signup' ? 'Create your user account' : 'Welcome back to Ledger'}
             </h2>
             <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1">
               {authMode === 'signup'
-                ? 'Sign up to manage multiple profiles and automated Paystack financial records.'
-                : 'Enter your credentials to access your financial profiles.'}
+                ? 'Sign up to manage multiple profiles, budgets, and automated financial records.'
+                : 'Enter your credentials to access your financial profiles and transactions.'}
             </p>
           </div>
+
+          {/* Success Banner */}
+          {formSuccess && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-start space-x-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+              <div className="flex-1 font-medium">{formSuccess}</div>
+            </div>
+          )}
 
           {/* Error Banner */}
           {formError && (
@@ -324,7 +375,7 @@ export const LandingPage: React.FC = () => {
                     Password <span className="text-[#DC2626]">*</span>
                   </label>
                   <div className="relative">
-                    <KeyRound className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="password"
                       required
@@ -342,7 +393,7 @@ export const LandingPage: React.FC = () => {
                     Confirm Password <span className="text-[#DC2626]">*</span>
                   </label>
                   <div className="relative">
-                    <KeyRound className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type="password"
                       required
@@ -407,7 +458,7 @@ export const LandingPage: React.FC = () => {
                 disabled={isSubmitting || !agreedToTerms}
                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all"
               >
-                {isSubmitting ? 'Creating User Account...' : 'Complete Sign Up &amp; Enter'}
+                {isSubmitting ? 'Creating User Account...' : 'Complete Sign Up & Enter'}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
@@ -436,7 +487,7 @@ export const LandingPage: React.FC = () => {
                   Password <span className="text-[#DC2626]">*</span>
                 </label>
                 <div className="relative">
-                  <KeyRound className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="password"
                     required
@@ -451,20 +502,21 @@ export const LandingPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 shadow-md transition-all mt-2"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 shadow-md transition-all mt-2 cursor-pointer"
               >
                 {isSubmitting ? 'Signing in...' : 'Sign In to Ledger'}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
-              <div className="text-center pt-2">
+              <div className="pt-3 border-t border-[#E8E5DF] dark:border-[#2D323F] flex flex-col items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setAuthMode('signup');
                     setFormError(null);
+                    setFormSuccess(null);
                   }}
-                  className="text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline"
+                  className="text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline cursor-pointer"
                 >
                   Don&apos;t have an account yet? Sign up here
                 </button>
@@ -511,6 +563,14 @@ export const LandingPage: React.FC = () => {
         onAccept={() => setAgreedToTerms(true)}
         isAccepted={agreedToTerms}
       />
+
+      {/* Animated iOS-Style Security Transition Loader */}
+      {isSubmitting && (
+        <AuthTransitionOverlay
+          mode={authMode === 'login' ? 'login' : 'register'}
+          usernameOrEmail={authMode === 'login' ? loginIdentifier : username}
+        />
+      )}
     </div>
   );
 };

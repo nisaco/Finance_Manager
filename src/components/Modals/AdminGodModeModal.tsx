@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { Component, useState, useEffect } from 'react';
 import {
   X,
   Crown,
@@ -23,6 +23,70 @@ import { WithdrawalRequest, UserWithStats, AdminPlatformStats } from '../../type
 import { api } from '../../api/client';
 import { useLedger } from '../../context/LedgerContext';
 import { useAuth } from '../../context/AuthContext';
+
+const safeFmt = (num: any, decimals = 2): string => {
+  if (typeof num === 'number' && !isNaN(num)) {
+    return num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  const parsed = Number(num);
+  if (!isNaN(parsed)) {
+    return parsed.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+  return '0.00';
+};
+
+const safeDate = (val: any): string => {
+  if (!val) return 'N/A';
+  try {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleString();
+  } catch {
+    return 'N/A';
+  }
+};
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: any;
+}
+
+class ModalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public override state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: any): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  override componentDidCatch(error: any, errorInfo: any) {
+    console.error('AdminGodModeModal ErrorBoundary caught:', error, errorInfo);
+  }
+
+  override render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center space-y-4">
+          <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
+          <h3 className="text-base font-bold text-[#1A1A1A] dark:text-white">Admin Portal Encountered an Issue</h3>
+          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono">
+            {this.state.error?.message || 'Failed to render administrative console.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="px-4 py-2 bg-[#1A1A1A] dark:bg-white text-white dark:text-[#111317] rounded-xl text-xs font-bold cursor-pointer"
+          >
+            Retry Loading Console
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface AdminGodModeModalProps {
   isOpen: boolean;
@@ -162,6 +226,7 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-200">
       <div className="relative w-full max-w-5xl bg-[#FDFCFB] dark:bg-[#15171C] rounded-2xl border border-amber-500/40 dark:border-amber-500/30 shadow-2xl overflow-hidden text-[#1A1A1A] dark:text-[#F3F4F6] max-h-[92vh] flex flex-col">
+        <ModalErrorBoundary>
         {/* Top Gold Ribbon Banner */}
         <div className="px-6 py-4 border-b border-[#E8E5DF] dark:border-[#2D323F] bg-gradient-to-r from-amber-500/15 via-emerald-500/10 to-transparent flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -217,7 +282,7 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                 <Building2 className="w-3.5 h-3.5 text-emerald-500" />
               </div>
               <span className="text-xl font-bold font-mono-num text-emerald-600 dark:text-emerald-400">
-                {stats.totalSavingsVaultAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {safeFmt(stats.totalSavingsVaultAmount ?? (stats as any).totalVaultsAmount ?? 0)}
               </span>
             </div>
 
@@ -227,7 +292,7 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                 <DollarSign className="w-3.5 h-3.5 text-purple-500" />
               </div>
               <span className="text-xl font-bold font-mono-num text-purple-600 dark:text-purple-400">
-                {stats.totalFeesCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                {safeFmt(stats.totalFeesCollected)}
               </span>
             </div>
           </div>
@@ -333,7 +398,7 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                         </div>
                         <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num">
                           Vault: <strong>{req.goalName}</strong> • Submitted:{' '}
-                          {new Date(req.createdAt).toLocaleString()}
+                          {safeDate(req.createdAt)}
                         </p>
                       </div>
 
@@ -358,19 +423,19 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                         <div className="flex justify-between">
                           <span className="text-[#6B7280] dark:text-[#9CA3AF]">Vault Balance:</span>
                           <span className="font-mono-num font-semibold">
-                            {req.currency} {req.vaultAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {req.currency} {safeFmt(req.vaultAmount)}
                           </span>
                         </div>
                         <div className="flex justify-between text-rose-600 dark:text-rose-400">
                           <span>Platform Fee ({req.totalFeePercent}%):</span>
                           <span className="font-mono-num font-semibold">
-                            -{req.currency} {req.feeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            -{req.currency} {safeFmt(req.feeAmount)}
                           </span>
                         </div>
                         <div className="flex justify-between pt-1 border-t border-[#E8E5DF] dark:border-[#2D323F] font-bold text-emerald-600 dark:text-emerald-400">
                           <span>DISBURSE TO USER:</span>
                           <span className="font-mono-num text-sm">
-                            {req.currency} {req.netPayoutAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {req.currency} {safeFmt(req.netPayoutAmount)}
                           </span>
                         </div>
                       </div>
@@ -458,7 +523,7 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                       <td className="p-3 font-mono-num">{u.profilesCount}</td>
                       <td className="p-3 font-mono-num">{u.transactionsCount}</td>
                       <td className="p-3 font-mono-num font-semibold">
-                        GHS {u.netBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        GHS {safeFmt(u.netBalance ?? u.totalBalance ?? 0)}
                       </td>
                       <td className="p-3 text-right">
                         <button
@@ -487,20 +552,20 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                     <div className="flex justify-between py-1 border-b border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
                       <span>Total Cumulative Ledger Balance:</span>
                       <span className="font-mono-num font-bold">
-                        GHS {stats.totalLedgerBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        GHS {safeFmt(stats.totalLedgerBalance ?? (stats as any).totalVaultsAmount ?? 0)}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
                       <span>Total Logged Transactions:</span>
-                      <span className="font-mono-num font-bold">{stats.totalTransactionsCount}</span>
+                      <span className="font-mono-num font-bold">{stats.totalTransactionsCount ?? (stats as any).totalTransactions ?? 0}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
                       <span>Active Budgets Enforced:</span>
-                      <span className="font-mono-num font-bold">{stats.totalBudgetsCount}</span>
+                      <span className="font-mono-num font-bold">{stats.totalBudgetsCount ?? 0}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
                       <span>Savings Vaults Created:</span>
-                      <span className="font-mono-num font-bold">{stats.totalSavingsGoalsCount}</span>
+                      <span className="font-mono-num font-bold">{stats.totalSavingsGoalsCount ?? 0}</span>
                     </div>
                   </div>
                 </div>
@@ -513,7 +578,7 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                     <div className="flex justify-between py-1 border-b border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
                       <span>Standard 2% Vault Fees Collected:</span>
                       <span className="font-mono-num font-bold text-emerald-600 dark:text-emerald-400">
-                        GHS {stats.totalFeesCollected.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        GHS {safeFmt(stats.totalFeesCollected)}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#E8E5DF]/50 dark:border-[#2D323F]/50">
@@ -543,6 +608,7 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
             Close Portal
           </button>
         </div>
+        </ModalErrorBoundary>
       </div>
 
       {/* Approval Sub-Modal */}

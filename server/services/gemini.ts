@@ -21,9 +21,17 @@ export function getGenAI(): GoogleGenAI {
   return aiClient;
 }
 
+export interface ChatAttachmentPayload {
+  name: string;
+  type: string;
+  size?: number;
+  data: string;
+}
+
 export interface ChatMessagePayload {
   role: 'user' | 'model';
   content: string;
+  attachments?: ChatAttachmentPayload[];
 }
 
 export interface GroundingWebSource {
@@ -123,10 +131,35 @@ ${contextDescription}`;
     config.tools = [{ googleSearch: {} }];
   }
 
-  const contents = params.messages.map((m) => ({
-    role: m.role === 'model' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }));
+  const contents = params.messages.map((m) => {
+    const parts: any[] = [];
+
+    if (m.attachments && Array.isArray(m.attachments)) {
+      // User requirement: Maximum of just two files or 2 pictures or 2 documents
+      m.attachments.slice(0, 2).forEach((att) => {
+        if (att.data) {
+          const rawBase64 = att.data.includes(',') ? att.data.split(',')[1] : att.data;
+          parts.push({
+            inlineData: {
+              mimeType: att.type || 'image/jpeg',
+              data: rawBase64,
+            },
+          });
+        }
+      });
+    }
+
+    if (m.content && m.content.trim()) {
+      parts.push({ text: m.content });
+    } else if (parts.length === 0) {
+      parts.push({ text: 'Please analyze the attached document / image.' });
+    }
+
+    return {
+      role: m.role === 'model' ? 'model' : 'user',
+      parts,
+    };
+  });
 
   try {
     const response = await ai.models.generateContent({
@@ -267,6 +300,8 @@ export function setupLiveWebSocket(wss: WebSocketServer) {
               prebuiltVoiceConfig: { voiceName: 'Zephyr' },
             },
           },
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
           systemInstruction: `You are Fima (Finance Manager AI), the voice assistant and intelligence partner for the Ledger platform.
 You are like a dedicated Mini Gemini built specifically for this app and for the user.
 You have real-time access to the user's current profile, balance, income, expenses, budgets, savings goals, debts, and recent transactions.
@@ -281,6 +316,14 @@ When speaking:
           onmessage: (message: LiveServerMessage) => {
             if (clientWs.readyState !== WebSocket.OPEN) return;
 
+            // User input speech transcription from Gemini Live
+            const userSpeech =
+              message.serverContent?.inputTranscription?.text ||
+              message.serverContent?.interimInputTranscription?.text;
+            if (userSpeech) {
+              clientWs.send(JSON.stringify({ type: 'user_text', text: userSpeech }));
+            }
+
             // Model audio chunk
             const audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (audio) {
@@ -292,10 +335,13 @@ When speaking:
               clientWs.send(JSON.stringify({ type: 'interrupted' }));
             }
 
-            // Text transcription if emitted by server
-            const textPart = message.serverContent?.modelTurn?.parts?.find((p: any) => p.text);
-            if (textPart?.text) {
-              clientWs.send(JSON.stringify({ type: 'text', text: textPart.text }));
+            // Text transcription from model output
+            const outputText =
+              message.serverContent?.outputTranscription?.text ||
+              message.serverContent?.modelTurn?.parts?.find((p: any) => p.text)?.text ||
+              (message as any).text;
+            if (outputText) {
+              clientWs.send(JSON.stringify({ type: 'text', text: outputText }));
             }
           },
           onerror: (err: any) => {

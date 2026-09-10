@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Wallet,
   Receipt,
@@ -24,10 +24,13 @@ import {
   X,
   Crown,
   ShieldCheck,
+  Palette,
+  Key,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { NavigationSidebar } from './NavigationSidebar';
 
 interface NavbarProps {
   activeTab?: string;
@@ -38,6 +41,7 @@ interface NavbarProps {
   onOpenAuditLogs?: () => void;
   onOpenLiveVoice?: () => void;
   onOpenAdminModal?: () => void;
+  onOpenStealthAdmin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -49,6 +53,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAuditLogs,
   onOpenLiveVoice,
   onOpenAdminModal,
+  onOpenStealthAdmin,
 }) => {
   const effectiveTab = activeTab || currentTab || 'overview';
   const handleTabChange = (tab: string) => {
@@ -65,9 +70,28 @@ export const Navbar: React.FC<NavbarProps> = ({
     lockProfile,
   } = useLedger();
   const { user, logout } = useAuth();
-  const { resolvedTheme, toggleTheme } = useTheme();
+  const { resolvedTheme, toggleTheme, uiStyle, setUiStyle } = useTheme();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
+
+  // Lock body scroll when mobile drawer is open so scrolling ONLY scrolls within the drawer
+  useEffect(() => {
+    if (mobileDrawerOpen) {
+      const prevOverflow = document.body.style.overflow;
+      const prevTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+        document.body.style.touchAction = prevTouchAction;
+      };
+    }
+  }, [mobileDrawerOpen]);
+
+  const isAdmin =
+    user?.role === 'admin' ||
+    user?.email?.toLowerCase() === 'jnkpappoe@gmail.com';
 
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Wallet },
@@ -78,6 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'reports', label: 'Reports', icon: PieChart },
     { id: 'ai-advisor', label: 'Fima AI', icon: Sparkles },
     { id: 'settings', label: 'Settings', icon: Settings },
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Crown }] : []),
   ];
 
   return (
@@ -94,7 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Ledger Financial Platform"
               id="navbar-brand-button"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] dark:bg-[#F3F4F6] border border-[#1A1A1A] dark:border-[#F3F4F6] flex items-center justify-center text-[#FFFFFF] dark:text-[#111317] font-display text-base font-bold tracking-tighter group-hover:bg-[#333333] dark:group-hover:bg-[#E5E7EB] transition-colors shadow-xs">
+              <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] dark:bg-[#F3F4F6] border border-[#1A1A1A] dark:border-[#F3F4F6] flex items-center justify-center text-[#FFFFFF] dark:text-[#111317] font-display text-base font-bold tracking-tighter group-hover:bg-[#333333] dark:group-hover:bg-[#E5E7EB] transition-all shadow-xs">
                 L
               </div>
               <div>
@@ -102,7 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Ledger
                 </span>
                 <span className="text-[9px] tracking-widest uppercase text-[#6B7280] dark:text-[#9CA3AF] font-mono-num hidden sm:block mt-0.5">
-                  Editorial Edition
+                  Financial OS
                 </span>
               </div>
             </button>
@@ -277,18 +302,59 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Right: Action Tools */}
           <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
-            {/* Desktop-only: Admin God Mode button if user has role admin */}
-            {user?.role === 'admin' && onOpenAdminModal && (
+            {/* Desktop UI Style / Theme Customizer */}
+            <div className="relative hidden md:block">
               <button
-                onClick={onOpenAdminModal}
-                title="Open God-Mode Administrative Console (Payouts, Vaults & System)"
-                aria-label="Admin God Mode"
-                className="hidden md:flex items-center space-x-1.5 px-2.5 sm:px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-xs font-bold shadow-xs transition-all active:scale-95 shrink-0"
+                onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
+                title="Customize Interface Style"
+                aria-label="Customize Interface Style"
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-[#F7F5F2] dark:bg-[#22252E] hover:bg-[#E8E5DF] dark:hover:bg-[#2D323F] border border-[#E8E5DF] dark:border-[#2D323F] text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] text-xs font-medium transition-all"
               >
-                <Crown className="w-3.5 h-3.5" />
-                <span>Admin God Mode</span>
+                <Palette className="w-3.5 h-3.5" />
+                <span className="capitalize">{uiStyle}</span>
               </button>
-            )}
+
+              {styleDropdownOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setStyleDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 mt-2 w-48 rounded-xl bg-white dark:bg-[#181A20] border border-[#E8E5DF] dark:border-[#2D323F] shadow-lg p-2 z-50 space-y-1">
+                    <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#9CA3AF] dark:text-[#6B7280]">
+                      Interface Appearance
+                    </div>
+                    {[
+                      { id: 'modern', label: 'Modern Clean', desc: 'Clean slate & sans-serif' },
+                      { id: 'minimal', label: 'Minimalist Mono', desc: 'Monochrome & crisp' },
+                      { id: 'slate', label: 'Nordic Slate', desc: 'Cool indigo accent' },
+                      { id: 'editorial', label: 'Editorial Paper', desc: 'Classic warm serif' },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        onClick={() => {
+                          setUiStyle(st.id as any);
+                          setStyleDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition-colors flex flex-col ${
+                          uiStyle === st.id
+                            ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] font-bold'
+                            : 'hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] text-[#1A1A1A] dark:text-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{st.label}</span>
+                          {uiStyle === st.id && <span className="text-[10px]">•</span>}
+                        </div>
+                        <span className={`text-[10px] ${uiStyle === st.id ? 'opacity-80' : 'text-[#6B7280] dark:text-[#9CA3AF]'}`}>
+                          {st.desc}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
 
             {/* Desktop-only: Theme Toggle */}
             <button
@@ -390,164 +456,21 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Slide-Over Navigation Drawer - STRICTLY MOBILE ONLY */}
-      {mobileDrawerOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-            onClick={() => setMobileDrawerOpen(false)}
-          />
-
-          {/* Drawer Body - Full Height and Substantial Width */}
-          <div className="relative w-80 sm:w-96 max-w-[88vw] h-full min-h-[100dvh] bg-[#FFFFFF] dark:bg-[#15181E] border-r border-[#E8E5DF] dark:border-[#2D323F] shadow-2xl flex flex-col justify-between z-10 animate-in slide-in-from-left duration-200">
-            {/* Top drawer header */}
-            <div className="p-4 border-b border-[#E8E5DF] dark:border-[#2D323F] flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] dark:bg-[#F3F4F6] text-[#FFFFFF] dark:text-[#111317] flex items-center justify-center font-bold text-sm shadow-xs">
-                  L
-                </div>
-                <div>
-                  <div className="font-display font-bold text-sm tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6]">
-                    Ledger
-                  </div>
-                  <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
-                    {user ? `@${user.username}` : 'Financial OS'} • {activeProfile?.name || 'Active'}
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setMobileDrawerOpen(false)}
-                className="p-1.5 rounded-lg text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] transition-colors"
-                aria-label="Close menu"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Middle nav list - Houses all Navigation Tabs in place of navbar on mobile */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-              {/* If Admin, prominent God Mode Quick Access */}
-              {user?.role === 'admin' && onOpenAdminModal && (
-                <button
-                  onClick={() => {
-                    setMobileDrawerOpen(false);
-                    onOpenAdminModal();
-                  }}
-                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-xs shadow-xs mb-2 active:scale-98 transition-all"
-                >
-                  <div className="flex items-center space-x-2">
-                    <Crown className="w-4 h-4" />
-                    <span>Admin God Mode Portal</span>
-                  </div>
-                  <span className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">2% / 10% Fees</span>
-                </button>
-              )}
-
-              <div className="text-[10px] font-mono-num font-bold uppercase tracking-wider text-[#9CA3AF] dark:text-[#6B7280] px-3 py-1">
-                Main Navigation
-              </div>
-
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = effectiveTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleTabChange(item.id)}
-                    className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                      isActive
-                        ? 'bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] shadow-xs'
-                        : 'text-[#4B5563] dark:text-[#9CA3AF] hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-
-              <div className="pt-3 border-t border-[#E8E5DF] dark:border-[#2D323F] space-y-1">
-                <div className="text-[10px] font-mono-num font-bold uppercase tracking-wider text-[#9CA3AF] dark:text-[#6B7280] px-3 py-1">
-                  Actions &amp; Logs
-                </div>
-                {onOpenLiveVoice && (
-                  <button
-                    onClick={() => {
-                      setMobileDrawerOpen(false);
-                      onOpenLiveVoice();
-                    }}
-                    className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 transition-colors"
-                  >
-                    <div className="flex items-center space-x-2.5">
-                      <Mic className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                      <span>Live Voice Fima (AI)</span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                  </button>
-                )}
-                {onOpenAuditLogs && (
-                  <button
-                    onClick={() => {
-                      setMobileDrawerOpen(false);
-                      onOpenAuditLogs();
-                    }}
-                    className="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] transition-colors"
-                  >
-                    <History className="w-4 h-4" />
-                    <span>Audit &amp; Movement Log</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom Drawer User Footer */}
-            <div className="p-3.5 border-t border-[#E8E5DF] dark:border-[#2D323F] bg-[#FDFCFB] dark:bg-[#111317] space-y-2.5">
-              <div className="flex items-center justify-between px-1">
-                <div className="text-xs">
-                  <span className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] block truncate">
-                    {user?.username || 'User'}
-                  </span>
-                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] truncate block">
-                    {user?.email}
-                  </span>
-                </div>
-                <button
-                  onClick={toggleTheme}
-                  aria-label="Toggle theme"
-                  className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#22252E] text-[#4B5563] dark:text-[#9CA3AF] text-xs font-medium"
-                >
-                  {resolvedTheme === 'dark' ? (
-                    <>
-                      <Sun className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Light</span>
-                    </>
-                  ) : (
-                    <>
-                      <Moon className="w-3.5 h-3.5 text-[#4B5563]" />
-                      <span>Dark</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {user && (
-                <button
-                  onClick={() => {
-                    setMobileDrawerOpen(false);
-                    logout();
-                  }}
-                  className="w-full flex items-center justify-center space-x-1.5 px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 font-semibold text-xs hover:bg-red-100 transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Mobile Slide-Over Navigation Drawer - Standalone Component & 100% Opaque */}
+      <NavigationSidebar
+        isOpen={mobileDrawerOpen}
+        onClose={() => setMobileDrawerOpen(false)}
+        effectiveTab={effectiveTab}
+        onTabChange={handleTabChange}
+        navItems={navItems}
+        user={user}
+        activeProfile={activeProfile}
+        resolvedTheme={resolvedTheme}
+        toggleTheme={toggleTheme}
+        logout={logout}
+        onOpenLiveVoice={onOpenLiveVoice}
+        onOpenAuditLogs={onOpenAuditLogs}
+      />
     </header>
   );
 };

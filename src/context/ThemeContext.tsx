@@ -2,12 +2,18 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type ResolvedTheme = 'light' | 'dark';
+export type UIStyle = 'modern' | 'slate' | 'minimal' | 'editorial';
+export type UIDensity = 'standard' | 'compact';
 
 interface ThemeContextType {
   theme: Theme;
   resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
+  uiStyle: UIStyle;
+  setUiStyle: (style: UIStyle) => void;
+  uiDensity: UIDensity;
+  setUiDensity: (density: UIDensity) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -18,7 +24,32 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return saved === 'dark' || saved === 'light' || saved === 'system' ? saved : 'light';
   });
 
+  const [uiStyle, setUiStyleState] = useState<UIStyle>(() => {
+    const saved = localStorage.getItem('ledger_ui_style') as UIStyle | null;
+    return saved === 'modern' || saved === 'slate' || saved === 'minimal' || saved === 'editorial'
+      ? saved
+      : 'modern';
+  });
+
+  const [uiDensity, setUiDensityState] = useState<UIDensity>(() => {
+    const saved = localStorage.getItem('ledger_ui_density') as UIDensity | null;
+    return saved === 'compact' || saved === 'standard' ? saved : 'standard';
+  });
+
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
+
+  // Apply UI Style and Density
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-ui-style', uiStyle);
+    localStorage.setItem('ledger_ui_style', uiStyle);
+  }, [uiStyle]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute('data-ui-density', uiDensity);
+    localStorage.setItem('ledger_ui_density', uiDensity);
+  }, [uiDensity]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -71,6 +102,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setThemeState(newTheme);
   };
 
+  const setUiStyle = (newStyle: UIStyle) => {
+    setUiStyleState(newStyle);
+  };
+
+  const setUiDensity = (newDensity: UIDensity) => {
+    setUiDensityState(newDensity);
+  };
+
   const toggleTheme = () => {
     setThemeState((curr) => {
       const next = curr === 'dark' ? 'light' : 'dark';
@@ -79,7 +118,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        resolvedTheme,
+        setTheme,
+        toggleTheme,
+        uiStyle,
+        setUiStyle,
+        uiDensity,
+        setUiDensity,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

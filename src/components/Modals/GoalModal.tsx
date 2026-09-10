@@ -5,14 +5,12 @@ import {
   ShieldCheck,
   CheckCircle,
   Loader2,
-  Lock,
-  Sparkles,
-  Percent,
+  Calendar,
+  Info,
 } from 'lucide-react';
 import { Goal, PaystackBank } from '../../types';
 import { useLedger } from '../../context/LedgerContext';
 import { api } from '../../api/client';
-import { formatCurrency } from '../../design/tokens';
 
 interface GoalModalProps {
   isOpen: boolean;
@@ -32,9 +30,6 @@ export const GoalModal: React.FC<GoalModalProps> = ({
   const [current, setCurrent] = useState('0');
   const [currency, setCurrency] = useState('GHS');
   const [deadline, setDeadline] = useState('');
-  const [vaultType, setVaultType] = useState<Goal['vaultType']>('high_yield_vault');
-  const [interestRateApr, setInterestRateApr] = useState('7.5');
-  const [isLocked, setIsLocked] = useState(true);
 
   // Paystack real-money setup
   const [isRealMoney, setIsRealMoney] = useState(false);
@@ -59,9 +54,6 @@ export const GoalModal: React.FC<GoalModalProps> = ({
       setCurrent(initialData.current.toString());
       setCurrency(initialData.currency);
       setDeadline(initialData.deadline || '');
-      setVaultType(initialData.vaultType || 'high_yield_vault');
-      setInterestRateApr(initialData.interestRateApr?.toString() || '7.5');
-      setIsLocked(initialData.isLocked ?? true);
 
       const hasPaystack = initialData.paystackDestination?.type === 'paystack_recipient';
       setIsRealMoney(hasPaystack);
@@ -75,10 +67,10 @@ export const GoalModal: React.FC<GoalModalProps> = ({
       setTarget('');
       setCurrent('0');
       setCurrency(activeProfile?.displayCurrency || 'GHS');
-      setDeadline('');
-      setVaultType('high_yield_vault');
-      setInterestRateApr('7.5');
-      setIsLocked(true);
+      // Default to 90 days out
+      const defaultDate = new Date();
+      defaultDate.setDate(defaultDate.getDate() + 90);
+      setDeadline(defaultDate.toISOString().split('T')[0]);
       setIsRealMoney(false);
       setAccountNumber('');
       setAccountName('');
@@ -105,22 +97,27 @@ export const GoalModal: React.FC<GoalModalProps> = ({
     }
   };
 
-  const handleLockDuration = (days: number) => {
+  const handleSetDuration = (days: number) => {
     const d = new Date();
     d.setDate(d.getDate() + days);
     setDeadline(d.toISOString().split('T')[0]);
   };
 
-  // Calculate estimated yield
   const numTarget = parseFloat(target) || 0;
-  const numRate = parseFloat(interestRateApr) || 0;
-  const estimatedAnnualYield = (numTarget * (numRate / 100));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeProfile) return;
+    if (!name.trim()) {
+      notify('Please enter a name for your savings vault', 'error');
+      return;
+    }
     if (!numTarget || numTarget <= 0) {
-      notify('Please enter a valid target amount', 'error');
+      notify('Please enter a valid savings target amount', 'error');
+      return;
+    }
+    if (!deadline) {
+      notify('Please set a target end date for your savings vault', 'error');
       return;
     }
 
@@ -153,31 +150,28 @@ export const GoalModal: React.FC<GoalModalProps> = ({
       }
 
       const payload = {
-        name,
+        name: name.trim(),
         target: numTarget,
         currency,
         deadline: deadline || undefined,
-        vaultType,
-        interestRateApr: vaultType === 'high_yield_vault' ? numRate : 0,
-        isLocked: vaultType === 'high_yield_vault' ? isLocked : false,
         paystackDestination,
       };
 
       if (initialData) {
         await api.updateGoal(initialData.id, payload);
-        notify('Savings vault updated');
+        notify('Savings vault updated successfully');
       } else {
         await api.createGoal({
           profileId: activeProfile.id,
           ...payload,
           current: isRealMoney ? 0 : parseFloat(current) || 0,
         });
-        notify('Savings vault established');
+        notify('Savings vault created! You can now deposit funds anytime.');
       }
       await refreshData();
       onClose();
     } catch (err: any) {
-      notify(err.message || 'Failed to save goal', 'error');
+      notify(err.message || 'Failed to save savings vault', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -194,7 +188,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
           <div className="flex items-center space-x-2">
             <PiggyBank className="w-5 h-5 text-[#1A1A1A] dark:text-white" />
             <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A] dark:text-white">
-              {initialData ? 'Edit Savings Vault' : 'Create New Savings Vault'}
+              {initialData ? 'Edit Savings Vault' : 'Create Savings Vault'}
             </h2>
           </div>
           <button
@@ -208,98 +202,29 @@ export const GoalModal: React.FC<GoalModalProps> = ({
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
           
-          {/* Vault Archetype */}
-          <div>
-            <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mb-1.5 font-bold">
-              Vault Type &amp; Strategy
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setVaultType('high_yield_vault');
-                  setIsLocked(true);
-                }}
-                className={`p-3 rounded-lg border text-left transition-all ${
-                  vaultType === 'high_yield_vault'
-                    ? 'border-[#1A1A1A] dark:border-white bg-[#FDFCFB] dark:bg-[#15181E] ring-1 ring-[#1A1A1A] dark:ring-white'
-                    : 'border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1E2128] hover:bg-[#F7F5F2]'
-                }`}
-              >
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-[#1A1A1A] dark:text-white">
-                  <Lock className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Time-Locked</span>
-                </div>
-                <div className="text-[10px] text-amber-600 dark:text-amber-400 font-bold mt-1">
-                  Discipline Vault
-                </div>
-                <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-0.5 leading-tight">
-                  Locked to term. 10% penalty only if broken early.
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setVaultType('emergency_stash');
-                  setIsLocked(false);
-                }}
-                className={`p-3 rounded-lg border text-left transition-all ${
-                  vaultType === 'emergency_stash'
-                    ? 'border-[#1A1A1A] dark:border-white bg-[#FDFCFB] dark:bg-[#15181E] ring-1 ring-[#1A1A1A] dark:ring-white'
-                    : 'border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1E2128] hover:bg-[#F7F5F2]'
-                }`}
-              >
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-[#1A1A1A] dark:text-white">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-500" />
-                  <span>Emergency</span>
-                </div>
-                <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold mt-1">
-                  Instant Access
-                </div>
-                <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-0.5 leading-tight">
-                  Flexible reserve. Standard 2% protocol fee.
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setVaultType('flexible_goal');
-                  setIsLocked(false);
-                }}
-                className={`p-3 rounded-lg border text-left transition-all ${
-                  vaultType === 'flexible_goal'
-                    ? 'border-[#1A1A1A] dark:border-white bg-[#FDFCFB] dark:bg-[#15181E] ring-1 ring-[#1A1A1A] dark:ring-white'
-                    : 'border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1E2128] hover:bg-[#F7F5F2]'
-                }`}
-              >
-                <div className="flex items-center space-x-1.5 text-xs font-bold text-[#1A1A1A] dark:text-white">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Milestone</span>
-                </div>
-                <div className="text-[10px] text-purple-600 dark:text-purple-400 font-bold mt-1">
-                  Target Savings
-                </div>
-                <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-0.5 leading-tight">
-                  Purchase or event savings milestones.
-                </div>
-              </button>
+          {/* Rules & Policy Notice */}
+          <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 text-xs text-amber-900 dark:text-amber-300 space-y-1.5">
+            <div className="flex items-center space-x-1.5 font-bold">
+              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>How Your Savings Vault Works</span>
             </div>
+            <p className="text-[11px] leading-relaxed text-amber-900/85 dark:text-amber-200/80">
+              You can deposit funds into your vault as many times as you like. When your set end date is reached, you can withdraw your money with the standard <strong>2%</strong> processing fee. You can also withdraw anytime before the set date with the <strong>10%</strong> early withdrawal penalty fee.
+            </p>
           </div>
 
           {/* Goal Name */}
           <div>
             <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mb-1 font-bold">
-              Vault Name
+              Savings Vault Name
             </label>
             <input
               type="text"
               required
-              placeholder="e.g. 6-Month Emergency Fund, Land Investment, Tech Equipment"
+              placeholder="e.g. Land Purchase, School Fees, Business Capital, New Car"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#FDFCFB] dark:bg-[#15181E] text-[#1A1A1A] dark:text-white px-3 py-2 rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] text-sm focus:outline-none focus:border-[#1A1A1A] dark:focus:border-white"
+              className="w-full bg-[#FDFCFB] dark:bg-[#15181E] text-[#1A1A1A] dark:text-white px-3 py-2.5 rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] text-sm focus:outline-none focus:border-[#1A1A1A] dark:focus:border-white transition-colors"
             />
           </div>
 
@@ -307,13 +232,14 @@ export const GoalModal: React.FC<GoalModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mb-1 font-bold">
-                Target Vault Target
+                Target Savings Goal
               </label>
               <input
                 type="number"
                 step="0.01"
                 required
-                placeholder="10000.00"
+                min="1"
+                placeholder="5000.00"
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
                 className="w-full bg-[#FDFCFB] dark:bg-[#15181E] text-[#1A1A1A] dark:text-white px-3 py-2 rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] text-sm font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A] dark:focus:border-white"
@@ -338,63 +264,57 @@ export const GoalModal: React.FC<GoalModalProps> = ({
             </div>
           </div>
 
-          {/* Lock Duration & Discipline Notice for Time-Locked Vaults */}
-          {vaultType === 'high_yield_vault' && (
-            <div className="p-3.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 space-y-2.5">
-              <div className="flex items-center space-x-1.5 text-xs font-bold text-amber-900 dark:text-amber-300">
-                <Lock className="w-3.5 h-3.5 text-amber-600" />
-                <span>Discipline Lock Term Shortcuts</span>
-              </div>
-
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleLockDuration(30)}
-                  className="px-2.5 py-1 text-xs rounded bg-white dark:bg-[#1E2128] border border-amber-200 dark:border-amber-800 hover:bg-amber-100 font-medium"
-                >
-                  30 Days (1 Mo)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleLockDuration(90)}
-                  className="px-2.5 py-1 text-xs rounded bg-white dark:bg-[#1E2128] border border-amber-200 dark:border-amber-800 hover:bg-amber-100 font-medium"
-                >
-                  90 Days (3 Mo)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleLockDuration(180)}
-                  className="px-2.5 py-1 text-xs rounded bg-white dark:bg-[#1E2128] border border-amber-200 dark:border-amber-800 hover:bg-amber-100 font-medium"
-                >
-                  180 Days (6 Mo)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleLockDuration(365)}
-                  className="px-2.5 py-1 text-xs rounded bg-white dark:bg-[#1E2128] border border-amber-200 dark:border-amber-800 hover:bg-amber-100 font-medium"
-                >
-                  365 Days (1 Yr)
-                </button>
-              </div>
-
-              {/* Fee and Penalty Notice */}
-              <div className="pt-2 border-t border-amber-200 dark:border-amber-800/40 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
-                <strong>Discipline Commitment:</strong> Reaching maturity incurs only the standard 2% disbursement fee. Liquidating early prior to maturity triggers a 10% early unlock penalty.
-              </div>
+          {/* Set End Date with Quick Presets */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] font-mono-num font-bold flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Set End Date (Maturity Date)</span>
+              </label>
+              <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
+                Withdraw anytime (2% on/after date, 10% before)
+              </span>
             </div>
-          )}
 
-          {/* Maturity / Target Date */}
-          <div>
-            <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mb-1 font-bold">
-              {vaultType === 'high_yield_vault' ? 'Maturity Date (Lock Expiry)' : 'Target Date (Optional)'}
-            </label>
             <input
               type="date"
+              required
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
               className="w-full bg-[#FDFCFB] dark:bg-[#15181E] text-[#1A1A1A] dark:text-white px-3 py-2 rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] text-sm font-mono-num focus:outline-none focus:border-[#1A1A1A] dark:focus:border-white"
             />
+
+            {/* Quick Presets */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => handleSetDuration(30)}
+                className="px-2.5 py-1 text-xs rounded-md bg-[#F7F5F2] dark:bg-[#252830] border border-[#E8E5DF] dark:border-[#2D323F] hover:bg-[#E8E5DF] font-medium transition-colors"
+              >
+                +30 Days (1 Mo)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetDuration(90)}
+                className="px-2.5 py-1 text-xs rounded-md bg-[#F7F5F2] dark:bg-[#252830] border border-[#E8E5DF] dark:border-[#2D323F] hover:bg-[#E8E5DF] font-medium transition-colors"
+              >
+                +90 Days (3 Mo)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetDuration(180)}
+                className="px-2.5 py-1 text-xs rounded-md bg-[#F7F5F2] dark:bg-[#252830] border border-[#E8E5DF] dark:border-[#2D323F] hover:bg-[#E8E5DF] font-medium transition-colors"
+              >
+                +180 Days (6 Mo)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetDuration(365)}
+                className="px-2.5 py-1 text-xs rounded-md bg-[#F7F5F2] dark:bg-[#252830] border border-[#E8E5DF] dark:border-[#2D323F] hover:bg-[#E8E5DF] font-medium transition-colors"
+              >
+                +365 Days (1 Yr)
+              </button>
+            </div>
           </div>
 
           {/* PAYSTACK DESTINATION SECTION */}
@@ -499,7 +419,7 @@ export const GoalModal: React.FC<GoalModalProps> = ({
               disabled={isSubmitting}
               className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#333333] dark:bg-white dark:hover:bg-gray-100 text-[#FFFFFF] dark:text-[#1A1A1A] rounded-md text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
             >
-              {isSubmitting ? 'Securing...' : initialData ? 'Save Changes' : 'Initialize Vault'}
+              {isSubmitting ? 'Securing...' : initialData ? 'Save Changes' : 'Create Vault'}
             </button>
           </div>
 

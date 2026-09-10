@@ -12,9 +12,11 @@ import {
   Smartphone,
   ExternalLink,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { Goal } from '../../types';
 import { useLedger } from '../../context/LedgerContext';
+import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
 import { formatCurrency } from '../../design/tokens';
 
@@ -29,7 +31,8 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
   onClose,
   goal,
 }) => {
-  const { refreshData, notify, user } = useLedger();
+  const { refreshData, notify } = useLedger();
+  const { user } = useAuth();
 
   const [method, setMethod] = useState<'paystack' | 'manual'>('paystack');
   const [amount, setAmount] = useState('');
@@ -48,7 +51,6 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
   if (!isOpen || !goal) return null;
 
   const remaining = Math.max(0, goal.target - goal.current);
-  const isLocked = goal.isLocked || goal.vaultType === 'locked_savings' || goal.vaultType === 'high_yield_vault';
 
   const presetAmounts = [100, 250, 500, 1000, 2500, 5000].filter(
     (amt) => amt <= Math.max(1000, goal.target)
@@ -152,10 +154,10 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
               <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A] dark:text-white">
                 Deposit to Savings Vault
               </h2>
-              {isLocked && (
+              {goal.deadline && (
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                  <Lock className="w-2.5 h-2.5 mr-1" />
-                  Locked Vault
+                  <Calendar className="w-2.5 h-2.5 mr-1" />
+                  Target Date: {goal.deadline}
                 </span>
               )}
             </div>
@@ -218,7 +220,18 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
               </div>
             )}
 
-            <div className="pt-3 flex items-center justify-center space-x-3">
+            <div className="pt-3 flex flex-wrap items-center justify-center gap-2.5">
+              {depositResult.status === 'pending' && depositResult.authorizationUrl && (
+                <a
+                  href={depositResult.authorizationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#333333] dark:bg-white dark:hover:bg-gray-100 text-white dark:text-[#1A1A1A] text-xs font-bold rounded-lg flex items-center space-x-1.5 shadow-sm"
+                >
+                  <span>Open Paystack Checkout</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              )}
               {depositResult.status === 'pending' && (
                 <button
                   type="button"
@@ -230,10 +243,22 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
                   <span>Verify Payment Now</span>
                 </button>
               )}
+              {depositResult.status === 'success' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDepositResult(null);
+                    setAmount('');
+                  }}
+                  className="px-5 py-2 bg-[#0F172A] hover:bg-[#1E293B] text-white dark:bg-white dark:text-[#0F172A] text-xs font-bold rounded-lg shadow-xs transition-all flex items-center space-x-1.5"
+                >
+                  <span>+ Deposit Again</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onClose}
-                className="px-5 py-2 bg-[#1A1A1A] hover:bg-[#333333] dark:bg-white dark:hover:bg-gray-100 text-white dark:text-[#1A1A1A] text-xs font-bold rounded-lg shadow-sm transition-all"
+                className="px-5 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] dark:bg-[#252830] dark:hover:bg-[#2D323F] text-[#1A1A1A] dark:text-white text-xs font-bold rounded-lg shadow-xs transition-all border border-[#E8E5DF] dark:border-[#2D323F]"
               >
                 {depositResult.status === 'success' ? 'Done' : 'Close'}
               </button>
@@ -270,25 +295,41 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
               </button>
             </div>
 
-            {/* Vault Terms Card */}
+            {/* Vault Summary Card */}
             <div className="p-3.5 rounded-lg bg-[#FDFCFB] dark:bg-[#181A20] border border-[#E8E5DF] dark:border-[#2D323F] space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Vault Archetype:</span>
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Savings Vault:</span>
                 <span className="font-bold text-[#1A1A1A] dark:text-white">
-                  {goal.vaultType === 'high_yield_vault' || goal.isLocked
-                    ? '🔒 Time-Locked Discipline Vault'
-                    : goal.vaultType === 'emergency_stash'
-                    ? '🛡️ Emergency Reserve Stash'
-                    : '🎯 Target Milestone Goal'}
+                  {goal.name}
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-xs pt-1 border-t border-[#E8E5DF] dark:border-[#2D323F] font-mono-num">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Remaining to Target:</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                  {formatCurrency(remaining, goal.currency)}
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Current Balance:</span>
+                <span className="font-bold text-[#1A1A1A] dark:text-white">
+                  {formatCurrency(goal.current, goal.currency)}
                 </span>
               </div>
+
+              <div className="flex items-center justify-between text-xs pt-1 border-t border-[#E8E5DF] dark:border-[#2D323F] font-mono-num">
+                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Target Goal:</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                  {formatCurrency(goal.target, goal.currency)}
+                </span>
+              </div>
+
+              {goal.deadline && (
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-[#E8E5DF] dark:border-[#2D323F] font-mono-num">
+                  <span className="text-[#6B7280] dark:text-[#9CA3AF]">Target End Date:</span>
+                  <span className="text-[#1A1A1A] dark:text-white font-medium">
+                    {goal.deadline}
+                  </span>
+                </div>
+              )}
+
+              <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] pt-1 leading-relaxed">
+                Tip: You can deposit funds into this vault at any time as you save. Each deposit adds directly to your saved balance.
+              </p>
             </div>
 
             {/* Paystack Channel Logos & Info */}

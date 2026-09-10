@@ -12,6 +12,7 @@ import { DebtsPage } from './pages/DebtsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AIAdvisorPage } from './pages/AIAdvisorPage';
+import { AdminPage } from './pages/AdminPage';
 
 // Modals
 import { TransactionModal } from './components/Modals/TransactionModal';
@@ -27,11 +28,14 @@ import { LiveVoiceModal } from './components/Modals/LiveVoiceModal';
 import { AdminGodModeModal } from './components/Modals/AdminGodModeModal';
 import { TermsModal } from './components/TermsModal';
 import { PrivacyModal } from './components/PrivacyModal';
+import { SplashLoader } from './components/SplashLoader';
+import { OverviewSkeleton, TableSkeleton, CardsGridSkeleton } from './components/SkeletonLoader';
 
 import { Transaction, Goal, Budget, Debt } from './types';
-import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, X, Crown } from 'lucide-react';
 
 const MainShell: React.FC = () => {
+  const { user } = useAuth();
   const {
     notification,
     clearNotification,
@@ -40,10 +44,11 @@ const MainShell: React.FC = () => {
     editingProfile,
     pendingLockedProfile,
     setPendingLockedProfile,
+    isLoading: isLedgerLoading,
   } = useLedger();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'transactions' | 'budgets' | 'goals' | 'debts' | 'reports' | 'ai-advisor' | 'settings'
+    'overview' | 'transactions' | 'budgets' | 'goals' | 'debts' | 'reports' | 'ai-advisor' | 'settings' | 'admin'
   >('overview');
 
   // Modal states
@@ -66,9 +71,18 @@ const MainShell: React.FC = () => {
 
   const [csvModalOpen, setCsvModalOpen] = useState(false);
   const [auditLogModalOpen, setAuditLogModalOpen] = useState(false);
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const [adminModalOpen, setAdminModalOpen] = useState(() => {
+    return localStorage.getItem('ledger_open_admin_modal') === 'true';
+  });
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
+  React.useEffect(() => {
+    if (localStorage.getItem('ledger_open_admin_modal') === 'true') {
+      localStorage.removeItem('ledger_open_admin_modal');
+      setAdminModalOpen(true);
+    }
+  }, []);
 
   // Handlers
   const handleOpenNewTx = () => {
@@ -136,60 +150,99 @@ const MainShell: React.FC = () => {
         onOpenAdminModal={() => setAdminModalOpen(true)}
       />
 
-      {/* Main Page Content Area */}
+      {/* Main Page Content Area with Fluid Transitions and Skeletons */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
-        {activeTab === 'overview' && (
-          <Overview
-            onNavigateTab={(tab) => setActiveTab(tab as any)}
-            onOpenNewTx={handleOpenNewTx}
-            onOpenNewBudget={handleOpenNewBudget}
-            onOpenNewGoal={handleOpenNewGoal}
-            onFundGoal={handleFundGoal}
-            onEditTx={handleEditTx}
-          />
-        )}
+        <div key={activeTab} className="animate-in fade-in-50 duration-200 ease-out">
+          {activeTab === 'overview' && (
+            isLedgerLoading ? (
+              <OverviewSkeleton />
+            ) : (
+              <Overview
+                onNavigateTab={(tab) => setActiveTab(tab as any)}
+                onOpenNewTx={handleOpenNewTx}
+                onOpenNewBudget={handleOpenNewBudget}
+                onOpenNewGoal={handleOpenNewGoal}
+                onFundGoal={handleFundGoal}
+                onEditTx={handleEditTx}
+              />
+            )
+          )}
 
-        {activeTab === 'transactions' && (
-          <TransactionsPage
-            onOpenNewTx={handleOpenNewTx}
-            onEditTx={handleEditTx}
-            onOpenCsvImport={() => setCsvModalOpen(true)}
-          />
-        )}
+          {activeTab === 'transactions' && (
+            isLedgerLoading ? (
+              <TableSkeleton />
+            ) : (
+              <TransactionsPage
+                onOpenNewTx={handleOpenNewTx}
+                onEditTx={handleEditTx}
+                onOpenCsvImport={() => setCsvModalOpen(true)}
+              />
+            )
+          )}
 
-        {activeTab === 'budgets' && (
-          <BudgetsPage
-            onOpenNewBudget={handleOpenNewBudget}
-            onEditBudget={handleEditBudget}
-          />
-        )}
+          {activeTab === 'budgets' && (
+            isLedgerLoading ? (
+              <CardsGridSkeleton count={6} />
+            ) : (
+              <BudgetsPage
+                onOpenNewBudget={handleOpenNewBudget}
+                onEditBudget={handleEditBudget}
+              />
+            )
+          )}
 
-        {activeTab === 'goals' && (
-          <GoalsPage
-            onOpenNewGoal={handleOpenNewGoal}
-            onEditGoal={handleEditGoal}
-            onFundGoal={handleFundGoal}
-          />
-        )}
+          {activeTab === 'goals' && (
+            isLedgerLoading ? (
+              <CardsGridSkeleton count={4} />
+            ) : (
+              <GoalsPage
+                onOpenNewGoal={handleOpenNewGoal}
+                onEditGoal={handleEditGoal}
+                onFundGoal={handleFundGoal}
+              />
+            )
+          )}
 
-        {activeTab === 'debts' && (
-          <DebtsPage
-            onOpenNewDebt={handleOpenNewDebt}
-            onEditDebt={handleEditDebt}
-            onRecordPayment={handleRecordDebtPayment}
-          />
-        )}
+          {activeTab === 'debts' && (
+            isLedgerLoading ? (
+              <CardsGridSkeleton count={3} />
+            ) : (
+              <DebtsPage
+                onOpenNewDebt={handleOpenNewDebt}
+                onEditDebt={handleEditDebt}
+                onRecordPayment={handleRecordDebtPayment}
+              />
+            )
+          )}
 
-        {activeTab === 'reports' && <ReportsPage />}
+          {activeTab === 'reports' && (
+            isLedgerLoading ? <OverviewSkeleton /> : <ReportsPage />
+          )}
 
-        {activeTab === 'ai-advisor' && <AIAdvisorPage />}
+          {activeTab === 'ai-advisor' && <AIAdvisorPage />}
 
-        {activeTab === 'settings' && (
-          <SettingsPage
-            onOpenAuditLogs={() => setAuditLogModalOpen(true)}
-            onOpenAdminModal={() => setAdminModalOpen(true)}
-          />
-        )}
+          {activeTab === 'settings' && (
+            <SettingsPage
+              onOpenAuditLogs={() => setAuditLogModalOpen(true)}
+              onOpenAdminModal={() => setAdminModalOpen(true)}
+            />
+          )}
+
+          {activeTab === 'admin' && (
+            user?.role === 'admin' || user?.email?.toLowerCase() === 'jnkpappoe@gmail.com' ? (
+              <AdminPage />
+            ) : (
+              <Overview
+                onNavigateTab={(tab) => setActiveTab(tab as any)}
+                onOpenNewTx={handleOpenNewTx}
+                onOpenNewBudget={handleOpenNewBudget}
+                onOpenNewGoal={handleOpenNewGoal}
+                onFundGoal={handleFundGoal}
+                onEditTx={handleEditTx}
+              />
+            )
+          )}
+        </div>
       </main>
 
       {/* Toast Notification Alert Banner */}
@@ -322,16 +375,21 @@ const MainShell: React.FC = () => {
 };
 
 const AppRouter: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const [showSplash, setShowSplash] = useState(true);
 
-  if (isLoading) {
+  if (showSplash) {
+    return <SplashLoader onComplete={() => setShowSplash(false)} />;
+  }
+
+  if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0F1115] flex flex-col items-center justify-center p-4">
-        <div className="w-10 h-10 rounded-xl bg-[#1A1A1A] dark:bg-[#F3F4F6] text-[#FFFFFF] dark:text-[#111317] flex items-center justify-center font-bold text-sm mb-4 animate-pulse shadow-md">
+      <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0B0D11] flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-[#252830] to-[#121418] text-white dark:from-[#FFFFFF] dark:to-[#E5E7EB] dark:text-[#111317] flex items-center justify-center font-bold text-lg mb-4 shadow-xl border border-white/10 dark:border-white/40 animate-pulse">
           L
         </div>
-        <div className="text-xs font-mono tracking-widest text-[#6B7280] dark:text-[#9CA3AF]">
-          INITIALIZING SECURE LEDGER...
+        <div className="text-[11px] font-mono tracking-[0.2em] text-[#6B7280] dark:text-[#9CA3AF] uppercase">
+          Securing Workspace...
         </div>
       </div>
     );

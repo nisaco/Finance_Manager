@@ -356,10 +356,10 @@ export class LedgerMongoDbManager {
   // ==========================================
   private normalizeUser(user: User | null): User | null {
     if (!user) return null;
-    const isAdmin = user.email.toLowerCase() === 'jnkpappoe@gmail.com' || user.role === 'admin';
+    const isOwner = user.email.toLowerCase() === 'jnkpappoe@gmail.com' || user.role === 'admin';
     return {
       ...user,
-      role: isAdmin ? 'admin' : 'user',
+      role: isOwner ? 'admin' : 'user',
     };
   }
 
@@ -494,6 +494,7 @@ export class LedgerMongoDbManager {
         let txCount = 0;
         let totalVaults = 0;
         let goalCount = 0;
+        let netBalance = 0;
 
         try {
           const db = await this.getDb();
@@ -502,8 +503,12 @@ export class LedgerMongoDbManager {
             const goals = await db.collection<Goal>('goals').find({ profileId: { $in: profileIds } }).toArray();
             goalCount = goals.length;
             totalVaults = goals.reduce((sum, g) => sum + (g.current || 0), 0);
+            const txs = await db.collection('transactions').find({ profileId: { $in: profileIds } }).toArray();
+            netBalance = txs.reduce((sum, t: any) => sum + (t.type === 'income' ? (t.amount || 0) : -(t.amount || 0)), 0);
           } else {
-            txCount = this.memTransactions.filter(t => profileIds.includes(t.profileId)).length;
+            const txs = this.memTransactions.filter(t => profileIds.includes(t.profileId));
+            txCount = txs.length;
+            netBalance = txs.reduce((sum, t) => sum + (t.type === 'income' ? (t.amount || 0) : -(t.amount || 0)), 0);
             const goals = this.memGoals.filter(g => profileIds.includes(g.profileId));
             goalCount = goals.length;
             totalVaults = goals.reduce((sum, g) => sum + (g.current || 0), 0);
@@ -521,6 +526,7 @@ export class LedgerMongoDbManager {
           transactionsCount: txCount,
           goalsCount: goalCount,
           totalVaultsSaved: totalVaults,
+          netBalance: netBalance || 0,
         };
       })
     );
@@ -653,10 +659,16 @@ export class LedgerMongoDbManager {
   public async getAdminPlatformStats(): Promise<{
     totalUsers: number;
     totalVaultsAmount: number;
+    totalSavingsVaultAmount: number;
     totalPendingWithdrawals: number;
+    pendingWithdrawalsCount: number;
     totalApprovedWithdrawals: number;
     totalFeesCollected: number;
     totalTransactionsCount: number;
+    totalTransactions: number;
+    totalLedgerBalance: number;
+    totalBudgetsCount: number;
+    totalSavingsGoalsCount: number;
   }> {
     const totalUsers = await this.getUsersCount();
     const withdrawals = await this.getWithdrawalRequests();
@@ -667,26 +679,42 @@ export class LedgerMongoDbManager {
 
     let totalVaults = 0;
     let txCount = 0;
+    let totalLedgerBalance = 0;
+    let budgetCount = 0;
+    let goalsCount = 0;
 
     try {
       const db = await this.getDb();
       if (db) {
         const goals = await db.collection<Goal>('goals').find({}).toArray();
+        goalsCount = goals.length;
         totalVaults = goals.reduce((sum, g) => sum + (g.current || 0), 0);
         txCount = await db.collection('transactions').countDocuments();
+        const allTxs = await db.collection('transactions').find({}).toArray();
+        totalLedgerBalance = allTxs.reduce((sum, t: any) => sum + (t.type === 'income' ? (t.amount || 0) : -(t.amount || 0)), 0);
+        budgetCount = await db.collection('budgets').countDocuments();
       } else {
+        goalsCount = this.memGoals.length;
         totalVaults = this.memGoals.reduce((sum, g) => sum + (g.current || 0), 0);
         txCount = this.memTransactions.length;
+        totalLedgerBalance = this.memTransactions.reduce((sum, t) => sum + (t.type === 'income' ? (t.amount || 0) : -(t.amount || 0)), 0);
+        budgetCount = this.memBudgets.length;
       }
     } catch {}
 
     return {
       totalUsers,
       totalVaultsAmount: totalVaults,
+      totalSavingsVaultAmount: totalVaults,
       totalPendingWithdrawals: pending.length,
+      pendingWithdrawalsCount: pending.length,
       totalApprovedWithdrawals: approved.length,
       totalFeesCollected,
       totalTransactionsCount: txCount,
+      totalTransactions: txCount,
+      totalLedgerBalance: Math.max(0, totalLedgerBalance),
+      totalBudgetsCount: budgetCount,
+      totalSavingsGoalsCount: goalsCount,
     };
   }
 
@@ -725,9 +753,13 @@ export class LedgerMongoDbManager {
             cooldownHours: 4,
             isLocked: true,
             lockedUntil: new Date(unlockTime).toISOString(),
-            message: `Message limit reached (40 messages in 8 hours). AI assistant is cooling down. Ready in ${hours}h ${mins}m.`,
+            message: `Profile message limit reached (40 messages in 8 hours). AI assistant is cooling down. Ready in ${hours}h ${mins}m.`,
           },
         };
+      } else {
+        // 4 hours cooldown has elapsed: reset back to zero as requested!
+        this.memAIMessages = this.memAIMessages.filter(m => m.userId !== userId);
+        userMsgs.length = 0;
       }
     }
 
@@ -758,7 +790,7 @@ export class LedgerMongoDbManager {
     const maxMessages = 40;
 
     this.memAIMessages = this.memAIMessages.filter(m => now - m.timestamp < windowMs);
-    const userMsgs = this.memAIMessages
+    let userMsgs = this.memAIMessages
       .filter(m => m.userId === userId)
       .sort((a, b) => a.timestamp - b.timestamp);
 
@@ -771,6 +803,10 @@ export class LedgerMongoDbManager {
       if (now < unlockTime) {
         isLocked = true;
         lockedUntil = new Date(unlockTime).toISOString();
+      } else {
+        // Reset back to zero after 4 hours cooldown
+        this.memAIMessages = this.memAIMessages.filter(m => m.userId !== userId);
+        userMsgs = [];
       }
     }
 
@@ -1317,10 +1353,6 @@ export class LedgerMongoDbManager {
     const safeUpdates = { ...updates } as any;
     delete safeUpdates._id;
 
-    if (existing.paystackDestination?.type === 'paystack_recipient' && safeUpdates.current !== undefined) {
-      delete safeUpdates.current;
-    }
-
     if (idx !== -1) {
       this.memGoals[idx] = { ...this.memGoals[idx], ...safeUpdates };
     }
@@ -1544,12 +1576,13 @@ export class LedgerMongoDbManager {
         const gIdx = this.memGoals.findIndex((g) => g.id === transfer.goalId);
         if (gIdx !== -1) {
           this.memGoals[gIdx].current = newCurrent;
+          this.memGoals[gIdx].status = 'active';
         }
 
         try {
           const db = await this.getDb();
           if (db) {
-            await db.collection('goals').updateOne({ id: transfer.goalId }, { $set: { current: newCurrent } });
+            await db.collection('goals').updateOne({ id: transfer.goalId }, { $set: { current: newCurrent, status: 'active' } });
           }
         } catch (err) {
           console.error('[DATABASE] Failed to credit goal in MongoDB:', err);
