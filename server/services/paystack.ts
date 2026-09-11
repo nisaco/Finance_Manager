@@ -72,33 +72,44 @@ export class PaystackService {
   }
 
   // 2. Resolve Account / Mobile Money verification
-  public async resolveAccount(accountNumber: string, bankCode: string): Promise<{ accountName: string; accountNumber: string }> {
+  public async resolveAccount(accountNumber: string, bankCode: string): Promise<{ accountName: string; accountNumber: string; verified: boolean }> {
     const key = this.getSecretKey();
+    const cleanNum = accountNumber.replace(/\s+/g, '');
+
     if (this.isKeyConfigured()) {
       try {
-        const res = await axios.get(`${PAYSTACK_BASE_URL}/bank/resolve?account_number=${accountNumber}&bank_code=${bankCode}`, {
-          headers: { Authorization: `Bearer ${key}` },
-          timeout: 8000,
-        });
+        const res = await axios.get(
+          `${PAYSTACK_BASE_URL}/bank/resolve?account_number=${encodeURIComponent(cleanNum)}&bank_code=${encodeURIComponent(bankCode.trim())}`,
+          {
+            headers: { Authorization: `Bearer ${key}` },
+            timeout: 8000,
+          }
+        );
         if (res.data?.data?.account_name) {
           return {
             accountName: res.data.data.account_name,
-            accountNumber: res.data.data.account_number || accountNumber,
+            accountNumber: res.data.data.account_number || cleanNum,
+            verified: true,
           };
         }
       } catch (err: any) {
-        console.warn('Live account resolve call failed, falling back to verified account holder format:', err?.response?.data || err?.message);
+        console.warn('Paystack live account resolve error:', err?.response?.data || err?.message);
+        if (this.isLiveMode()) {
+          const errMsg = err?.response?.data?.message || 'Could not resolve account name. Please verify the account number and provider.';
+          throw new Error(errMsg);
+        }
       }
     }
 
     const bank = FALLBACK_GHANA_BANKS.find((b) => b.code === bankCode);
     const resolvedName = bank?.type === 'mobile_money'
-      ? `Verified Mobile Money Subscriber (${accountNumber.slice(-4)})`
-      : `Verified Account Holder (${accountNumber.slice(-4)})`;
+      ? `Verified Mobile Money Subscriber (${cleanNum.slice(-4)})`
+      : `Verified Account Holder (${cleanNum.slice(-4)})`;
 
     return {
       accountName: resolvedName,
-      accountNumber,
+      accountNumber: cleanNum,
+      verified: false,
     };
   }
 

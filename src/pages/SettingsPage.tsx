@@ -25,6 +25,9 @@ import {
   FileText,
   UserCheck,
   Crown,
+  RotateCcw,
+  Calendar,
+  AlertTriangle,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -32,21 +35,26 @@ import { useAuth } from '../context/AuthContext';
 import { TermsModal } from '../components/TermsModal';
 import { PrivacyModal } from '../components/PrivacyModal';
 import { api } from '../api/client';
+import { formatCurrency } from '../design/tokens';
 
 interface SettingsPageProps {
   onOpenAuditLogs: () => void;
   onOpenAdminModal?: () => void;
+  onNavigateToHistory?: () => void;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onOpenAdminModal }) => {
+export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onOpenAdminModal, onNavigateToHistory }) => {
   const { user, logout, setUserRole } = useAuth();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+  const [isResettingBalance, setIsResettingBalance] = useState(false);
   const [isSwitchingRole, setIsSwitchingRole] = useState(false);
 
   const {
     profiles,
     activeProfile,
+    summary,
     refreshData,
     notify,
     selectProfile,
@@ -88,6 +96,35 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
   // Backup & restore
   const [restoreJson, setRestoreJson] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleResetBalance = async () => {
+    if (!activeProfile) return;
+    setIsResettingBalance(true);
+    try {
+      await api.resetProfileBalance(activeProfile.id);
+      notify('Active net balance reset to 0.00. Previous transactions safely archived to Monthly History.');
+      setShowResetConfirmModal(false);
+      await refreshData();
+    } catch (err: any) {
+      notify(err.message || 'Failed to reset balance', 'error');
+    } finally {
+      setIsResettingBalance(false);
+    }
+  };
+
+  const handleToggleAutoMonthlyReset = async () => {
+    if (!activeProfile) return;
+    const currentVal = activeProfile.autoMonthlyReset !== false;
+    try {
+      await api.updateProfile(activeProfile.id, {
+        autoMonthlyReset: !currentVal,
+      });
+      notify(!currentVal ? 'Automatic monthly rollover enabled' : 'Automatic monthly rollover disabled');
+      await refreshData();
+    } catch (err: any) {
+      notify(err.message || 'Failed to update monthly setting', 'error');
+    }
+  };
 
   const handleSaveRates = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -604,6 +641,115 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
         </div>
       </div>
 
+      {/* Financial Cycle & Net Balance Reset Section */}
+      <div className="bg-white dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl p-5 shadow-sm space-y-5 transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
+          <div className="flex items-center space-x-2">
+            <RotateCcw className="w-4 h-4 text-[#1A1A1A] dark:text-white" />
+            <h2 className="font-display text-base font-bold text-[#1A1A1A] dark:text-white">
+              Financial Cycles &amp; Balance Reset
+            </h2>
+          </div>
+          <span className="text-[11px] font-mono-num text-[#6B7280] dark:text-[#9CA3AF]">
+            Active Cycle: <strong className="text-[#1A1A1A] dark:text-white">{summary?.cycleMonth || 'Current Month'}</strong>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Active Balance Status Card */}
+          <div className="p-4 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FDFCFB] dark:bg-[#1A1D24] space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[#6B7280] dark:text-[#9CA3AF] uppercase tracking-wider">
+                Active Ledger Net Balance
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                {activeProfile?.autoMonthlyReset !== false ? 'Monthly Cycle' : 'All-Time'}
+              </span>
+            </div>
+
+            <div className="text-2xl font-bold font-mono-num text-[#1A1A1A] dark:text-[#F3F4F6]">
+              {formatCurrency(summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
+            </div>
+
+            <div className="pt-2 border-t border-[#E8E5DF]/60 dark:border-[#2D323F]/60 flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+              <span>Cumulative All-Time Balance:</span>
+              <span className="font-mono-num font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                {formatCurrency(summary?.allTimeNetBalance ?? summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
+              </span>
+            </div>
+
+            {activeProfile?.balanceResetAt && (
+              <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
+                Cycle manually restarted: {new Date(activeProfile.balanceResetAt).toLocaleDateString()}
+              </div>
+            )}
+          </div>
+
+          {/* Reset Action & Controls */}
+          <div className="p-4 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FDFCFB] dark:bg-[#1A1D24] flex flex-col justify-between space-y-4">
+            <div className="space-y-1.5">
+              <div className="text-xs font-bold text-[#1A1A1A] dark:text-white">
+                Start a Fresh Cycle / Reset Balance
+              </div>
+              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+                Reset your active dashboard balance to 0.00 to start tracking a fresh period. All previous transactions are permanently stored in your <strong>Monthly History</strong> archive.
+              </p>
+              <div className="text-[11px] text-[#22C55E] font-medium flex items-center space-x-1">
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Savings Vaults and debts are essential and never reset.</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirmModal(true)}
+                disabled={isResettingBalance}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#1A1A1A] text-white hover:bg-[#333333] dark:bg-white dark:text-[#111317] dark:hover:bg-[#E5E7EB] transition-colors flex items-center space-x-1.5 shadow-sm"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{isResettingBalance ? 'Resetting...' : 'Reset Net Balance to 0.00'}</span>
+              </button>
+
+              {onNavigateToHistory && (
+                <button
+                  type="button"
+                  onClick={onNavigateToHistory}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#16181E] text-[#1A1A1A] dark:text-white hover:bg-[#F7F5F0] dark:hover:bg-[#20242E] transition-colors flex items-center space-x-1"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Open Monthly History</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Rollover Switch */}
+        <div className="p-4 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#16181E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="space-y-0.5">
+            <div className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+              Automatic Monthly Rollover
+            </div>
+            <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+              Every 1st of the month, active balance resets to 0.00 for the new month, keeping completed months in Monthly History.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleToggleAutoMonthlyReset}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+              activeProfile?.autoMonthlyReset !== false
+                ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] dark:bg-white dark:text-[#111317] dark:border-white'
+                : 'bg-white text-[#6B7280] border-[#E8E5DF] dark:bg-[#20242E] dark:text-[#9CA3AF] dark:border-[#2D323F]'
+            }`}
+          >
+            {activeProfile?.autoMonthlyReset !== false ? 'Enabled (Monthly Cycle)' : 'Disabled (All-Time)'}
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* 1. Multi-Profile Management (Personal, Family, Business) */}
         <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
@@ -988,6 +1134,62 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
         onClose={() => setShowPrivacyModal(false)}
         isAccepted={true}
       />
+
+      {/* Reset Balance Confirmation Modal */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start space-x-3">
+              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 shrink-0 border border-amber-200 dark:border-amber-800">
+                <RotateCcw className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                  Reset Net Balance to 0.00?
+                </h3>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+                  This restarts your active dashboard ledger at <strong>0.00</strong> so you can track a clean, new financial cycle.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-[#F9F8F6] dark:bg-[#20242E] border border-[#E8E5DF] dark:border-[#2D323F] text-xs space-y-2 text-[#4B5563] dark:text-[#D1D5DB]">
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
+                <span><strong>Zero Data Loss:</strong> All past transactions are permanently saved in your <strong>Monthly History</strong>.</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
+                <span><strong>Savings Vaults Untouched:</strong> Your emergency funds and goal vaults never reset.</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
+                <span><strong>Debts Preserved:</strong> All money owed to or by you remains intact.</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowResetConfirmModal(false)}
+                disabled={isResettingBalance}
+                className="px-4 py-2 rounded-xl text-xs font-semibold border border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F7F5F0] dark:hover:bg-[#20242E] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetBalance}
+                disabled={isResettingBalance}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1A1A1A] text-white hover:bg-[#333333] dark:bg-white dark:text-[#111317] dark:hover:bg-[#E5E7EB] transition-colors flex items-center space-x-1.5 shadow-sm"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isResettingBalance ? 'animate-spin' : ''}`} />
+                <span>{isResettingBalance ? 'Resetting...' : 'Yes, Reset to 0.00'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

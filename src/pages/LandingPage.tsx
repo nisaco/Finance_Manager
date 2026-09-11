@@ -20,10 +20,12 @@ import {
   Sparkles,
   Clock,
   X,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
-  const { login, register, sessionExpiredMessage, clearSessionExpiredMessage } = useAuth();
+  const { login, register, loginWithGoogle, sessionExpiredMessage, clearSessionExpiredMessage } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
   const [authMode, setAuthMode] = useState<'signup' | 'login'>('login');
@@ -39,12 +41,72 @@ export const LandingPage: React.FC = () => {
   const [loginIdentifier, setLoginIdentifier] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
+  // Password visibility states
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
+  // Google Sign-In & Username Selection Modal state
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
+  const [googleUsername, setGoogleUsername] = useState('');
+  const [isGoogleProcessing, setIsGoogleProcessing] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
+  const handleOpenGoogleModal = () => {
+    setGoogleError(null);
+    if (email && email.includes('@')) {
+      setGoogleEmail(email);
+      setGoogleUsername(username || email.split('@')[0]);
+    } else if (loginIdentifier && loginIdentifier.includes('@')) {
+      setGoogleEmail(loginIdentifier);
+      setGoogleUsername(loginIdentifier.split('@')[0]);
+    }
+    setShowGoogleModal(true);
+  };
+
+  const handleGoogleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGoogleError(null);
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!googleEmail.trim() || !emailRegex.test(googleEmail.trim())) {
+      setGoogleError('Please enter a valid Google email address.');
+      return;
+    }
+
+    if (googleUsername && googleUsername.trim().length < 3) {
+      setGoogleError('Username must be at least 3 characters.');
+      return;
+    }
+
+    setIsGoogleProcessing(true);
+    try {
+      const res = await loginWithGoogle({
+        email: googleEmail.trim(),
+        name: googleName.trim() || googleEmail.split('@')[0],
+        requestedUsername: googleUsername.trim(),
+      });
+
+      if (!res.success) {
+        setIsGoogleProcessing(false);
+        setGoogleError(res.error || 'Failed to authenticate with Google');
+      } else {
+        setShowGoogleModal(false);
+      }
+    } catch {
+      setIsGoogleProcessing(false);
+      setGoogleError('Failed to complete Google Sign-In. Please try again.');
+    }
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -377,14 +439,23 @@ export const LandingPage: React.FC = () => {
                   <div className="relative">
                     <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       required
                       minLength={6}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] focus:outline-none p-1"
+                      title={showPassword ? 'Hide password' : 'View password'}
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 
@@ -395,14 +466,23 @@ export const LandingPage: React.FC = () => {
                   <div className="relative">
                     <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
-                      type="password"
+                      type={showConfirmPassword ? 'text' : 'password'}
                       required
                       minLength={6}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] focus:outline-none p-1"
+                      title={showConfirmPassword ? 'Hide password' : 'View password'}
+                      aria-label="Toggle confirm password visibility"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -456,10 +536,47 @@ export const LandingPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || !agreedToTerms}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all"
+                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all cursor-pointer"
               >
                 {isSubmitting ? 'Creating User Account...' : 'Complete Sign Up & Enter'}
                 <ArrowRight className="w-4 h-4" />
+              </button>
+
+              {/* Social Login Separator */}
+              <div className="relative my-3 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[#E8E5DF] dark:border-[#2D323F]"></div>
+                </div>
+                <span className="relative bg-[#FFFFFF] dark:bg-[#181D27] px-3 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-wider">
+                  or continue with
+                </span>
+              </div>
+
+              {/* Google Sign-in button */}
+              <button
+                type="button"
+                onClick={handleOpenGoogleModal}
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Sign up with Google (Select Username)</span>
               </button>
             </form>
           ) : (
@@ -477,7 +594,7 @@ export const LandingPage: React.FC = () => {
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     placeholder="Enter your username or email"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
                   />
                 </div>
               </div>
@@ -489,13 +606,22 @@ export const LandingPage: React.FC = () => {
                 <div className="relative">
                   <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    type="password"
+                    type={showLoginPassword ? 'text' : 'password'}
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword(!showLoginPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] focus:outline-none p-1"
+                    title={showLoginPassword ? 'Hide password' : 'View password'}
+                    aria-label="Toggle login password visibility"
+                  >
+                    {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
 
@@ -506,6 +632,43 @@ export const LandingPage: React.FC = () => {
               >
                 {isSubmitting ? 'Signing in...' : 'Sign In to Ledger'}
                 <ArrowRight className="w-4 h-4" />
+              </button>
+
+              {/* Social Login Separator */}
+              <div className="relative my-3 flex items-center justify-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-[#E8E5DF] dark:border-[#2D323F]"></div>
+                </div>
+                <span className="relative bg-[#FFFFFF] dark:bg-[#181D27] px-3 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-wider">
+                  or sign in with
+                </span>
+              </div>
+
+              {/* Google Sign-in button */}
+              <button
+                type="button"
+                onClick={handleOpenGoogleModal}
+                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
               </button>
 
               <div className="pt-3 border-t border-[#E8E5DF] dark:border-[#2D323F] flex flex-col items-center gap-2">
@@ -563,6 +726,141 @@ export const LandingPage: React.FC = () => {
         onAccept={() => setAgreedToTerms(true)}
         isAccepted={agreedToTerms}
       />
+
+      {/* Google Sign-in & Custom Username Modal */}
+      {showGoogleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-[#FFFFFF] dark:bg-[#181D27] rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F] shadow-2xl p-6 overflow-hidden">
+            <button
+              onClick={() => {
+                setShowGoogleModal(false);
+                setGoogleError(null);
+              }}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] hover:bg-[#F3F4F6] dark:hover:bg-[#1F2937] transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#F3F4F6] dark:bg-[#1E2330] flex items-center justify-center shadow-inner">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                  Continue with Google
+                </h3>
+                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  Sign in or create your free Ledger account
+                </p>
+              </div>
+            </div>
+
+            {googleError && (
+              <div className="mb-4 p-3 rounded-xl bg-[#FEF2F2] dark:bg-[#450A0A]/40 border border-[#FCA5A5] dark:border-[#7F1D1D] text-[#B91C1C] dark:text-[#FCA5A5] text-xs flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div className="flex-1 font-medium">{googleError}</div>
+              </div>
+            )}
+
+            <form onSubmit={handleGoogleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">
+                  Google Account Email <span className="text-[#DC2626]">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    required
+                    value={googleEmail}
+                    onChange={(e) => setGoogleEmail(e.target.value)}
+                    placeholder="user@gmail.com"
+                    className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">
+                  Your Name (Optional)
+                </label>
+                <div className="relative">
+                  <UserIcon className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={googleName}
+                    onChange={(e) => setGoogleName(e.target.value)}
+                    placeholder="e.g. Alex Pappoe"
+                    className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF]">
+                    Choose Custom Username
+                  </label>
+                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
+                    Can change anytime later
+                  </span>
+                </div>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#9CA3AF]">
+                    @
+                  </span>
+                  <input
+                    type="text"
+                    value={googleUsername}
+                    onChange={(e) => setGoogleUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                    placeholder="my_username"
+                    className="w-full pl-8 pr-3 py-2 text-base sm:text-xs font-mono-num rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                  />
+                </div>
+                <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-1">
+                  Unique handle used for multi-user collaboration and Paystack receipt tagging.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowGoogleModal(false)}
+                  className="px-4 py-2 text-xs font-medium text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isGoogleProcessing || !googleEmail.trim()}
+                  className="px-5 py-2.5 text-xs font-bold rounded-xl text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 transition-all shadow-md cursor-pointer flex items-center gap-2"
+                >
+                  {isGoogleProcessing ? 'Authenticating...' : 'Sign In with Google'}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Animated iOS-Style Security Transition Loader */}
       {isSubmitting && (

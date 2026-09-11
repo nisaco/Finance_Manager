@@ -78,14 +78,49 @@ export const GoalModal: React.FC<GoalModalProps> = ({
     }
   }, [initialData, isOpen, activeProfile]);
 
+  // Auto-fetch account name on typing when linking Paystack payout destination
+  useEffect(() => {
+    if (!isRealMoney) return;
+    const cleanNum = accountNumber.replace(/\s+/g, '');
+    if (cleanNum.length < 9) {
+      return;
+    }
+
+    let isCurrent = true;
+    const timer = setTimeout(async () => {
+      setIsResolving(true);
+      try {
+        const res = await api.resolveAccount(cleanNum, selectedBankCode);
+        if (isCurrent) {
+          setAccountName(res.accountName);
+          setIsResolved(true);
+        }
+      } catch (err: any) {
+        if (isCurrent) {
+          console.warn('Auto account resolution error:', err);
+        }
+      } finally {
+        if (isCurrent) {
+          setIsResolving(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [accountNumber, selectedBankCode, isRealMoney]);
+
   const handleResolveAccount = async () => {
-    if (!accountNumber || accountNumber.length < 9) {
+    const cleanNum = accountNumber.replace(/\s+/g, '');
+    if (!cleanNum || cleanNum.length < 9) {
       notify('Please enter a valid account or mobile money number', 'error');
       return;
     }
     setIsResolving(true);
     try {
-      const res = await api.resolveAccount(accountNumber, selectedBankCode);
+      const res = await api.resolveAccount(cleanNum, selectedBankCode);
       setAccountName(res.accountName);
       setIsResolved(true);
       notify(`Account verified: ${res.accountName}`);

@@ -69,9 +69,7 @@ export const VoiceTranscriptSidebar: React.FC<VoiceTranscriptSidebarProps> = ({
   useEffect(() => {
     if (isOpen) {
       const originalOverflow = document.body.style.overflow;
-      const originalTouchAction = document.body.style.touchAction;
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -85,10 +83,13 @@ export const VoiceTranscriptSidebar: React.FC<VoiceTranscriptSidebarProps> = ({
       window.addEventListener('keydown', handleKeyDown);
 
       return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.touchAction = originalTouchAction;
+        document.body.style.overflow = originalOverflow === 'hidden' ? '' : originalOverflow;
+        document.body.style.touchAction = '';
         window.removeEventListener('keydown', handleKeyDown);
       };
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
     }
   }, [isOpen, onClose, editingId]);
 

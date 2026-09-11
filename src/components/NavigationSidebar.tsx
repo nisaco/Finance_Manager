@@ -49,9 +49,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   useEffect(() => {
     if (isOpen) {
       const prevOverflow = document.body.style.overflow;
-      const prevTouchAction = document.body.style.touchAction;
       document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
 
       const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
@@ -61,10 +59,13 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       window.addEventListener('keydown', handleKeyDown);
 
       return () => {
-        document.body.style.overflow = prevOverflow;
-        document.body.style.touchAction = prevTouchAction;
+        document.body.style.overflow = prevOverflow === 'hidden' ? '' : prevOverflow;
+        document.body.style.touchAction = '';
         window.removeEventListener('keydown', handleKeyDown);
       };
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
     }
   }, [isOpen, onClose]);
 

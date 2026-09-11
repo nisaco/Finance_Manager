@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpRight, ArrowDownRight, TrendingUp, Plus, PieChart } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, TrendingUp, Plus, PieChart, History } from 'lucide-react';
 import { SummaryReport, Profile } from '../types';
 import { formatCurrency } from '../design/tokens';
 import { useTheme } from '../context/ThemeContext';
@@ -9,6 +9,7 @@ interface TicketStubCardProps {
   profile: Profile | null;
   onAddTransaction: () => void;
   onManageBudgets: () => void;
+  onNavigateToHistory?: () => void;
 }
 
 export const TicketStubCard: React.FC<TicketStubCardProps> = ({
@@ -16,6 +17,7 @@ export const TicketStubCard: React.FC<TicketStubCardProps> = ({
   profile,
   onAddTransaction,
   onManageBudgets,
+  onNavigateToHistory,
 }) => {
   const { uiStyle } = useTheme();
   const currency = profile?.displayCurrency || 'GHS';
@@ -48,10 +50,10 @@ export const TicketStubCard: React.FC<TicketStubCardProps> = ({
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span className="text-[11px] uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] font-bold">
-              Total Net Balance
+              {summary?.isMonthlyResetActive !== false ? 'Active Cycle Net Balance' : 'Total Net Balance'}
             </span>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#F1F5F9] dark:bg-[#20293A] text-[#0F172A] dark:text-[#F1F5F9] border border-[#E2E8F0] dark:border-[#334155]">
-              {profile?.name} • {currency}
+              {summary?.cycleMonth || 'Active Month'} • {currency}
             </span>
           </div>
 
@@ -70,6 +72,12 @@ export const TicketStubCard: React.FC<TicketStubCardProps> = ({
               {formatCurrency(summary?.monthNet || 0, currency)} this month
             </span>
           </div>
+
+          {summary?.allTimeNetBalance !== undefined && summary?.isMonthlyResetActive !== false && (
+            <div className="text-[11px] text-[#64748B] dark:text-[#94A3B8] font-mono-num">
+              Cumulative All-Time: <strong className="text-[#0F172A] dark:text-white">{formatCurrency(summary.allTimeNetBalance, currency)}</strong>
+            </div>
+          )}
         </div>
 
         {/* Right: Key Performance Metrics */}
@@ -114,7 +122,7 @@ export const TicketStubCard: React.FC<TicketStubCardProps> = ({
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <div className="flex items-center space-x-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-            <span className="font-semibold text-[#0F172A] dark:text-white">Active &amp; Synced</span>
+            <span className="font-semibold text-[#0F172A] dark:text-white">Active Cycle</span>
           </div>
           <span className="hidden sm:inline-block text-[#CBD5E1] dark:text-[#334155]">•</span>
           <div className="flex items-center space-x-1.5">
@@ -138,6 +146,15 @@ export const TicketStubCard: React.FC<TicketStubCardProps> = ({
             <PieChart className="w-3.5 h-3.5" />
             <span>Budgets</span>
           </button>
+          {onNavigateToHistory && (
+            <button
+              onClick={onNavigateToHistory}
+              className="flex-1 sm:flex-initial text-center px-3 py-1.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] dark:bg-[#1E293B] dark:hover:bg-[#2D3B4F] text-[#0F172A] dark:text-white rounded-lg font-semibold transition-all border border-[#E2E8F0] dark:border-[#334155] flex items-center justify-center space-x-1"
+            >
+              <History className="w-3.5 h-3.5" />
+              <span>Monthly History</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

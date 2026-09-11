@@ -659,7 +659,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                       <div>
                         <span className="text-[#6B7280] block text-[10px]">Requested:</span>
                         <span className="font-semibold text-[#1A1A1A] dark:text-white">
-                          {formatCurrency(w.requestedAmount, w.currency)}
+                          {formatCurrency(w.requestedAmount || w.vaultAmount, w.currency)}
                         </span>
                       </div>
                       <div>
@@ -675,6 +675,15 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
                         </span>
                       </div>
                     </div>
+
+                    {w.remainingVaultBalance !== undefined && w.remainingVaultBalance > 0 && (
+                      <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num flex justify-between items-center px-1">
+                        <span>Remaining in Vault:</span>
+                        <span className="font-semibold text-[#1A1A1A] dark:text-white">
+                          {formatCurrency(w.remainingVaultBalance, w.currency)}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] bg-white dark:bg-[#1E2128] p-2 rounded border border-[#E8E5DF] dark:border-[#2D323F]/60">
                       Destination: <span className="font-semibold text-[#1A1A1A] dark:text-white">{w.accountName}</span> ({w.bankName} • {w.accountNumber})

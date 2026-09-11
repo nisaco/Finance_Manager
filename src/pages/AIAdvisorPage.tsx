@@ -108,10 +108,10 @@ export const AIAdvisorPage: React.FC = () => {
   const { user } = useAuth();
 
   // Model selection per requirements:
+  // - gemini-3.1-flash-lite for tasks that should happen fast (Default)
   // - gemini-3.5-flash for general tasks (and search grounding)
   // - gemini-3.1-pro-preview for particularly complex tasks
-  // - gemini-3.1-flash-lite for tasks that should happen fast
-  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.5-flash');
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-3.1-flash-lite');
   const [enableSearch, setEnableSearch] = useState<boolean>(false);
   const [inputPrompt, setInputPrompt] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -142,8 +142,10 @@ export const AIAdvisorPage: React.FC = () => {
       const prev = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
-        document.body.style.overflow = prev;
+        document.body.style.overflow = prev === 'hidden' ? '' : prev;
       };
+    } else {
+      document.body.style.overflow = '';
     }
   }, [showLedgerSidebar]);
 
@@ -221,6 +223,7 @@ export const AIAdvisorPage: React.FC = () => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Helper to scroll smoothly to the user's last message/prompt
   const scrollToLastUserPrompt = (msgList: Message[] = messages, behavior: ScrollBehavior = 'smooth') => {
@@ -228,7 +231,15 @@ export const AIAdvisorPage: React.FC = () => {
     if (lastUser) {
       const el = document.getElementById(`message-${lastUser.id}`);
       if (el) {
-        el.scrollIntoView({ behavior, block: 'start' });
+        if (scrollContainerRef.current) {
+          const container = scrollContainerRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const targetScrollTop = container.scrollTop + (elRect.top - containerRect.top) - 24;
+          container.scrollTo({ top: Math.max(0, targetScrollTop), behavior });
+        } else {
+          el.scrollIntoView({ behavior, block: 'start' });
+        }
         return true;
       }
     }
@@ -238,7 +249,11 @@ export const AIAdvisorPage: React.FC = () => {
   // When opening the text AI, scroll down to the user's last message/prompt (not the AI's last response)
   const initialScrollDoneRef = useRef(false);
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const t1 = setTimeout(() => {
+      scrollToLastUserPrompt(messages, 'auto');
+    }, 60);
+
+    const t2 = setTimeout(() => {
       const scrolled = scrollToLastUserPrompt(messages, 'smooth');
       if (scrolled) {
         initialScrollDoneRef.current = true;
@@ -246,9 +261,12 @@ export const AIAdvisorPage: React.FC = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         initialScrollDoneRef.current = true;
       }
-    }, 150);
+    }, 280);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, []);
 
   // Optional manual scroll to bottom
@@ -651,70 +669,55 @@ export const AIAdvisorPage: React.FC = () => {
 
   return (
     <div className="space-y-3">
-      {/* Top Header: Gemini-Style Navigation & Intelligence Controls */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-[#1A1A1A] to-[#3B4252] text-white dark:from-[#F3F4F6] dark:to-[#D1D5DB] dark:text-[#111317] flex items-center justify-center shadow-xs">
-            <Sparkles className="w-4 h-4 text-emerald-400 dark:text-emerald-600" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="font-display text-lg sm:text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6] tracking-tight">
-                Fima AI
-              </h1>
-              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-mono font-semibold">
-                Finance Strategist
-              </span>
-            </div>
-            <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] hidden sm:block">
-              Full-context financial advisory powered by Gemini intelligence
-            </p>
-          </div>
+      {/* Top Header: Model Selector & Actions (Mobile Optimized) */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
+        {/* Prominent Model Selector: 3 Equal Tabs on Mobile, Flex on Desktop */}
+        <div className="w-full sm:w-auto grid grid-cols-3 sm:flex items-center bg-[#F7F5F2] dark:bg-[#1E222C] p-1 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] shrink-0">
+          <button
+            type="button"
+            onClick={() => setSelectedModel('gemini-3.1-flash-lite')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center whitespace-nowrap cursor-pointer ${
+              selectedModel === 'gemini-3.1-flash-lite'
+                ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-bold'
+                : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
+            }`}
+            title="Fast calculations & quick answers (Default)"
+          >
+            Fast
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedModel('gemini-3.5-flash')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center whitespace-nowrap cursor-pointer ${
+              selectedModel === 'gemini-3.5-flash'
+                ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-bold'
+                : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
+            }`}
+            title="Balanced reasoning & search"
+          >
+            Balanced
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedModel('gemini-3.1-pro-preview')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center whitespace-nowrap cursor-pointer ${
+              selectedModel === 'gemini-3.1-pro-preview'
+                ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-bold'
+                : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
+            }`}
+            title="Deep strategic reasoning & complex financial math"
+          >
+            Deep
+          </button>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center space-x-2 flex-wrap">
-          {/* Intelligence Model Selector */}
-          <div className="flex items-center bg-[#F7F5F2] dark:bg-[#1E222C] p-0.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F]">
-            <button
-              onClick={() => setSelectedModel('gemini-3.5-flash')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                selectedModel === 'gemini-3.5-flash'
-                  ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-semibold'
-                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
-              }`}
-              title="Balanced model for general reasoning & web search"
-            >
-              Balanced
-            </button>
-            <button
-              onClick={() => setSelectedModel('gemini-3.1-pro-preview')}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                selectedModel === 'gemini-3.1-pro-preview'
-                  ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-semibold'
-                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
-              }`}
-              title="Deep strategic reasoning & complex financial math"
-            >
-              Deep Reasoning
-            </button>
-            <button
-              onClick={() => setSelectedModel('gemini-3.1-flash-lite')}
-              className={`hidden sm:block px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
-                selectedModel === 'gemini-3.1-flash-lite'
-                  ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-semibold'
-                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
-              }`}
-              title="Fast calculations & quick answers"
-            >
-              Fast
-            </button>
-          </div>
-
+        <div className="flex items-center justify-between sm:justify-end space-x-2 py-0.5 max-w-full overflow-x-auto no-scrollbar">
           {/* Search Grounding Toggle */}
           <button
+            type="button"
             onClick={() => setEnableSearch(!enableSearch)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               enableSearch
                 ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 shadow-2xs'
                 : 'bg-white dark:bg-[#1E222C] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
@@ -726,7 +729,7 @@ export const AIAdvisorPage: React.FC = () => {
                 enableSearch ? 'text-blue-600 dark:text-blue-400 animate-pulse' : ''
               }`}
             />
-            <span className="hidden sm:inline">Search</span>
+            <span>Search</span>
             {enableSearch && (
               <span className="px-1 py-0.2 rounded bg-blue-600 text-white text-[9px] font-bold">
                 ON
@@ -737,7 +740,7 @@ export const AIAdvisorPage: React.FC = () => {
           {/* Ledger Scope Drawer Trigger */}
           <button
             onClick={() => setShowLedgerSidebar(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1E222C] text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] hover:bg-[#F7F5F2] dark:hover:bg-[#262B37] transition-all shadow-xs"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1E222C] text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] hover:bg-[#F7F5F2] dark:hover:bg-[#262B37] transition-all shadow-xs shrink-0 cursor-pointer"
             title="Inspect active ledger figures & metrics"
           >
             <Wallet className="w-3.5 h-3.5 text-emerald-600" />
@@ -750,7 +753,7 @@ export const AIAdvisorPage: React.FC = () => {
           {/* Voice Fima Launcher Button */}
           <button
             onClick={() => setIsLiveVoiceOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer"
             title="Start borderless voice dialogue with Fima"
           >
             <Mic className="w-3.5 h-3.5" />
@@ -761,7 +764,7 @@ export const AIAdvisorPage: React.FC = () => {
           {/* New Chat Session */}
           <button
             onClick={handleResetConversation}
-            className="p-2 rounded-xl bg-white dark:bg-[#1E222C] border border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-[#F3F4F6] transition-colors"
+            className="p-2 rounded-xl bg-white dark:bg-[#1E222C] border border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-[#F3F4F6] transition-colors shrink-0 cursor-pointer"
             title="Start new conversation thread"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -772,7 +775,7 @@ export const AIAdvisorPage: React.FC = () => {
       {/* Main Full-Width Gemini-Style Context Window */}
       <div className="w-full bg-white dark:bg-[#13161F] border border-[#E8E5DF] dark:border-[#252935] rounded-3xl shadow-xs h-[calc(100vh-190px)] min-h-[620px] flex flex-col overflow-hidden relative">
         {/* Messages Stream (Centered max-w-4xl like Gemini) */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
           <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-6 space-y-7">
             {/* Gemini Hero Greeting (Rendered when fresh or on welcome) */}
             {messages.length <= 1 && (
@@ -859,7 +862,7 @@ export const AIAdvisorPage: React.FC = () => {
                               }
                             }}
                             rows={3}
-                            className="w-full bg-white dark:bg-[#13161F] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl p-3 text-xs sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] outline-hidden resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                            className="w-full bg-white dark:bg-[#13161F] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl p-3 text-base sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] outline-hidden resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                             placeholder="Edit your prompt..."
                           />
                           <div className="flex items-center justify-end space-x-2">
@@ -972,14 +975,6 @@ export const AIAdvisorPage: React.FC = () => {
                       <span className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
                         Fima
                       </span>
-                      {msg.modelUsed && (
-                        <>
-                          <span>•</span>
-                          <span className="px-1.5 py-0.2 rounded bg-[#F7F5F2] dark:bg-[#222734] text-[10px] font-mono-num">
-                            {msg.modelUsed}
-                          </span>
-                        </>
-                      )}
                       <span>•</span>
                       <span className="font-mono-num">{msg.timestamp}</span>
                     </div>
@@ -1222,7 +1217,7 @@ export const AIAdvisorPage: React.FC = () => {
                   ? 'Add your question or notes regarding the attached document(s)...'
                   : 'Ask Fima anything: budget analysis, debt payoffs, savings growth, or investment advice...'
               }
-              className="w-full bg-transparent text-xs sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] resize-none outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed px-1"
+              className="w-full bg-transparent text-base sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] resize-none outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed px-1"
             />
 
             {/* Controls Bar Inside Capsule */}

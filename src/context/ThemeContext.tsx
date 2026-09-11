@@ -62,18 +62,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return currentTheme;
     };
 
+    const applyThemeToDOM = (resolved: ResolvedTheme) => {
+      if (resolved === 'dark') {
+        root.classList.add('dark');
+        document.body.classList.add('dark');
+        root.setAttribute('data-theme', 'dark');
+        root.style.colorScheme = 'dark';
+      } else {
+        root.classList.remove('dark');
+        document.body.classList.remove('dark');
+        root.setAttribute('data-theme', 'light');
+        root.style.colorScheme = 'light';
+      }
+    };
+
     const nextResolved = computeResolvedTheme(theme);
     setResolvedTheme(nextResolved);
-
-    if (nextResolved === 'dark') {
-      root.classList.add('dark');
-      root.setAttribute('data-theme', 'dark');
-      root.style.colorScheme = 'dark';
-    } else {
-      root.classList.remove('dark');
-      root.setAttribute('data-theme', 'light');
-      root.style.colorScheme = 'light';
-    }
+    applyThemeToDOM(nextResolved);
 
     localStorage.setItem('ledger_theme', theme);
 
@@ -82,15 +87,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const handleChange = () => {
         const updated = mediaQuery.matches ? 'dark' : 'light';
         setResolvedTheme(updated);
-        if (updated === 'dark') {
-          root.classList.add('dark');
-          root.setAttribute('data-theme', 'dark');
-          root.style.colorScheme = 'dark';
-        } else {
-          root.classList.remove('dark');
-          root.setAttribute('data-theme', 'light');
-          root.style.colorScheme = 'light';
-        }
+        applyThemeToDOM(updated);
       };
 
       mediaQuery.addEventListener('change', handleChange);

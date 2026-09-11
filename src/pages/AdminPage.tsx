@@ -23,6 +23,8 @@ import {
   FileText,
   Copy,
   Check,
+  Eye,
+  Loader2,
 } from 'lucide-react';
 import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -30,6 +32,7 @@ import { useLedger } from '../context/LedgerContext';
 import { AdminPlatformStats, UserWithStats, WithdrawalRequest } from '../types';
 import { OverviewSkeleton } from '../components/SkeletonLoader';
 import { formatCurrency } from '../design/tokens';
+import { UserDetailsModal } from '../components/Modals/UserDetailsModal';
 
 export const AdminPage: React.FC = () => {
   const { user: currentAdmin } = useAuth();
@@ -48,8 +51,6 @@ export const AdminPage: React.FC = () => {
 
   // Approval modal state
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [paystackRef, setPaystackRef] = useState('');
-  const [adminNote, setAdminNote] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Rejection modal state
@@ -58,6 +59,9 @@ export const AdminPage: React.FC = () => {
 
   // Copied reference state
   const [copiedRef, setCopiedRef] = useState<string | null>(null);
+
+  // User detail drilldown modal
+  const [inspectingUserId, setInspectingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadAdminData();
@@ -88,13 +92,10 @@ export const AdminPage: React.FC = () => {
     setIsProcessing(true);
     try {
       await api.approveAdminWithdrawal(approvingId, {
-        paystackReference: paystackRef.trim() || undefined,
-        notes: adminNote.trim() || undefined,
+        notes: 'Approved and marked as paid by administrator',
       });
-      showNotification('Savings vault withdrawal approved and payout recorded', 'success');
+      showNotification('Savings vault withdrawal approved and marked as paid!', 'success');
       setApprovingId(null);
-      setPaystackRef('');
-      setAdminNote('');
       await loadAdminData();
       await loadData();
     } catch (err: any) {
@@ -436,8 +437,13 @@ export const AdminPage: React.FC = () => {
                         {/* Breakdown */}
                         <div className="space-y-1 text-xs">
                           <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-                            Vault Amount: <span className="font-mono">{formatCurrency(req.vaultAmount, req.currency)}</span>
+                            Withdrawal Amount: <span className="font-mono font-semibold">{formatCurrency(req.requestedAmount || req.vaultAmount, req.currency)}</span>
                           </div>
+                          {req.remainingVaultBalance !== undefined && req.remainingVaultBalance > 0 && (
+                            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-medium font-mono">
+                              Partial • Vault Keeps: {formatCurrency(req.remainingVaultBalance, req.currency)}
+                            </div>
+                          )}
                           <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
                             Fees &amp; Deductions: <span className="font-mono text-emerald-600 dark:text-emerald-400">-{formatCurrency(req.feeAmount, req.currency)} ({req.totalFeePercent}%)</span>
                           </div>
@@ -461,11 +467,7 @@ export const AdminPage: React.FC = () => {
                               </div>
                               <div className="flex items-center space-x-1.5 mt-1">
                                 <button
-                                  onClick={() => {
-                                    setApprovingId(req.id);
-                                    setPaystackRef('');
-                                    setAdminNote('');
-                                  }}
+                                  onClick={() => setApprovingId(req.id)}
                                   className="flex-1 px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-xs transition-colors cursor-pointer"
                                 >
                                   Approve
@@ -535,23 +537,29 @@ export const AdminPage: React.FC = () => {
       {/* TAB 2: USER DIRECTORY */}
       {activeTab === 'users' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
             <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-              All registered accounts with active profiles and permissions.
+              All registered accounts with active profiles, ledger holdings, and permissions.
             </span>
-            <span className="text-xs font-mono text-[#9CA3AF]">
-              {filteredUsers.length} Account{filteredUsers.length === 1 ? '' : 's'}
-            </span>
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] text-[#9CA3AF] sm:hidden">
+                Swipe horizontally to view all columns
+              </span>
+              <span className="text-xs font-mono text-[#9CA3AF]">
+                {filteredUsers.length} Account{filteredUsers.length === 1 ? '' : 's'}
+              </span>
+            </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#161920] shadow-2xs">
-            <table className="min-w-full divide-y divide-[#E8E5DF] dark:divide-[#2D323F] text-left text-xs">
+          <div className="overflow-x-auto overscroll-x-contain touch-pan-x rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#161920] shadow-2xs">
+            <table className="min-w-[780px] w-full divide-y divide-[#E8E5DF] dark:divide-[#2D323F] text-left text-xs">
               <thead className="bg-[#FAF9F6] dark:bg-[#111317] text-[#6B7280] dark:text-[#9CA3AF] uppercase font-mono text-[10px] font-bold tracking-wider">
                 <tr>
                   <th className="py-3 px-4">User</th>
-                  <th className="py-3 px-4 hidden sm:table-cell">Profiles</th>
-                  <th className="py-3 px-4 hidden md:table-cell">Transactions</th>
                   <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4 text-center">Profiles</th>
+                  <th className="py-3 px-4 text-center">Transactions</th>
+                  <th className="py-3 px-4">Net Holdings</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -561,38 +569,43 @@ export const AdminPage: React.FC = () => {
                   const isAdminRole = u.role === 'admin';
 
                   return (
-                    <tr key={u.id} className="hover:bg-[#FAF9F6]/80 dark:hover:bg-[#1A1E27]/80 transition-colors">
+                    <tr
+                      key={u.id}
+                      className="hover:bg-[#FAF9F6]/80 dark:hover:bg-[#1A1E27]/80 transition-colors cursor-pointer group"
+                      onClick={(e) => {
+                        // Prevent row click when interacting with select or action buttons
+                        const target = e.target as HTMLElement;
+                        if (target.closest('select') || target.closest('button')) return;
+                        setInspectingUserId(u.id);
+                      }}
+                    >
                       <td className="py-3 px-4">
                         <div className="flex items-center space-x-2.5">
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                            isAdminRole
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-[#F0EEE6] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6]'
-                          }`}>
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                              isAdminRole
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-[#F0EEE6] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6]'
+                            }`}
+                          >
                             {u.username.charAt(0).toUpperCase()}
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <div className="font-semibold flex items-center space-x-1.5">
-                              <span>{u.username}</span>
+                              <span className="group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                {u.username}
+                              </span>
                               {isCurrent && (
                                 <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-[#1A1A1A] dark:bg-[#F3F4F6] text-white dark:text-[#111317] font-mono">
                                   You
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                            <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] truncate max-w-[180px]">
                               {u.email}
                             </div>
                           </div>
                         </div>
-                      </td>
-
-                      <td className="py-3 px-4 hidden sm:table-cell font-mono">
-                        {u.profilesCount}
-                      </td>
-
-                      <td className="py-3 px-4 hidden md:table-cell font-mono">
-                        {u.transactionsCount}
                       </td>
 
                       <td className="py-3 px-4">
@@ -611,16 +624,41 @@ export const AdminPage: React.FC = () => {
                         </select>
                       </td>
 
+                      <td className="py-3 px-4 text-center font-mono font-semibold">
+                        {u.profilesCount}
+                      </td>
+
+                      <td className="py-3 px-4 text-center font-mono font-semibold">
+                        {u.transactionsCount}
+                      </td>
+
+                      <td className="py-3 px-4 font-mono font-bold text-xs text-[#1A1A1A] dark:text-[#F3F4F6]">
+                        {formatCurrency(u.netBalance || (u as any).totalBalance || 0)}
+                      </td>
+
                       <td className="py-3 px-4 text-right">
-                        {!isCurrent && (
+                        <div className="flex items-center justify-end space-x-1.5">
                           <button
-                            onClick={() => handleDeleteUser(u.id, u.username)}
-                            title="Delete user account"
-                            className="p-1.5 rounded-lg text-[#9CA3AF] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                            type="button"
+                            onClick={() => setInspectingUserId(u.id)}
+                            title="Inspect user holdings & ledger"
+                            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FAF9F6] dark:bg-[#252C3D] hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300 border border-[#E8E5DF] dark:border-[#2D323F] transition-colors cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Inspect</span>
                           </button>
-                        )}
+
+                          {!isCurrent && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(u.id, u.username)}
+                              title="Delete user account"
+                              className="p-1.5 rounded-lg text-[#9CA3AF] hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -672,12 +710,12 @@ export const AdminPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-5 rounded-xl bg-[#FFFFFF] dark:bg-[#161920] border border-[#E8E5DF] dark:border-[#2D323F] space-y-3">
-            <h3 className="text-sm font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
-              Paystack Automated Payout Integration
+          <div className="p-4 rounded-xl bg-[#FFFFFF] dark:bg-[#161920] border border-[#E8E5DF] dark:border-[#2D323F] space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A] dark:text-[#F3F4F6]">
+              Withdrawal &amp; Payout Management
             </h3>
             <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
-              When a user submits a savings vault withdrawal request, it enters the <strong>Withdrawal Requests</strong> queue. As an administrator, you verify the requested payout destination, perform the bank/momo transfer (via Paystack Transfer or banking dashboard), and key in the transfer reference to mark the request completed.
+              When users submit a withdrawal request, the amount is immediately deducted from their savings vault. As an administrator, disburse the payout to their specified Mobile Money or Bank account and click <strong>Approve</strong> to mark the request as paid.
             </p>
           </div>
         </div>
@@ -685,75 +723,84 @@ export const AdminPage: React.FC = () => {
         </>
       )}
 
-      {/* APPROVAL MODAL */}
-      {approvingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-[#FFFFFF] dark:bg-[#161920] rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F] shadow-2xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
-              <h3 className="font-display font-bold text-base text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Confirm Vault Payout</span>
-              </h3>
-              <button
-                onClick={() => setApprovingId(null)}
-                className="p-1 rounded-lg text-[#6B7280] hover:text-[#1A1A1A] dark:hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
-              Record confirmation of the bank/momo transfer sent to the user. This updates the user's savings vault status to <strong>Unlocked</strong>.
-            </p>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">
-                  Paystack / Bank Transfer Reference
-                </label>
-                <input
-                  type="text"
-                  value={paystackRef}
-                  onChange={(e) => setPaystackRef(e.target.value)}
-                  placeholder="e.g. TRF_29482942048 or Bank Ref"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6] font-mono"
-                />
+      {/* APPROVAL CONFIRMATION MODAL */}
+      {approvingId && (() => {
+        const approvingReq = withdrawals.find((w) => w.id === approvingId);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md bg-[#FFFFFF] dark:bg-[#161920] rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F] shadow-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
+                <h3 className="font-display font-bold text-base text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                  <span>Approve Withdrawal</span>
+                </h3>
+                <button
+                  onClick={() => setApprovingId(null)}
+                  className="p-1 rounded-lg text-[#6B7280] hover:text-[#1A1A1A] dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">
-                  Admin Note (Optional)
-                </label>
-                <textarea
-                  rows={2}
-                  value={adminNote}
-                  onChange={(e) => setAdminNote(e.target.value)}
-                  placeholder="e.g. Sent via Paystack Transfer API to MTN Momo"
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
-                />
-              </div>
-            </div>
+              <p className="text-xs text-[#1A1A1A] dark:text-[#F3F4F6] font-medium leading-relaxed">
+                Are you sure you want to approve this withdrawal request?
+              </p>
 
-            <div className="flex items-center justify-end space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setApprovingId(null)}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#4B5563] dark:text-[#9CA3AF] hover:bg-[#F5F4F0] dark:hover:bg-[#1E2330] cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isProcessing}
-                onClick={handleApprove}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer disabled:opacity-50"
-              >
-                {isProcessing ? 'Processing...' : 'Confirm & Mark Paid'}
-              </button>
+              {approvingReq && (
+                <div className="p-3.5 rounded-xl bg-[#FAF9F6] dark:bg-[#1E2330] border border-[#E8E5DF] dark:border-[#2D323F] space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Account Holder:</span>
+                    <span className="font-bold text-[#1A1A1A] dark:text-white">
+                      {approvingReq.accountName || approvingReq.userName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Payout Destination:</span>
+                    <span className="font-semibold font-mono text-[#1A1A1A] dark:text-white">
+                      {approvingReq.bankName} • {approvingReq.accountNumber}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Savings Vault:</span>
+                    <span className="text-[#1A1A1A] dark:text-white font-medium">
+                      {approvingReq.goalName}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F] flex justify-between items-baseline">
+                    <span className="text-xs font-bold text-[#1A1A1A] dark:text-white">Net Payout to Send:</span>
+                    <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(approvingReq.netPayoutAmount, approvingReq.currency)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+                The funds were already deducted from the person's vault upon submission. Clicking confirm will mark this payout as completed and paid.
+              </p>
+
+              <div className="flex items-center justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setApprovingId(null)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-[#4B5563] dark:text-[#9CA3AF] hover:bg-[#F5F4F0] dark:hover:bg-[#1E2330] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isProcessing}
+                  onClick={handleApprove}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center space-x-1.5"
+                >
+                  {isProcessing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Yes, Approve &amp; Mark as Paid</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* REJECTION MODAL */}
       {rejectingId && (
@@ -810,6 +857,14 @@ export const AdminPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* User Details Drilldown Modal */}
+      <UserDetailsModal
+        isOpen={Boolean(inspectingUserId)}
+        userId={inspectingUserId}
+        onClose={() => setInspectingUserId(null)}
+        onRoleChanged={loadAdminData}
+      />
     </div>
   );
 };

@@ -455,6 +455,33 @@ export class LedgerMongoDbManager {
     return newUser;
   }
 
+  public async updateUsername(userId: string, newUsername: string): Promise<User | null> {
+    const cleanUsername = newUsername.trim().toLowerCase();
+    const existing = await this.findUserByUsername(cleanUsername);
+    if (existing && existing.id !== userId) {
+      throw new Error('This username is already taken by another user');
+    }
+
+    const idx = this.memUsers.findIndex((u) => u.id === userId);
+    if (idx !== -1) {
+      this.memUsers[idx].username = cleanUsername;
+    }
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').updateOne(
+          { id: userId },
+          { $set: { username: cleanUsername } }
+        );
+      }
+    } catch (err) {
+      console.error('[DATABASE] updateUsername MongoDB error:', err);
+    }
+
+    return await this.findUserById(userId);
+  }
+
   public async getUsersCount(): Promise<number> {
     try {
       const db = await this.getDb();
@@ -532,6 +559,105 @@ export class LedgerMongoDbManager {
     );
 
     return enriched;
+  }
+
+  public async getUserFullDetails(userId: string): Promise<any | null> {
+    const user = await this.findUserById(userId);
+    if (!user) return null;
+
+    const { passwordHash, ...safeUser } = user;
+    const profiles = await this.getProfiles(userId);
+    const profileIds = profiles.map(p => p.id);
+
+    let transactions: Transaction[] = [];
+    let goals: Goal[] = [];
+    let debts: Debt[] = [];
+    let budgets: Budget[] = [];
+
+    try {
+      const db = await this.getDb();
+      if (db && profileIds.length > 0) {
+        transactions = await db
+          .collection<Transaction>('transactions')
+          .find({ profileId: { $in: profileIds } }, { projection: { _id: 0 } })
+          .sort({ date: -1, createdAt: -1 })
+          .limit(30)
+          .toArray();
+        goals = await db
+          .collection<Goal>('goals')
+          .find({ profileId: { $in: profileIds } }, { projection: { _id: 0 } })
+          .toArray();
+        debts = await db
+          .collection<Debt>('debts')
+          .find({ profileId: { $in: profileIds } }, { projection: { _id: 0 } })
+          .toArray();
+        budgets = await db
+          .collection<Budget>('budgets')
+          .find({ profileId: { $in: profileIds } }, { projection: { _id: 0 } })
+          .toArray();
+      } else {
+        transactions = this.memTransactions
+          .filter(t => profileIds.includes(t.profileId))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 30);
+        goals = this.memGoals.filter(g => profileIds.includes(g.profileId));
+        debts = this.memDebts.filter(d => profileIds.includes(d.profileId));
+        budgets = this.memBudgets.filter(b => profileIds.includes(b.profileId));
+      }
+    } catch (err) {
+      console.error('getUserFullDetails error:', err);
+    }
+
+    const profilesWithBalances = await Promise.all(
+      profiles.map(async (p) => {
+        let pTxs: Transaction[] = [];
+        try {
+          const db = await this.getDb();
+          if (db) {
+            pTxs = await db.collection<Transaction>('transactions').find({ profileId: p.id }).toArray();
+          } else {
+            pTxs = this.memTransactions.filter(t => t.profileId === p.id);
+          }
+        } catch {}
+        const totalIncome = pTxs.filter(t => t.type === 'income').reduce((s, t) => s + (t.amount || 0), 0);
+        const totalExpense = pTxs.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
+        const netBalance = totalIncome - totalExpense;
+        return {
+          ...p,
+          totalIncome,
+          totalExpense,
+          netBalance,
+          transactionCount: pTxs.length,
+        };
+      })
+    );
+
+    const totalVaults = goals.reduce((sum, g) => sum + (g.current || 0), 0);
+    const totalDebts = debts.reduce(
+      (sum, d) => sum + Math.max(0, (d.amount || 0) - (d.paid || 0)),
+      0
+    );
+    const totalLedgerBalance = profilesWithBalances.reduce((sum, p) => sum + (p.netBalance || 0), 0);
+    const totalInflow = profilesWithBalances.reduce((sum, p) => sum + (p.totalIncome || 0), 0);
+    const totalOutflow = profilesWithBalances.reduce((sum, p) => sum + (p.totalExpense || 0), 0);
+
+    return {
+      user: safeUser,
+      profiles: profilesWithBalances,
+      transactions,
+      goals,
+      debts,
+      budgets,
+      stats: {
+        totalLedgerBalance,
+        totalInflow,
+        totalOutflow,
+        totalVaults,
+        totalDebts,
+        profilesCount: profiles.length,
+        recentTransactionsCount: transactions.length,
+      },
+    };
   }
 
   public async updateUserRole(userId: string, role: 'admin' | 'user'): Promise<boolean> {
@@ -1028,6 +1154,9 @@ export class LedgerMongoDbManager {
       pin?: string;
       newPin?: string;
       currentPin?: string;
+      balanceResetAt?: string;
+      balanceResetAmount?: number;
+      autoMonthlyReset?: boolean;
     }
   ): Promise<Profile | null> {
     const existing = await this.getRawProfile(id);
@@ -1041,6 +1170,9 @@ export class LedgerMongoDbManager {
     if (data.displayCurrency !== undefined) updates.displayCurrency = data.displayCurrency;
     if (data.type !== undefined) updates.type = data.type;
     if (data.exchangeRates !== undefined) updates.exchangeRates = data.exchangeRates;
+    if (data.balanceResetAt !== undefined) updates.balanceResetAt = data.balanceResetAt;
+    if (data.balanceResetAmount !== undefined) updates.balanceResetAmount = data.balanceResetAmount;
+    if (data.autoMonthlyReset !== undefined) updates.autoMonthlyReset = data.autoMonthlyReset;
 
     // Handle Lock & PIN state changes
     if (data.isLocked !== undefined) {

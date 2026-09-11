@@ -15,6 +15,7 @@ import {
   AdminPlatformStats,
   AIMessageQuota,
   User,
+  MonthlyHistoryRecord,
 } from '../types';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -67,6 +68,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ currentPin, newPin }),
     }),
+  loginWithGoogle: (data: { credential?: string; email?: string; name?: string; requestedUsername?: string }) =>
+    request<{ success: boolean; token: string; user: User; isNewUser: boolean }>('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateUsername: (username: string) =>
+    request<{ success: boolean; user: User }>('/api/auth/username', {
+      method: 'PUT',
+      body: JSON.stringify({ username }),
+    }),
 
   // Profiles
   getProfiles: () => request<Profile[]>('/api/profiles'),
@@ -114,6 +125,11 @@ export const api = {
       body: JSON.stringify({ pin }),
     }),
   deleteProfile: (id: string) => request<{ success: boolean }>(`/api/profiles/${id}`, { method: 'DELETE' }),
+  resetProfileBalance: (profileId: string, notes?: string) =>
+    request<{ success: boolean; message: string; profile: Profile }>(`/api/profiles/${profileId}/reset-balance`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    }),
   updateRates: (profileId: string, exchangeRates: Record<string, number>) =>
     request<Profile>(`/api/profiles/${profileId}`, {
       method: 'PATCH',
@@ -209,11 +225,13 @@ export const api = {
   },
   getTrendReport: (profileId: string, months = 6) =>
     request<{ currency: string; trend: MonthlyTrend[] }>(`/api/reports/trend?profileId=${profileId}&months=${months}`),
+  getMonthlyHistory: (profileId: string) =>
+    request<{ currency: string; months: MonthlyHistoryRecord[] }>(`/api/reports/monthly-history?profileId=${profileId}`),
 
   // Paystack
   getPaystackBanks: (country = 'ghana') => request<PaystackBank[]>(`/api/paystack/banks?country=${country}`),
   resolveAccount: (accountNumber: string, bankCode: string) =>
-    request<{ accountName: string; accountNumber: string }>('/api/paystack/resolve-account', {
+    request<{ accountName: string; accountNumber: string; verified?: boolean }>('/api/paystack/resolve-account', {
       method: 'POST',
       body: JSON.stringify({ accountNumber, bankCode }),
     }),
@@ -223,7 +241,7 @@ export const api = {
       body: JSON.stringify({ name, accountNumber, bankCode, currency }),
     }),
   verifyTransfer: (reference: string) => request<FundTransfer>(`/api/paystack/verify/${reference}`),
-  initializeDeposit: (data: { email?: string; amount: number; currency?: string; goalId: string; profileId: string }) =>
+  initializeDeposit: (data: { email?: string; amount: number; currency?: string; goalId: string; profileId: string; callbackUrl?: string }) =>
     request<{ authorizationUrl: string; accessCode: string; reference: string; simulated: boolean }>('/api/paystack/initialize-deposit', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -339,6 +357,7 @@ export const api = {
   requestVaultWithdrawal: (
     goalId: string,
     payoutDetails: {
+      amount?: number;
       bankOrProvider: string;
       accountNumber: string;
       accountName: string;
@@ -361,6 +380,7 @@ export const api = {
   // Admin "God Mode"
   getAdminStats: () => request<AdminPlatformStats>('/api/admin/stats'),
   getAdminUsers: () => request<UserWithStats[]>('/api/admin/users'),
+  getAdminUserDetails: (id: string) => request<any>(`/api/admin/users/${id}/details`),
   updateUserRole: (id: string, role: 'admin' | 'user') =>
     request<{ success: boolean; role: 'admin' | 'user' }>(`/api/admin/users/${id}/role`, {
       method: 'PATCH',

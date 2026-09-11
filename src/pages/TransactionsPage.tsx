@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   FileSpreadsheet,
+  History,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { ReceiptRow } from '../components/ReceiptRow';
@@ -20,12 +21,14 @@ interface TransactionsPageProps {
   onOpenNewTx: () => void;
   onEditTx: (tx: Transaction) => void;
   onOpenCsvImport: () => void;
+  onNavigateToHistory?: () => void;
 }
 
 export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   onOpenNewTx,
   onEditTx,
   onOpenCsvImport,
+  onNavigateToHistory,
 }) => {
   const { activeProfile, transactions, refreshData, notify } = useLedger();
 
@@ -124,6 +127,16 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             <Download className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
             <span>Export CSV</span>
           </button>
+
+          {onNavigateToHistory && (
+            <button
+              onClick={onNavigateToHistory}
+              className="flex-1 xs:flex-initial px-2.5 sm:px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors"
+            >
+              <History className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
+              <span>Monthly History</span>
+            </button>
+          )}
 
           <button
             onClick={onOpenNewTx}

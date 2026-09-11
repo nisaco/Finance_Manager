@@ -68,6 +68,7 @@ export const Overview: React.FC<OverviewProps> = ({
         profile={activeProfile}
         onAddTransaction={onOpenNewTx}
         onManageBudgets={() => onNavigateTab('budgets')}
+        onNavigateToHistory={() => onNavigateTab('history')}
       />
 
       {/* 2. Main Dashboard Grid */}

@@ -12,6 +12,8 @@ import {
   Home,
   PiggyBank,
   FolderGit2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { Profile } from '../../types';
 import { useLedger } from '../../context/LedgerContext';
@@ -72,6 +74,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   const [confirmPin, setConfirmPin] = useState('');
   const [currentPin, setCurrentPin] = useState('');
   const [pinAction, setPinAction] = useState<'keep' | 'change' | 'remove'>('keep');
+  const [showPin, setShowPin] = useState(false);
 
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -387,36 +390,53 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {/* Case A: Creating a new profile with Lock, or locking an unlocked profile */}
             {isLocked && (!initialData || !initialData.isLocked) && (
               <div className="space-y-2.5 pt-2 border-t border-[#E8E5DF] animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num font-bold">
+                    Profile Security Passcode
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPin(!showPin)}
+                    className="flex items-center space-x-1 text-[11px] text-[#6B7280] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                  >
+                    {showPin ? <EyeOff className="w-3.5 h-3.5 text-[#1A1A1A]" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showPin ? 'Hide PIN' : 'View PIN'}</span>
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
                       Set 4-6 Digit PIN *
                     </label>
-                    <input
-                      type="password"
-                      maxLength={6}
-                      pattern="[0-9]*"
-                      inputMode="numeric"
-                      placeholder="••••"
-                      value={pin}
-                      onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-white text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPin ? 'text' : 'password'}
+                        maxLength={6}
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        placeholder="••••"
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-white text-[#1A1A1A] px-3 py-1.5 pr-8 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
                       Confirm PIN *
                     </label>
-                    <input
-                      type="password"
-                      maxLength={6}
-                      pattern="[0-9]*"
-                      inputMode="numeric"
-                      placeholder="••••"
-                      value={confirmPin}
-                      onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
-                      className="w-full bg-white text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showPin ? 'text' : 'password'}
+                        maxLength={6}
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        placeholder="••••"
+                        value={confirmPin}
+                        onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                        className="w-full bg-white text-[#1A1A1A] px-3 py-1.5 pr-8 rounded-lg border border-[#E8E5DF] text-sm tracking-widest font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
+                      />
+                    </div>
                   </div>
                 </div>
                 <p className="text-[10px] text-[#6B7280] font-mono-num">
@@ -428,40 +448,52 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {/* Case B: Editing an already locked profile */}
             {initialData && initialData.isLocked && (
               <div className="space-y-3 pt-2 border-t border-[#E8E5DF]">
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setPinAction('keep')}
-                    className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
-                      pinAction === 'keep'
-                        ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
-                        : 'bg-white text-[#4B5563] border-[#E8E5DF]'
-                    }`}
-                  >
-                    Keep Current PIN
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPinAction('change')}
-                    className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
-                      pinAction === 'change'
-                        ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
-                        : 'bg-white text-[#4B5563] border-[#E8E5DF]'
-                    }`}
-                  >
-                    Change PIN
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPinAction('remove')}
-                    className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
-                      pinAction === 'remove'
-                        ? 'bg-rose-700 text-white border-rose-700'
-                        : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
-                    }`}
-                  >
-                    Remove Lock
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPinAction('keep')}
+                      className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
+                        pinAction === 'keep'
+                          ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                          : 'bg-white text-[#4B5563] border-[#E8E5DF]'
+                      }`}
+                    >
+                      Keep Current PIN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPinAction('change')}
+                      className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
+                        pinAction === 'change'
+                          ? 'bg-[#1A1A1A] text-white border-[#1A1A1A]'
+                          : 'bg-white text-[#4B5563] border-[#E8E5DF]'
+                      }`}
+                    >
+                      Change PIN
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPinAction('remove')}
+                      className={`px-2.5 py-1 rounded-md border text-xs font-semibold ${
+                        pinAction === 'remove'
+                          ? 'bg-rose-700 text-white border-rose-700'
+                          : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'
+                      }`}
+                    >
+                      Remove Lock
+                    </button>
+                  </div>
+                  {pinAction !== 'keep' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="flex items-center space-x-1 text-[11px] text-[#6B7280] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                    >
+                      {showPin ? <EyeOff className="w-3.5 h-3.5 text-[#1A1A1A]" /> : <Eye className="w-3.5 h-3.5" />}
+                      <span>{showPin ? 'Hide' : 'View'}</span>
+                    </button>
+                  )}
                 </div>
 
                 {pinAction === 'remove' && (
@@ -470,7 +502,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       Enter Current PIN to Unlock
                     </label>
                     <input
-                      type="password"
+                      type={showPin ? 'text' : 'password'}
                       maxLength={6}
                       pattern="[0-9]*"
                       inputMode="numeric"
@@ -492,7 +524,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         Current PIN *
                       </label>
                       <input
-                        type="password"
+                        type={showPin ? 'text' : 'password'}
                         maxLength={6}
                         pattern="[0-9]*"
                         inputMode="numeric"
@@ -508,7 +540,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                           New PIN *
                         </label>
                         <input
-                          type="password"
+                          type={showPin ? 'text' : 'password'}
                           maxLength={6}
                           pattern="[0-9]*"
                           inputMode="numeric"
@@ -523,7 +555,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                           Confirm New PIN *
                         </label>
                         <input
-                          type="password"
+                          type={showPin ? 'text' : 'password'}
                           maxLength={6}
                           pattern="[0-9]*"
                           inputMode="numeric"

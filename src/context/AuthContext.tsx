@@ -23,6 +23,13 @@ interface AuthContextType {
   logout: (reason?: string) => Promise<void>;
   setUserRole: (role: 'admin' | 'user') => Promise<{ success: boolean; error?: string }>;
   refreshUser: () => Promise<void>;
+  loginWithGoogle: (data: {
+    credential?: string;
+    email?: string;
+    name?: string;
+    requestedUsername?: string;
+  }) => Promise<{ success: boolean; isNewUser?: boolean; user?: User; error?: string }>;
+  updateUsername: (newUsername: string) => Promise<{ success: boolean; error?: string }>;
   requireAuthModal: boolean;
   setRequireAuthModal: (show: boolean) => void;
   openAuthModal: (mode?: 'login' | 'register') => void;
@@ -227,6 +234,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async ({
+    credential,
+    email,
+    name,
+    requestedUsername,
+  }: {
+    credential?: string;
+    email?: string;
+    name?: string;
+    requestedUsername?: string;
+  }) => {
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ credential, email, name, requestedUsername }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to authenticate with Google' };
+      }
+
+      if (data.token) {
+        localStorage.setItem('ledger_token', data.token);
+      }
+      localStorage.setItem('ledger_last_activity', Date.now().toString());
+      clearSessionExpiredMessage();
+
+      if (data.user?.role === 'admin' || data.user?.email?.toLowerCase() === 'jnkpappoe@gmail.com') {
+        localStorage.setItem('ledger_open_admin_modal', 'true');
+      }
+
+      setUser(data.user);
+      setIsAuthenticated(true);
+      setRequireAuthModal(false);
+      return { success: true, isNewUser: data.isNewUser, user: data.user };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error during Google sign-in' };
+    }
+  };
+
+  const updateUsername = async (newUsername: string) => {
+    try {
+      const token = localStorage.getItem('ledger_token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('/api/auth/username', {
+        method: 'PUT',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ username: newUsername }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to update username' };
+      }
+
+      setUser(data.user);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error updating username' };
+    }
+  };
+
   const logout = async (reason?: string) => {
     try {
       await fetch('/api/auth/logout', {
@@ -291,6 +366,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         setUserRole,
         refreshUser,
+        loginWithGoogle,
+        updateUsername,
         requireAuthModal,
         setRequireAuthModal,
         openAuthModal,

@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import http from 'http';
 import path from 'path';
+import crypto from 'crypto';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcryptjs';
@@ -391,8 +392,128 @@ async function startServer() {
   });
 
   // ==========================================
-  // PAYSTACK WEBHOOK (UNPROTECTED ROUTE WITH SIGNATURE CHECK)
+  // GOOGLE SIGN-IN / SIGN-UP & USERNAME SELECTION
   // ==========================================
+  app.post('/api/auth/google', async (req: Request, res: Response) => {
+    try {
+      const { credential, email: directEmail, name: directName, requestedUsername } = req.body;
+
+      let email = directEmail;
+      let name = directName;
+
+      if (credential && typeof credential === 'string') {
+        try {
+          const parts = credential.split('.');
+          if (parts.length === 3) {
+            const payloadJson = Buffer.from(parts[1], 'base64').toString('utf-8');
+            const googlePayload = JSON.parse(payloadJson);
+            if (googlePayload?.email) {
+              email = googlePayload.email;
+              name = googlePayload.name || googlePayload.given_name;
+            }
+          }
+        } catch (jwtErr) {
+          console.warn('Failed to parse Google credential token:', jwtErr);
+        }
+      }
+
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return res.status(400).json({ error: 'A valid email is required for Google Sign-In' });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      let user = await dbManager.findUserByEmail(cleanEmail);
+      let isNewUser = false;
+
+      if (!user) {
+        isNewUser = true;
+        // Determine unique username
+        let chosenUsername = requestedUsername
+          ? requestedUsername.trim().toLowerCase().replace(/[^a-z0-9_]/g, '')
+          : '';
+        if (!chosenUsername || chosenUsername.length < 3) {
+          const baseName = (name || cleanEmail.split('@')[0])
+            .toLowerCase()
+            .replace(/[^a-z0-9_]/g, '')
+            .slice(0, 15);
+          chosenUsername = baseName.length >= 3 ? baseName : `user_${Math.random().toString(36).substring(2, 7)}`;
+        }
+
+        let finalUsername = chosenUsername;
+        let suffix = 1;
+        while (await dbManager.findUserByUsername(finalUsername)) {
+          finalUsername = `${chosenUsername}_${suffix}`;
+          suffix++;
+        }
+
+        const dummyPassword = crypto.randomBytes(32).toString('hex');
+        const passwordHash = bcrypt.hashSync(dummyPassword, 10);
+        user = await dbManager.createUser(finalUsername, cleanEmail, passwordHash, new Date().toISOString());
+      }
+
+      const isOwner =
+        user.email.toLowerCase() === 'jnkpappoe@gmail.com' ||
+        user.role === 'admin';
+
+      const token = generateToken({
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        role: isOwner ? 'admin' : (user.role || 'user'),
+      });
+
+      res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+      return res.json({
+        success: true,
+        token,
+        isNewUser,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: isOwner ? 'admin' : (user.role || 'user'),
+          agreedToTermsAt: user.agreedToTermsAt,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (err: any) {
+      console.error('Google Auth error:', err);
+      res.status(500).json({ error: err.message || 'Google authentication failed' });
+    }
+  });
+
+  // Update Username endpoint
+  app.put('/api/auth/username', authMiddleware, async (req: any, res: Response) => {
+    try {
+      const { username } = req.body;
+      if (!username || typeof username !== 'string') {
+        return res.status(400).json({ error: 'Username is required' });
+      }
+      const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+      if (clean.length < 3 || clean.length > 25) {
+        return res.status(400).json({ error: 'Username must be between 3 and 25 alphanumeric/underscore characters' });
+      }
+
+      const updated = await dbManager.updateUsername(req.user.userId, clean);
+      return res.json({ success: true, user: updated });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message || 'Failed to update username' });
+    }
+  });
+
+  // ==========================================
+  // PAYSTACK WEBHOOK (VERIFICATION + AUTO-RECONCILIATION)
+  // ==========================================
+  // Health check endpoint for webhook testing & configuration
+  app.get('/api/paystack/webhook', (_req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'active',
+      service: 'Ledger Paystack Webhook Handler',
+      message: 'Configure this webhook URL in your Paystack Dashboard (Settings -> API Keys & Webhooks)',
+      supportedEvents: ['charge.success', 'transfer.success', 'transfer.failed', 'transfer.reversed'],
+    });
+  });
+
   app.post('/api/paystack/webhook', async (req: any, res: Response) => {
     const signature = req.headers['x-paystack-signature'] as string;
     const rawBody = req.rawBody || JSON.stringify(req.body);
@@ -401,40 +522,95 @@ async function startServer() {
     const isLocalOrTest = !process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET_KEY === 'sk_test_xxxxxxxx';
 
     if (!isVerified && !isLocalOrTest) {
-      console.warn('Paystack webhook signature verification failed!');
+      console.warn('[PAYSTACK WEBHOOK] Signature verification failed!');
       return res.status(400).json({ error: 'Invalid Paystack webhook signature' });
     }
 
     const event = req.body;
-    console.log('Received Paystack Webhook Event:', event?.event);
+    console.log('[PAYSTACK WEBHOOK] Received Event:', event?.event);
 
-    if (event?.event === 'transfer.success' && event?.data) {
-      const reference = event.data.reference;
-      await dbManager.updateTransferStatus(
-        reference,
-        'success',
-        event.data,
-        event.data.gateway_response || 'Paystack confirmed transfer success'
-      );
-    } else if (event?.event === 'charge.success' && event?.data) {
-      // Direct checkout deposit payment successful!
-      const reference = event.data.reference;
-      await dbManager.updateTransferStatus(
-        reference,
-        'success',
-        event.data,
-        event.data.gateway_response || 'Paystack card/MoMo payment confirmed'
-      );
-    } else if ((event?.event === 'transfer.failed' || event?.event === 'transfer.reversed') && event?.data) {
-      const reference = event.data.reference;
-      await dbManager.updateTransferStatus(
-        reference,
-        'failed',
-        event.data,
-        event.data.gateway_response || 'Paystack transfer failed or was reversed'
-      );
+    try {
+      if (event?.event === 'charge.success' && event?.data) {
+        // Direct checkout deposit payment confirmed!
+        const reference = event.data.reference;
+        const amountInUnits = Number(((event.data.amount || 0) / 100).toFixed(2));
+        const currency = event.data.currency || 'GHS';
+        const metadata = event.data.metadata || {};
+
+        let transfer = await dbManager.getTransferByReference(reference);
+
+        if (!transfer && metadata.goalId) {
+          transfer = await dbManager.createTransfer({
+            profileId: metadata.profileId || 'default',
+            goalId: metadata.goalId,
+            amount: amountInUnits,
+            currency,
+            direction: 'deposit',
+            paystackReference: reference,
+            status: 'pending',
+            gatewayResponse: event.data.gateway_response || 'Paystack card/MoMo payment received',
+          });
+        }
+
+        if (transfer) {
+          await dbManager.updateTransferStatus(
+            reference,
+            'success',
+            event.data,
+            event.data.gateway_response || 'Paystack card/MoMo payment confirmed'
+          );
+
+          // Credit savings goal and ledger if attached
+          if (transfer.goalId) {
+            const goal = await dbManager.getGoal(transfer.goalId);
+            if (goal) {
+              const newCurrent = Number(((goal.current || 0) + transfer.amount).toFixed(2));
+              await dbManager.updateGoal(goal.id, { current: newCurrent, status: 'active' });
+
+              await dbManager.createTransaction({
+                profileId: goal.profileId,
+                type: 'expense',
+                amount: transfer.amount,
+                currency: transfer.currency || goal.currency || 'GHS',
+                category: 'Savings & Investments',
+                date: new Date().toISOString().split('T')[0],
+                note: `Paystack Deposit to Goal: ${goal.name} (Ref: ${reference})`,
+                recurring: 'none',
+              });
+            }
+          }
+        }
+
+        await dbManager.logAudit('paystack.charge_success', 'Paystack', reference, {
+          amount: amountInUnits,
+          currency,
+          customer: event.data.customer?.email,
+          channel: event.data.channel,
+        });
+      } else if (event?.event === 'transfer.success' && event?.data) {
+        const reference = event.data.reference;
+        await dbManager.updateTransferStatus(
+          reference,
+          'success',
+          event.data,
+          event.data.gateway_response || 'Paystack confirmed transfer success'
+        );
+        await dbManager.logAudit('paystack.transfer_success', 'Paystack', reference, event.data);
+      } else if ((event?.event === 'transfer.failed' || event?.event === 'transfer.reversed') && event?.data) {
+        const reference = event.data.reference;
+        await dbManager.updateTransferStatus(
+          reference,
+          'failed',
+          event.data,
+          event.data.gateway_response || 'Paystack transfer failed or was reversed'
+        );
+        await dbManager.logAudit('paystack.transfer_failed', 'Paystack', reference, event.data);
+      }
+    } catch (hookErr: any) {
+      console.error('[PAYSTACK WEBHOOK] Processing error:', hookErr);
     }
 
+    // Always respond 200 to Paystack so it does not retry or drop webhooks
     res.status(200).json({ received: true });
   });
 
@@ -476,6 +652,35 @@ async function startServer() {
       res.json(profile);
     } catch (err: any) {
       res.status(400).json({ error: err.message || 'Failed to update profile' });
+    }
+  });
+
+  app.post('/api/profiles/:id/reset-balance', async (req: Request, res: Response) => {
+    try {
+      const profile = await dbManager.getProfile(req.params.id);
+      if (!profile) return res.status(404).json({ error: 'Profile not found' });
+      
+      const now = new Date().toISOString();
+      const updated = await dbManager.updateProfileWithLock(req.params.id, {
+        balanceResetAt: now,
+      });
+
+      await dbManager.logAudit(
+        'profile.balance_reset',
+        'profile',
+        req.params.id,
+        {
+          details: 'Active net balance reset to zero. Historical transactions archived to Monthly History. (Savings vaults and debts preserved untouched).',
+        }
+      );
+
+      res.json({
+        success: true,
+        message: 'Active net balance reset to zero. Historical transactions safely preserved in your Monthly History archive.',
+        profile: updated,
+      });
+    } catch (err: any) {
+      res.status(400).json({ error: err.message || 'Failed to reset balance' });
     }
   });
 
@@ -904,10 +1109,25 @@ async function startServer() {
         return res.status(400).json({ error: 'Cannot withdraw from an empty savings vault' });
       }
 
-      const { bankOrProvider, accountNumber, accountName } = req.body;
+      const { bankOrProvider, accountNumber, accountName, amount } = req.body;
       if (!bankOrProvider || !accountNumber || !accountName) {
         return res.status(400).json({ error: 'Bank/Mobile Money provider, account number, and recipient name are required for payout' });
       }
+
+      const currentBalance = Number((goal.current || 0).toFixed(2));
+      let withdrawAmount = amount !== undefined && amount !== null && amount !== '' ? Number(amount) : currentBalance;
+
+      if (isNaN(withdrawAmount) || withdrawAmount <= 0) {
+        return res.status(400).json({ error: 'Please enter a valid withdrawal amount greater than 0' });
+      }
+
+      if (withdrawAmount > currentBalance) {
+        return res.status(400).json({
+          error: `Requested amount (${goal.currency || 'GHS'} ${withdrawAmount.toFixed(2)}) exceeds available vault balance (${goal.currency || 'GHS'} ${currentBalance.toFixed(2)})`
+        });
+      }
+
+      withdrawAmount = Number(withdrawAmount.toFixed(2));
 
       const now = new Date();
       const deadline = goal.deadline ? new Date(goal.deadline) : null;
@@ -917,9 +1137,9 @@ async function startServer() {
       const earlyPenaltyPercent = isEarlyWithdrawal ? 10 : 0; // 10% penalty if early
       const totalFeePercent = standardFeePercent + earlyPenaltyPercent; // 2% or 12%
 
-      const vaultAmount = Number(goal.current.toFixed(2));
-      const feeAmount = Number(((vaultAmount * totalFeePercent) / 100).toFixed(2));
-      const netPayoutAmount = Number((vaultAmount - feeAmount).toFixed(2));
+      const feeAmount = Number(((withdrawAmount * totalFeePercent) / 100).toFixed(2));
+      const netPayoutAmount = Number((withdrawAmount - feeAmount).toFixed(2));
+      const remainingVaultBalance = Number((currentBalance - withdrawAmount).toFixed(2));
 
       const withdrawalRequest = await dbManager.createWithdrawalRequest({
         userId: req.user.userId,
@@ -928,7 +1148,12 @@ async function startServer() {
         profileId: goal.profileId,
         goalId: goal.id,
         goalName: goal.name,
-        vaultAmount,
+        vaultAmount: withdrawAmount,
+        requestedAmount: withdrawAmount,
+        remainingVaultBalance,
+        bankName: bankOrProvider.trim(),
+        accountNumber: accountNumber.trim(),
+        accountName: accountName.trim(),
         isEarlyWithdrawal,
         standardFeePercent,
         earlyPenaltyPercent,
@@ -943,8 +1168,11 @@ async function startServer() {
         },
       });
 
-      // Mark goal status as pending_withdrawal
-      await dbManager.updateGoal(goal.id, { status: 'pending_withdrawal' });
+      // Immediately deduct withdrawal amount from vault balance to avoid disputes
+      await dbManager.updateGoal(goal.id, {
+        current: remainingVaultBalance,
+        status: 'pending_withdrawal',
+      });
 
       res.status(201).json(withdrawalRequest);
     } catch (err: any) {
@@ -983,6 +1211,18 @@ async function startServer() {
       res.json(users);
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to fetch platform users' });
+    }
+  });
+
+  app.get('/api/admin/users/:id/details', adminMiddleware, async (req: any, res: Response) => {
+    try {
+      const details = await dbManager.getUserFullDetails(req.params.id);
+      if (!details) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      res.json(details);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch user details' });
     }
   });
 
@@ -1038,12 +1278,13 @@ async function startServer() {
         adminNotes: notes || '',
       });
 
-      // Clear vault balance and mark withdrawn
+      // Funds were already deducted from vault upon request submission.
+      // Update goal status: if no balance remains, mark withdrawn; otherwise restore to active.
       const goal = await dbManager.getGoal(request.goalId);
       if (goal) {
+        const remaining = Number((goal.current || 0).toFixed(2));
         await dbManager.updateGoal(goal.id, {
-          current: 0,
-          status: 'withdrawn',
+          status: remaining <= 0 ? 'withdrawn' : 'active',
         });
       }
 
@@ -1076,10 +1317,15 @@ async function startServer() {
         rejectionReason: reason || 'Declined by platform administrator',
       });
 
-      // Unlock goal status back to active
+      // Refund deducted amount back to goal balance and restore status to active
       const goal = await dbManager.getGoal(request.goalId);
       if (goal) {
-        await dbManager.updateGoal(goal.id, { status: 'active' });
+        const refundAmount = request.requestedAmount || request.vaultAmount || 0;
+        const restoredBalance = Number(((goal.current || 0) + refundAmount).toFixed(2));
+        await dbManager.updateGoal(goal.id, {
+          current: restoredBalance,
+          status: 'active',
+        });
       }
 
       res.json({ success: true, request: updated });
@@ -1170,25 +1416,54 @@ async function startServer() {
 
     const now = new Date();
     const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+    const cycleMonthLabel = monthFormatter.format(now);
 
+    const isAutoMonthly = profile.autoMonthlyReset !== false;
     let totalIncome = 0;
     let totalExpense = 0;
     let monthIncome = 0;
     let monthExpense = 0;
+    let cycleIncome = 0;
+    let cycleExpense = 0;
+
+    const resetTimestamp = profile.balanceResetAt ? new Date(profile.balanceResetAt).getTime() : null;
 
     txs.forEach((t) => {
       const converted = convertAmount(t.amount, t.currency, profile.displayCurrency, profile.exchangeRates);
+      const isThisMonth = t.date.startsWith(currentYearMonth);
+
       if (t.type === 'income') {
         totalIncome += converted;
-        if (t.date.startsWith(currentYearMonth)) monthIncome += converted;
+        if (isThisMonth) monthIncome += converted;
       } else {
         totalExpense += converted;
-        if (t.date.startsWith(currentYearMonth)) monthExpense += converted;
+        if (isThisMonth) monthExpense += converted;
+      }
+
+      // Check if transaction counts towards active period cycle
+      let inCycle = false;
+      if (resetTimestamp) {
+        const txTime = new Date(t.date).getTime();
+        inCycle = txTime >= resetTimestamp;
+      } else if (isAutoMonthly) {
+        inCycle = isThisMonth;
+      } else {
+        inCycle = true;
+      }
+
+      if (inCycle) {
+        if (t.type === 'income') cycleIncome += converted;
+        else cycleExpense += converted;
       }
     });
 
-    const netBalance = totalIncome - totalExpense;
+    const allTimeNetBalance = totalIncome - totalExpense;
+    const cycleNet = cycleIncome - cycleExpense;
     const monthNet = monthIncome - monthExpense;
+    
+    // Active net balance shown on overview: cycleNet if monthly rollover/reset is active, else allTimeNetBalance
+    const activeNetBalance = isAutoMonthly || resetTimestamp ? cycleNet : allTimeNetBalance;
     const savingsRate = monthIncome > 0 ? Math.max(0, Math.round(((monthIncome - monthExpense) / monthIncome) * 100)) : 0;
 
     const totalSavedInGoals = goals.reduce(
@@ -1206,7 +1481,7 @@ async function startServer() {
 
     res.json({
       currency: profile.displayCurrency,
-      netBalance: Math.round(netBalance * 100) / 100,
+      netBalance: Math.round(activeNetBalance * 100) / 100,
       totalIncome: Math.round(totalIncome * 100) / 100,
       totalExpense: Math.round(totalExpense * 100) / 100,
       monthIncome: Math.round(monthIncome * 100) / 100,
@@ -1217,7 +1492,111 @@ async function startServer() {
       totalIOwe: Math.round(totalIOwe * 100) / 100,
       totalOwedToMe: Math.round(totalOwedToMe * 100) / 100,
       transactionCount: txs.length,
+      allTimeNetBalance: Math.round(allTimeNetBalance * 100) / 100,
+      cycleNetBalance: Math.round(cycleNet * 100) / 100,
+      cycleMonth: cycleMonthLabel,
+      isMonthlyResetActive: isAutoMonthly,
+      balanceResetAt: profile.balanceResetAt,
     });
+  });
+
+  app.get('/api/reports/monthly-history', async (req: Request, res: Response) => {
+    try {
+      const profiles = await dbManager.getProfiles();
+      const profileId = (req.query.profileId as string) || profiles[0]?.id;
+      const profile = (await dbManager.getProfile(profileId)) || profiles[0];
+      if (!profile) return res.json({ months: [] });
+
+      const txs = await dbManager.getTransactions(profileId);
+      const now = new Date();
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // Group transactions by YYYY-MM
+      const monthlyGroups: Record<string, {
+        income: number;
+        expense: number;
+        transactions: any[];
+        categoryTotals: Record<string, number>;
+      }> = {};
+
+      // Always initialize the current month so it exists in history
+      monthlyGroups[currentYearMonth] = {
+        income: 0,
+        expense: 0,
+        transactions: [],
+        categoryTotals: {},
+      };
+
+      txs.forEach((t) => {
+        const ym = t.date.slice(0, 7); // e.g. "2026-09"
+        if (!monthlyGroups[ym]) {
+          monthlyGroups[ym] = {
+            income: 0,
+            expense: 0,
+            transactions: [],
+            categoryTotals: {},
+          };
+        }
+
+        const converted = convertAmount(t.amount, t.currency, profile.displayCurrency, profile.exchangeRates);
+        monthlyGroups[ym].transactions.push(t);
+
+        if (t.type === 'income') {
+          monthlyGroups[ym].income += converted;
+        } else {
+          monthlyGroups[ym].expense += converted;
+          monthlyGroups[ym].categoryTotals[t.category] = (monthlyGroups[ym].categoryTotals[t.category] || 0) + converted;
+        }
+      });
+
+      // Sort yearMonth keys descending (newest month first)
+      const sortedMonths = Object.keys(monthlyGroups).sort((a, b) => b.localeCompare(a));
+
+      const monthFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+
+      const records = sortedMonths.map((ym) => {
+        const group = monthlyGroups[ym];
+        const [yearStr, monthStr] = ym.split('-');
+        const dateObj = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, 1);
+        const label = monthFormatter.format(dateObj);
+
+        const income = Math.round(group.income * 100) / 100;
+        const expense = Math.round(group.expense * 100) / 100;
+        const net = Math.round((income - expense) * 100) / 100;
+        const savingsRate = income > 0 ? Math.max(0, Math.round(((income - expense) / income) * 100)) : 0;
+
+        // Sort transactions descending by date
+        const sortedTxs = [...group.transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        // Category breakdown
+        const totalExp = expense > 0 ? expense : 1;
+        const categoryBreakdown = Object.entries(group.categoryTotals).map(([cat, amt]) => ({
+          category: cat,
+          amount: Math.round(amt * 100) / 100,
+          percentage: Math.round((amt / totalExp) * 100),
+        })).sort((a, b) => b.amount - a.amount);
+
+        return {
+          yearMonth: ym,
+          label,
+          isCurrentMonth: ym === currentYearMonth,
+          income,
+          expense,
+          net,
+          savingsRate,
+          transactionCount: group.transactions.length,
+          transactions: sortedTxs,
+          categoryBreakdown,
+        };
+      });
+
+      res.json({
+        currency: profile.displayCurrency,
+        months: records,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to fetch monthly history' });
+    }
   });
 
   app.get('/api/reports/category-breakdown', async (req: Request, res: Response) => {
@@ -1304,8 +1683,12 @@ async function startServer() {
     if (!accountNumber || !bankCode) {
       return res.status(400).json({ error: 'accountNumber and bankCode are required' });
     }
-    const resolved = await paystackService.resolveAccount(accountNumber, bankCode);
-    res.json(resolved);
+    try {
+      const resolved = await paystackService.resolveAccount(accountNumber, bankCode);
+      res.json(resolved);
+    } catch (err: any) {
+      res.status(422).json({ error: err.message || 'Could not resolve account name' });
+    }
   });
 
   app.post('/api/paystack/recipient', optionalAuthMiddleware, async (req: Request, res: Response) => {

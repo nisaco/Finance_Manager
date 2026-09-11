@@ -18,11 +18,16 @@ import {
   Loader2,
   AlertCircle,
   TrendingUp,
+  Copy,
+  Eye,
+  CheckCircle2,
 } from 'lucide-react';
 import { WithdrawalRequest, UserWithStats, AdminPlatformStats } from '../../types';
 import { api } from '../../api/client';
 import { useLedger } from '../../context/LedgerContext';
 import { useAuth } from '../../context/AuthContext';
+import { UserDetailsModal } from './UserDetailsModal';
+import { formatCurrency } from '../../design/tokens';
 
 const safeFmt = (num: any, decimals = 2): string => {
   if (typeof num === 'number' && !isNaN(num)) {
@@ -107,13 +112,15 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
 
   // Approval modal state
   const [approvingId, setApprovingId] = useState<string | null>(null);
-  const [paystackRef, setPaystackRef] = useState('');
-  const [adminNote, setAdminNote] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Rejection modal state
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+
+  // User detail drilldown modal
+  const [inspectingUserId, setInspectingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -145,13 +152,10 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
     setIsProcessing(true);
     try {
       await api.approveAdminWithdrawal(approvingId, {
-        paystackReference: paystackRef || undefined,
-        notes: adminNote || undefined,
+        notes: 'Approved and marked as paid by administrator',
       });
-      showNotification('Savings vault withdrawal approved and payout confirmed!', 'success');
+      showNotification('Savings vault withdrawal approved and marked as paid!', 'success');
       setApprovingId(null);
-      setPaystackRef('');
-      setAdminNote('');
       await loadAdminData();
       await loadData();
     } catch (err: any) {
@@ -472,10 +476,10 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                         </button>
                         <button
                           onClick={() => setApprovingId(req.id)}
-                          className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-all flex items-center space-x-1"
+                          className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs transition-all flex items-center space-x-1 cursor-pointer"
                         >
                           <Check className="w-3.5 h-3.5" />
-                          <span>Approve & Authorize Payout</span>
+                          <span>Mark as Sent (Manual Payout)</span>
                         </button>
                       </div>
                     )}
@@ -485,60 +489,88 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
             )
           ) : activeTab === 'users' ? (
             /* USER DIRECTORY */
-            <div className="bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl overflow-hidden shadow-xs">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#F7F5F2] dark:bg-[#181A20] border-b border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] dark:text-[#9CA3AF] uppercase font-bold text-[10px]">
-                  <tr>
-                    <th className="p-3">User</th>
-                    <th className="p-3">Role</th>
-                    <th className="p-3">Profiles</th>
-                    <th className="p-3">Transactions</th>
-                    <th className="p-3">Total Balance</th>
-                    <th className="p-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#E8E5DF] dark:divide-[#2D323F]">
-                  {filteredUsers.map((u) => (
-                    <tr key={u.id} className="hover:bg-[#FDFCFB] dark:hover:bg-[#15171C]">
-                      <td className="p-3">
-                        <div className="font-semibold text-[#1A1A1A] dark:text-white">
-                          {u.username}
-                        </div>
-                        <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">{u.email}</div>
-                      </td>
-                      <td className="p-3">
-                        <select
-                          value={u.role}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value as any)}
-                          className={`px-2 py-1 rounded text-xs font-bold font-mono focus:outline-hidden ${
-                            u.role === 'admin'
-                              ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-                              : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
-                          }`}
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </td>
-                      <td className="p-3 font-mono-num">{u.profilesCount}</td>
-                      <td className="p-3 font-mono-num">{u.transactionsCount}</td>
-                      <td className="p-3 font-mono-num font-semibold">
-                        GHS {safeFmt(u.netBalance ?? u.totalBalance ?? 0)}
-                      </td>
-                      <td className="p-3 text-right">
-                        <button
-                          onClick={() => handleDeleteUser(u.id, u.username)}
-                          disabled={u.id === currentAdmin?.id}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-md transition-colors disabled:opacity-30"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
+            <div className="space-y-2">
+              <div className="text-[11px] text-[#9CA3AF] sm:hidden">
+                Swipe horizontally to access all account columns & controls
+              </div>
+              <div className="bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl overflow-x-auto overscroll-x-contain touch-pan-x shadow-xs">
+                <table className="min-w-[740px] w-full text-left text-xs">
+                  <thead className="bg-[#F7F5F2] dark:bg-[#181A20] border-b border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] dark:text-[#9CA3AF] uppercase font-bold text-[10px]">
+                    <tr>
+                      <th className="p-3">User</th>
+                      <th className="p-3">Role</th>
+                      <th className="p-3 text-center">Profiles</th>
+                      <th className="p-3 text-center">Transactions</th>
+                      <th className="p-3">Total Balance</th>
+                      <th className="p-3 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[#E8E5DF] dark:divide-[#2D323F]">
+                    {filteredUsers.map((u) => (
+                      <tr
+                        key={u.id}
+                        className="hover:bg-[#FDFCFB] dark:hover:bg-[#15171C] cursor-pointer group transition-colors"
+                        onClick={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (target.closest('select') || target.closest('button')) return;
+                          setInspectingUserId(u.id);
+                        }}
+                      >
+                        <td className="p-3">
+                          <div className="font-semibold text-[#1A1A1A] dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                            {u.username}
+                          </div>
+                          <div className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] truncate max-w-[180px]">
+                            {u.email}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value as any)}
+                            className={`px-2 py-1 rounded text-xs font-bold font-mono focus:outline-hidden cursor-pointer ${
+                              u.role === 'admin'
+                                ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                                : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                            }`}
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </td>
+                        <td className="p-3 font-mono-num text-center font-semibold">{u.profilesCount}</td>
+                        <td className="p-3 font-mono-num text-center font-semibold">{u.transactionsCount}</td>
+                        <td className="p-3 font-mono-num font-bold">
+                          GHS {safeFmt(u.netBalance ?? u.totalBalance ?? 0)}
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end space-x-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setInspectingUserId(u.id)}
+                              title="Inspect user holdings & details"
+                              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FAF9F6] dark:bg-[#252C3D] hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-300 border border-[#E8E5DF] dark:border-[#2D323F] transition-colors cursor-pointer"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Inspect</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteUser(u.id, u.username)}
+                              disabled={u.id === currentAdmin?.id}
+                              className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-md transition-colors disabled:opacity-30 cursor-pointer"
+                              title="Delete User"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             /* SYSTEM TELEMETRY */
@@ -593,6 +625,60 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
                     </div>
                   </div>
                 </div>
+
+                {/* Paystack Webhook & Starter Business Configuration Card */}
+                <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200/80 dark:border-blue-800/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <h3 className="font-bold text-xs uppercase tracking-wider text-blue-900 dark:text-blue-300">
+                        Paystack Webhook Endpoint (Starter Business Mode)
+                      </h3>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 font-bold">
+                      Active
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
+                    Paste this Webhook URL into your <strong>Paystack Dashboard &rarr; Settings &rarr; Preferences &rarr; API Keys &amp; Webhooks</strong>. Every customer deposit will be instantly verified and auto-credited to their savings vault.
+                  </p>
+
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 p-2 rounded-lg bg-white dark:bg-[#15171C] border border-[#E8E5DF] dark:border-[#2D323F] font-mono text-[11px] text-[#1A1A1A] dark:text-[#F3F4F6] truncate select-all">
+                      {typeof window !== 'undefined' ? `${window.location.origin}/api/paystack/webhook` : '/api/paystack/webhook'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/api/paystack/webhook`;
+                        navigator.clipboard.writeText(url);
+                        setCopiedWebhook(true);
+                        showNotification('Paystack Webhook URL copied to clipboard!', 'success');
+                        setTimeout(() => setCopiedWebhook(false), 3000);
+                      }}
+                      className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center space-x-1.5 shrink-0 transition-colors cursor-pointer"
+                    >
+                      {copiedWebhook ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedWebhook ? 'Copied!' : 'Copy URL'}</span>
+                    </button>
+                  </div>
+
+                  <div className="text-[11px] p-2.5 rounded-lg bg-white/70 dark:bg-[#1A1D24]/70 border border-blue-100 dark:border-blue-900/30 text-[#4B5563] dark:text-[#9CA3AF] space-y-1">
+                    <div className="font-semibold text-blue-900 dark:text-blue-300">
+                      How Paystack Starter Business works:
+                    </div>
+                    <div>
+                      1. <strong>Deposits:</strong> Users deposit money normally through Paystack Checkout. The webhook auto-credits their vault.
+                    </div>
+                    <div>
+                      2. <strong>Withdrawals:</strong> When a user requests a payout, it appears in your <em>Withdrawal Queue</em> tab.
+                    </div>
+                    <div>
+                      3. <strong>Manual Payout:</strong> Send them the funds manually (via your MTN MoMo, Telecel Cash, or Bank app) and click <strong>Mark as Sent</strong>.
+                    </div>
+                  </div>
+                </div>
               </div>
             )
           )}
@@ -612,55 +698,83 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
       </div>
 
       {/* Approval Sub-Modal */}
-      {approvingId && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70">
-          <div className="w-full max-w-md bg-white dark:bg-[#1A1D24] rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F] p-5 space-y-4 shadow-2xl">
-            <h3 className="font-display font-bold text-sm">Approve Savings Vault Payout</h3>
-            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-              Confirm that the disbursement has been initiated or executed via Paystack or local bank transfer.
-            </p>
+      {approvingId && (() => {
+        const approvingReq = withdrawals.find((w) => w.id === approvingId);
+        return (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/70 animate-in fade-in">
+            <div className="w-full max-w-md bg-white dark:bg-[#1A1D24] rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F] p-5 space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
+                <h3 className="font-display font-bold text-sm text-[#1A1A1A] dark:text-white flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Approve Withdrawal</span>
+                </h3>
+                <button
+                  onClick={() => setApprovingId(null)}
+                  className="p-1 rounded-lg text-[#6B7280] hover:text-[#1A1A1A] dark:hover:text-white cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-            <div>
-              <label className="block text-xs font-medium mb-1">Paystack / Bank Transfer Reference (Optional)</label>
-              <input
-                type="text"
-                placeholder="e.g. TRF_20260907_123456"
-                value={paystackRef}
-                onChange={(e) => setPaystackRef(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#FDFCFB] dark:bg-[#15171C] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl font-mono focus:outline-hidden"
-              />
-            </div>
+              <p className="text-xs text-[#1A1A1A] dark:text-[#F3F4F6] font-medium leading-relaxed">
+                Are you sure you want to approve this withdrawal request?
+              </p>
 
-            <div>
-              <label className="block text-xs font-medium mb-1">Admin Audit Notes</label>
-              <input
-                type="text"
-                placeholder="e.g. Disbursed via MTN Mobile Money"
-                value={adminNote}
-                onChange={(e) => setAdminNote(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-[#FDFCFB] dark:bg-[#15171C] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl focus:outline-hidden"
-              />
-            </div>
+              {approvingReq && (
+                <div className="p-3.5 rounded-xl bg-[#F7F5F2] dark:bg-[#15171C] border border-[#E8E5DF] dark:border-[#2D323F] space-y-2 text-xs">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Account Holder:</span>
+                    <span className="font-bold text-[#1A1A1A] dark:text-white">
+                      {approvingReq.accountName || approvingReq.userName}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Payout Destination:</span>
+                    <span className="font-semibold font-mono text-[#1A1A1A] dark:text-white">
+                      {approvingReq.bankName} • {approvingReq.accountNumber}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#6B7280] dark:text-[#9CA3AF]">Vault Name:</span>
+                    <span className="text-[#1A1A1A] dark:text-white font-medium">
+                      {approvingReq.goalName}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F] flex justify-between items-baseline">
+                    <span className="font-bold text-[#1A1A1A] dark:text-white">Net Payout to Send:</span>
+                    <span className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(approvingReq.netPayoutAmount, approvingReq.currency)}
+                    </span>
+                  </div>
+                </div>
+              )}
 
-            <div className="flex justify-end space-x-2 pt-2">
-              <button
-                onClick={() => setApprovingId(null)}
-                className="px-3 py-1.5 text-xs font-medium border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleApprove}
-                disabled={isProcessing}
-                className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center space-x-1"
-              >
-                {isProcessing && <Loader2 className="w-3 h-3 animate-spin" />}
-                <span>Confirm Payout</span>
-              </button>
+              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+                The money was deducted straight from the person's vault when requested. Clicking confirm will mark this withdrawal as approved and paid.
+              </p>
+
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setApprovingId(null)}
+                  className="px-3.5 py-1.5 text-xs font-medium border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl hover:bg-[#F5F4F0] dark:hover:bg-[#1E2330] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={isProcessing}
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl flex items-center space-x-1.5 cursor-pointer transition-colors disabled:opacity-50"
+                >
+                  {isProcessing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Yes, Approve &amp; Mark as Paid</span>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Rejection Sub-Modal */}
       {rejectingId && (
@@ -701,6 +815,14 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
           </div>
         </div>
       )}
+
+      {/* User Details Drilldown Modal */}
+      <UserDetailsModal
+        isOpen={Boolean(inspectingUserId)}
+        userId={inspectingUserId}
+        onClose={() => setInspectingUserId(null)}
+        onRoleChanged={loadAdminData}
+      />
     </div>
   );
 };

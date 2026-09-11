@@ -37,7 +37,7 @@ export const StealthAdminModal: React.FC<StealthAdminModalProps> = ({
     try {
       const res = await adminLogin(secretKey.trim());
       if (res.success) {
-        notify('⚡ Stealth Admin clearance verified! God Mode unlocked.', 'info');
+        notify('Stealth Admin clearance verified. Administrative privileges unlocked.', 'info');
         setSecretKey('');
         onClose();
         onSuccess();

@@ -10,6 +10,7 @@ import { BudgetsPage } from './pages/BudgetsPage';
 import { GoalsPage } from './pages/GoalsPage';
 import { DebtsPage } from './pages/DebtsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { HistoryPage } from './pages/HistoryPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AIAdvisorPage } from './pages/AIAdvisorPage';
 import { AdminPage } from './pages/AdminPage';
@@ -33,12 +34,15 @@ import { OverviewSkeleton, TableSkeleton, CardsGridSkeleton } from './components
 
 import { Transaction, Goal, Budget, Debt } from './types';
 import { CheckCircle2, AlertCircle, Info, X, Crown } from 'lucide-react';
+import { api } from './api/client';
 
 const MainShell: React.FC = () => {
   const { user } = useAuth();
   const {
     notification,
     clearNotification,
+    notify,
+    refreshData,
     profileModalOpen,
     closeProfileModal,
     editingProfile,
@@ -48,7 +52,7 @@ const MainShell: React.FC = () => {
   } = useLedger();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'transactions' | 'budgets' | 'goals' | 'debts' | 'reports' | 'ai-advisor' | 'settings' | 'admin'
+    'overview' | 'transactions' | 'history' | 'budgets' | 'goals' | 'debts' | 'reports' | 'ai-advisor' | 'settings' | 'admin'
   >('overview');
 
   // Modal states
@@ -83,6 +87,52 @@ const MainShell: React.FC = () => {
       setAdminModalOpen(true);
     }
   }, []);
+
+  // Detect Paystack Return Redirect (e.g. ?reference=... or ?trxref=... or ?paystack_deposit_ref=...)
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paystackRef = params.get('reference') || params.get('trxref');
+    const depositGoalId = params.get('paystack_deposit_ref');
+
+    // Also check cached pending deposit in sessionStorage
+    let cachedPending: any = null;
+    try {
+      const raw = sessionStorage.getItem('pending_paystack_deposit');
+      if (raw) cachedPending = JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+
+    const refToVerify = paystackRef || (depositGoalId && cachedPending?.reference ? cachedPending.reference : null);
+
+    if (refToVerify) {
+      // Clear URL params cleanly without reloading the page
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      // Verify payment with Paystack
+      api.verifyDeposit(refToVerify)
+        .then(async (result) => {
+          if (result.status === 'success') {
+            notify(
+              `🎉 Paystack payment confirmed! ${cachedPending?.amount ? `${cachedPending.currency || 'GH₵'} ${cachedPending.amount} ` : ''}credited directly to your vault.`,
+              'success'
+            );
+            sessionStorage.removeItem('pending_paystack_deposit');
+            await refreshData();
+            setActiveTab('goals');
+          } else if (result.status === 'pending') {
+            notify('Paystack settlement is processing. Your vault balance will update shortly.', 'info');
+          } else {
+            notify(result.message || 'Payment verification failed or was canceled.', 'error');
+          }
+        })
+        .catch((err) => {
+          console.warn('Paystack verification error on return:', err);
+          notify(err.message || 'Could not verify Paystack payment', 'error');
+        });
+    }
+  }, [notify, refreshData]);
 
   // Handlers
   const handleOpenNewTx = () => {
@@ -176,8 +226,16 @@ const MainShell: React.FC = () => {
                 onOpenNewTx={handleOpenNewTx}
                 onEditTx={handleEditTx}
                 onOpenCsvImport={() => setCsvModalOpen(true)}
+                onNavigateToHistory={() => setActiveTab('history')}
               />
             )
+          )}
+
+          {activeTab === 'history' && (
+            <HistoryPage
+              onEditTx={handleEditTx}
+              onNavigateToSettings={() => setActiveTab('settings')}
+            />
           )}
 
           {activeTab === 'budgets' && (
@@ -225,6 +283,7 @@ const MainShell: React.FC = () => {
             <SettingsPage
               onOpenAuditLogs={() => setAuditLogModalOpen(true)}
               onOpenAdminModal={() => setAdminModalOpen(true)}
+              onNavigateToHistory={() => setActiveTab('history')}
             />
           )}
 

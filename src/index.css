@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
+/* Explicitly bind Tailwind v4 dark: variants to the .dark class on html/root */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --font-serif: "Plus Jakarta Sans", "Inter", -apple-system, sans-serif;
@@ -122,20 +125,24 @@
   }
 
   html {
-    overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
     -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
 
   body {
     font-family: var(--font-sans);
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
-    min-height: 100%;
+    min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
+    overscroll-behavior: auto;
     transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
   }
 }
@@ -474,6 +481,32 @@ html {
 .animate-siri-border {
   background-size: 300% 300%;
   animation: siriBorderFlow 8s ease infinite;
+}
+
+/* ========================================================
+   MOBILE UX: PREVENT IPHONE INPUT AUTO-ZOOM & STUCK SCROLL
+   ======================================================== */
+@media screen and (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    touch-action: manipulation;
+  }
+}
+
+html, body {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: auto;
+}
+
+.overflow-y-auto,
+.overflow-x-auto,
+[class*="overflow-y-"],
+[class*="overflow-x-"] {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 

@@ -69,6 +69,9 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
 
     try {
       if (method === 'paystack') {
+        // Construct return callback URL pointing back to current app with deposit reference
+        const returnCallbackUrl = `${window.location.origin}${window.location.pathname}?paystack_deposit_ref=${goal.id}`;
+
         // Direct Paystack Deposit Checkout flow
         const init = await api.initializeDeposit({
           amount: numAmount,
@@ -76,8 +79,35 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
           goalId: goal.id,
           profileId: goal.profileId,
           email: email || user?.email || 'saver@ledgerapp.io',
+          callbackUrl: returnCallbackUrl,
         });
 
+        // If Paystack provided a real hosted authorizationUrl (e.g. checkout.paystack.com/...),
+        // automatically navigate the user directly to the Paystack checkout page!
+        if (init.authorizationUrl && !init.simulated) {
+          // Save pending reference in sessionStorage so returning to the app can verify seamlessly
+          try {
+            sessionStorage.setItem('pending_paystack_deposit', JSON.stringify({
+              reference: init.reference,
+              goalId: goal.id,
+              goalName: goal.name,
+              amount: numAmount,
+              currency: goal.currency,
+              timestamp: Date.now(),
+            }));
+          } catch (e) {
+            console.warn('Could not cache pending deposit session:', e);
+          }
+
+          notify('Redirecting to Paystack secure checkout...', 'info');
+          // Short timeout so the user sees notification before redirection
+          setTimeout(() => {
+            window.location.href = init.authorizationUrl;
+          }, 400);
+          return;
+        }
+
+        // Fallback or simulated sandbox rail
         setDepositResult({
           reference: init.reference,
           authorizationUrl: init.authorizationUrl,
@@ -85,29 +115,8 @@ export const FundGoalModal: React.FC<FundGoalModalProps> = ({
           status: 'pending',
           message: init.simulated
             ? 'Deposit initialized via Paystack Sandbox rail. Click below to verify and confirm instant settlement.'
-            : 'Paystack authorization token generated. Complete the checkout or verify payment settlement.',
+            : 'Paystack authorization token generated. Complete checkout or verify payment settlement.',
         });
-
-        // Auto verify for smooth sandbox / simulation experience
-        if (init.simulated) {
-          setTimeout(async () => {
-            try {
-              const verified = await api.verifyDeposit(init.reference);
-              if (verified.status === 'success') {
-                setDepositResult({
-                  reference: init.reference,
-                  authorizationUrl: init.authorizationUrl,
-                  simulated: true,
-                  status: 'success',
-                  message: `Deposit confirmed: ${formatCurrency(numAmount, goal.currency)} credited to ${goal.name}`,
-                });
-                await refreshData();
-              }
-            } catch (err) {
-              console.warn('Auto verification pending:', err);
-            }
-          }, 1500);
-        }
       } else {
         // Manual ledger credit flow
         const res = await api.fundGoal(goal.id, numAmount, goal.currency);

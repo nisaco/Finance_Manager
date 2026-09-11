@@ -18,6 +18,9 @@ export interface Profile {
   type?: 'personal' | 'family' | 'business' | 'savings' | string;
   isLocked?: boolean;
   pinHash?: string;
+  balanceResetAt?: string;
+  balanceResetAmount?: number;
+  autoMonthlyReset?: boolean;
   createdAt: string;
 }
 
@@ -91,6 +94,11 @@ export interface WithdrawalRequest {
   goalId: string;
   goalName: string;
   vaultAmount: number;
+  requestedAmount?: number;
+  remainingVaultBalance?: number;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
   isEarlyWithdrawal: boolean;
   standardFeePercent: number; // 2%
   earlyPenaltyPercent: number; // 10% if early, else 0%

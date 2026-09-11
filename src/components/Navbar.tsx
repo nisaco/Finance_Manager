@@ -75,20 +75,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
 
-  // Lock body scroll when mobile drawer is open so scrolling ONLY scrolls within the drawer
-  useEffect(() => {
-    if (mobileDrawerOpen) {
-      const prevOverflow = document.body.style.overflow;
-      const prevTouchAction = document.body.style.touchAction;
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-      return () => {
-        document.body.style.overflow = prevOverflow;
-        document.body.style.touchAction = prevTouchAction;
-      };
-    }
-  }, [mobileDrawerOpen]);
-
   const isAdmin =
     user?.role === 'admin' ||
     user?.email?.toLowerCase() === 'jnkpappoe@gmail.com';
@@ -96,6 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Wallet },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
+    { id: 'history', label: 'Monthly History', icon: History },
     { id: 'budgets', label: 'Budgets', icon: Scale },
     { id: 'goals', label: 'Savings Goals', icon: PiggyBank },
     { id: 'debts', label: 'Debts', icon: Layers },

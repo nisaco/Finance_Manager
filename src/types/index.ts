@@ -17,6 +17,9 @@ export interface Profile {
   exchangeRates: Record<string, number>;
   type?: 'personal' | 'family' | 'business' | 'savings' | string;
   isLocked?: boolean;
+  balanceResetAt?: string;
+  balanceResetAmount?: number;
+  autoMonthlyReset?: boolean;
   createdAt: string;
 }
 
@@ -67,6 +70,7 @@ export interface Goal {
     recipientCode?: string;
     accountLast4?: string;
     bankName?: string;
+    bankCode?: string;
     accountName?: string;
     accountNumber?: string;
   };
@@ -83,6 +87,7 @@ export interface WithdrawalRequest {
   goalName: string;
   vaultAmount: number;
   requestedAmount?: number;
+  remainingVaultBalance?: number;
   bankName?: string;
   accountNumber?: string;
   accountName?: string;
@@ -158,6 +163,24 @@ export interface SummaryReport {
   totalIOwe: number;
   totalOwedToMe: number;
   transactionCount: number;
+  allTimeNetBalance?: number;
+  cycleNetBalance?: number;
+  cycleMonth?: string;
+  isMonthlyResetActive?: boolean;
+  balanceResetAt?: string;
+}
+
+export interface MonthlyHistoryRecord {
+  yearMonth: string; // e.g. "2026-09"
+  label: string; // e.g. "September 2026"
+  isCurrentMonth: boolean;
+  income: number;
+  expense: number;
+  net: number;
+  savingsRate: number;
+  transactionCount: number;
+  transactions: Transaction[];
+  categoryBreakdown: { category: string; amount: number; percentage: number }[];
 }
 
 export interface CategoryBreakdown {
