@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGradFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E222D"/>
+      <stop offset="50%" stop-color="#11141A"/>
+      <stop offset="100%" stop-color="#090B0E"/>
+    </linearGradient>
+
+    <linearGradient id="goldGradFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A"/>
+      <stop offset="45%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+
+    <linearGradient id="emeraldGradFav" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="60%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#6EE7B7"/>
+    </linearGradient>
+
+    <linearGradient id="pillarGradFav" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#CBD5E1"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="16" y="16" width="480" height="480" rx="120" fill="url(#bgGradFav)"/>
+  <rect x="18" y="18" width="476" height="476" rx="118" fill="none" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="4"/>
+
+  <!-- Base Bar of L -->
+  <rect x="120" y="324" width="272" height="60" rx="16" fill="url(#goldGradFav)"/>
+
+  <!-- Vertical Pillar of L -->
+  <rect x="120" y="116" width="64" height="268" rx="18" fill="url(#pillarGradFav)"/>
+
+  <!-- Middle Ascent Bar -->
+  <rect x="216" y="234" width="56" height="74" rx="14" fill="#E2E8F0"/>
+
+  <!-- Tall Ascent Bar -->
+  <rect x="296" y="170" width="56" height="138" rx="14" fill="url(#pillarGradFav)"/>
+
+  <!-- Emerald Arrowhead / Dot -->
+  <circle cx="384" cy="128" r="28" fill="url(#emeraldGradFav)"/>
+  <circle cx="384" cy="128" r="10" fill="#FFFFFF"/>
+</svg>

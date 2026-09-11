@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { LedgerLogo } from './LedgerLogo';
 
 interface SplashLoaderProps {
   onComplete: () => void;
@@ -33,16 +34,11 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({
       <div className="absolute w-72 h-72 rounded-full bg-gradient-to-tr from-emerald-500/10 via-amber-500/5 to-blue-500/10 dark:from-emerald-500/15 dark:via-blue-500/10 dark:to-transparent blur-3xl pointer-events-none animate-pulse" />
 
       <div className="relative z-10 flex flex-col items-center space-y-6">
-        {/* iOS-Style App Icon Squircle */}
+        {/* Professional App Icon Squircle */}
         <div className="relative group">
-          {/* Subtle Outer Glow Ring */}
-          <div className="absolute -inset-1.5 rounded-[28px] bg-gradient-to-b from-black/10 to-black/5 dark:from-white/20 dark:to-white/5 blur-sm" />
-          
-          <div className="relative w-20 h-20 rounded-[22px] bg-gradient-to-b from-[#22252B] to-[#121418] dark:from-[#FFFFFF] dark:to-[#E5E7EB] text-[#FFFFFF] dark:text-[#111317] flex items-center justify-center shadow-[0_12px_32px_rgba(0,0,0,0.18)] dark:shadow-[0_12px_32px_rgba(255,255,255,0.12)] border border-white/10 dark:border-white/40 transition-transform duration-500">
-            {/* Specular highlight */}
-            <div className="absolute inset-0 rounded-[22px] bg-gradient-to-b from-white/20 via-transparent to-black/20 pointer-events-none" />
-            <span className="font-display text-3xl font-bold tracking-tight">L</span>
-          </div>
+          {/* Ambient Glow */}
+          <div className="absolute -inset-2 rounded-3xl bg-emerald-500/20 blur-md" />
+          <LedgerLogo size={80} />
         </div>
 
         {/* Minimalist Brand Typography */}

@@ -9,6 +9,7 @@ import {
   LucideIcon,
 } from 'lucide-react';
 import { Profile, User } from '../types';
+import { LedgerLogo } from './LedgerLogo';
 
 interface NavItem {
   id: string;
@@ -93,9 +94,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             }}
             className="flex items-center space-x-2.5 cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-xl bg-[#1A1A1A] text-white dark:bg-[#FFFFFF] dark:text-[#111317] flex items-center justify-center font-bold text-sm shadow-xs">
-              L
-            </div>
+            <LedgerLogo size={32} />
             <div>
               <div className="font-display font-bold text-sm tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6]">
                 Ledger

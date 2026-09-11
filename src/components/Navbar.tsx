@@ -31,6 +31,7 @@ import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { NavigationSidebar } from './NavigationSidebar';
+import { LedgerLogo } from './LedgerLogo';
 
 interface NavbarProps {
   activeTab?: string;
@@ -106,9 +107,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               title="Ledger Financial Platform"
               id="navbar-brand-button"
             >
-              <div className="w-8 h-8 rounded-lg bg-[#1A1A1A] dark:bg-[#F3F4F6] border border-[#1A1A1A] dark:border-[#F3F4F6] flex items-center justify-center text-[#FFFFFF] dark:text-[#111317] font-display text-base font-bold tracking-tighter group-hover:bg-[#333333] dark:group-hover:bg-[#E5E7EB] transition-all shadow-xs">
-                L
-              </div>
+              <LedgerLogo size={32} />
               <div>
                 <span className="font-display text-sm sm:text-base font-bold tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6] block leading-none">
                   Ledger

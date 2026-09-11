@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { TermsModal } from '../components/TermsModal';
 import { PrivacyModal } from '../components/PrivacyModal';
 import { AuthTransitionOverlay } from '../components/AuthTransitionOverlay';
+import { LedgerLogo } from '../components/LedgerLogo';
 import {
   Shield,
   Layers,
@@ -202,9 +203,7 @@ export const LandingPage: React.FC = () => {
       <header className="sticky top-0 z-40 w-full border-b border-[#E8E5DF] dark:border-[#2D323F] bg-[#FAF9F6]/90 dark:bg-[#111317]/90 backdrop-blur-md transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3 text-left">
-            <div className="w-9 h-9 rounded-xl bg-[#1A1A1A] dark:bg-[#F3F4F6] text-[#FFFFFF] dark:text-[#111317] flex items-center justify-center font-bold text-sm tracking-wider shadow-sm">
-              L
-            </div>
+            <LedgerLogo size={36} />
             <div>
               <div className="text-base font-bold tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6]">
                 Ledger
@@ -365,7 +364,13 @@ export const LandingPage: React.FC = () => {
 
           {/* Form Header */}
           <div className="mb-5">
-            <h2 className="text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6] flex items-center gap-2">
+            <div className="flex items-center space-x-2 mb-2">
+              <LedgerLogo size={24} />
+              <span className="text-[10px] uppercase font-mono tracking-widest text-[#6B7280] dark:text-[#9CA3AF] font-bold">
+                {authMode === 'signup' ? 'New Registration' : 'Account Access'}
+              </span>
+            </div>
+            <h2 className="text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
               {authMode === 'signup' ? 'Create your user account' : 'Welcome back to Ledger'}
             </h2>
             <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1">
@@ -692,8 +697,9 @@ export const LandingPage: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#111317] py-6 px-4 sm:px-6 lg:px-8 text-xs text-[#6B7280] dark:text-[#9CA3AF] transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div>
-            Ledger • Personal &amp; Business Financial Management
+          <div className="flex items-center space-x-2.5">
+            <LedgerLogo size={22} />
+            <span>Ledger • Personal &amp; Business Financial Management</span>
           </div>
           <div className="flex items-center space-x-5">
             <button
