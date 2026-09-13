@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
+@import "./design/foundation.css";
 
 /* Explicitly bind Tailwind v4 dark: variants to the .dark class on html/root */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -8,7 +9,7 @@
   :root {
     --font-serif: "Plus Jakarta Sans", "Inter", -apple-system, sans-serif;
     --font-mono: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-    --font-sans: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+    --font-sans: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
 
     /* Modern Clean Light Theme Palette (Default) */
     --bg-primary: #F8FAFC;

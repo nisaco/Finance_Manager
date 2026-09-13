@@ -38,7 +38,8 @@ interface LedgerContextType {
   loadData: () => Promise<void>;
 }
 
-const LedgerContext = createContext<LedgerContextType | undefined>(undefined);
+export const LedgerContext = createContext<LedgerContextType | undefined>(undefined);
+export type { LedgerContextType };
 
 export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();

@@ -1,0 +1,5 @@
+/* Preview-only entry: the app stylesheet plus an explicit source root, because
+   this harness lives outside src/ and Tailwind's automatic detection starts at
+   the Vite root. */
+@import "../../src/index.css";
+@source "../../src";

@@ -1,0 +1,214 @@
+/* ============================================================================
+   Ledger — Design Foundation (light)
+   ----------------------------------------------------------------------------
+   The single source of truth for surface, ink, accent and semantic colour.
+   Components consume these through Tailwind utilities (bg-surface, text-ink-3,
+   border-line, ...) so no component needs to know a hex value again.
+
+   Adding a value here is a design decision. Writing a hex literal inside a
+   component is a bug.
+
+   Purely presentational. Nothing in this file touches state, data or routing.
+   ========================================================================== */
+
+:root {
+  /* --- Surfaces: three tones carry the whole interface --------------------- */
+  --lg-canvas: #f4f5f7; /* page behind everything */
+  --lg-surface: #ffffff; /* cards, panels, sheets */
+  --lg-sunken: #fafafb; /* inset rows, wells, table stripes */
+
+  /* --- Hairlines: depth comes from these, never from shadows -------------- */
+  --lg-line: #e7e9ee;
+  --lg-line-strong: #d6dae1;
+
+  /* --- Ink: four steps, each with a job ---------------------------------- */
+  --lg-ink: #0c111d; /* primary values and headings */
+  --lg-ink-2: #344054; /* labels, body copy */
+  --lg-ink-3: #667085; /* metadata, secondary */
+  --lg-ink-4: #98a2b3; /* eyebrows, disabled, placeholders */
+
+  /* --- Accent: interaction only. Never decoration. ----------------------- */
+  --lg-accent: #0f5257;
+  --lg-accent-hover: #0b3e42;
+  --lg-accent-soft: #eaf1f1;
+
+  /* --- Semantic: money and status only ----------------------------------- */
+  --lg-pos: #067a55;
+  --lg-pos-soft: #e6f4f0;
+  --lg-neg: #b42318;
+  --lg-neg-soft: #fdecea;
+  --lg-warn: #b54708;
+  --lg-warn-soft: #fef3e8;
+
+  /* --- Solid action colour (primary buttons) ----------------------------- */
+  --lg-solid: #101828;
+  --lg-solid-hover: #1d2939;
+  --lg-on-solid: #ffffff;
+
+  /* --- Type ------------------------------------------------------------- */
+  --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system,
+    sans-serif;
+}
+
+/* Expose the foundation to Tailwind so utilities generate from it.
+   The var() indirection is deliberate: re-point the :root values and every
+   surface in the product follows, which is what makes theming real rather
+   than a switch that toggles nothing. */
+@theme inline {
+  --color-canvas: var(--lg-canvas);
+  --color-surface: var(--lg-surface);
+  --color-sunken: var(--lg-sunken);
+
+  --color-line: var(--lg-line);
+  --color-line-strong: var(--lg-line-strong);
+
+  --color-ink: var(--lg-ink);
+  --color-ink-2: var(--lg-ink-2);
+  --color-ink-3: var(--lg-ink-3);
+  --color-ink-4: var(--lg-ink-4);
+
+  --color-accent: var(--lg-accent);
+  --color-accent-hover: var(--lg-accent-hover);
+  --color-accent-soft: var(--lg-accent-soft);
+
+  --color-pos: var(--lg-pos);
+  --color-pos-soft: var(--lg-pos-soft);
+  --color-neg: var(--lg-neg);
+  --color-neg-soft: var(--lg-neg-soft);
+  --color-warn: var(--lg-warn);
+  --color-warn-soft: var(--lg-warn-soft);
+
+  --font-sans: var(--lg-font);
+
+  --color-solid: var(--lg-solid);
+  --color-solid-hover: var(--lg-solid-hover);
+  --color-on-solid: var(--lg-on-solid);
+}
+
+/* Everything below sits in the `components` layer on purpose.
+   Tailwind's `utilities` layer is ordered after it, so a utility on the element
+   always wins over the semantic class — `class="t-body text-ink"` really does
+   produce ink, and an unlayered rule here would silently swallow it. */
+
+@layer components {
+  /* ============================================================================
+     Type scale — six roles. If a size is not on this list it does not exist.
+     The old interface put 879 of ~1,120 text declarations at 12px or below,
+     which is why nothing led the eye. 15px is the body floor here.
+     ========================================================================== */
+
+  .t-hero {
+    font-size: clamp(2.375rem, 6vw, 3.625rem); /* 38 → 58px */
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--lg-ink);
+  }
+
+  .t-title {
+    font-size: 1.25rem; /* 20px */
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    color: var(--lg-ink);
+  }
+
+  .t-card {
+    font-size: 0.96875rem; /* 15.5px */
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--lg-ink);
+  }
+
+  .t-body {
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 500;
+    line-height: 1.45;
+    color: var(--lg-ink-2);
+  }
+
+  .t-meta {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--lg-ink-3);
+  }
+
+  .t-eyebrow {
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.085em;
+    text-transform: uppercase;
+    color: var(--lg-ink-4);
+  }
+
+  /* Every figure in the product is tabular, so decimals stay in a column and
+     digits do not shift width as values update. */
+  .num {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+
+  /* ============================================================================
+     Primitives
+     ========================================================================== */
+
+  /* A card. Hairline + surface tone. No shadow, no gradient, no lift on hover. */
+  .lg-card {
+    background: var(--lg-surface);
+    border: 1px solid var(--lg-line);
+    border-radius: 16px;
+  }
+
+  /* Small status/provenance badge (Paystack, Recurring, Vault ...). */
+  .lg-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid var(--lg-line);
+    border-radius: 6px;
+    background: var(--lg-sunken);
+    color: var(--lg-ink-3);
+    font-size: 0.625rem; /* 10px — a badge is a label, not content */
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .lg-tag-pos {
+    background: var(--lg-pos-soft);
+    border-color: transparent;
+    color: var(--lg-pos);
+  }
+
+  /* Progress track. One rule, so every bar in the product is the same bar. */
+  .lg-track {
+    display: block; /* an inline span ignores height — the bar disappears */
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--lg-line);
+    overflow: hidden;
+  }
+
+  .lg-track > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--lg-ink);
+    transition: width 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  /* Motion appears only where it carries information, and never against the
+     user's stated preference. */
+  @media (prefers-reduced-motion: reduce) {
+    .lg-track > span {
+      transition: none;
+    }
+  }
+}
