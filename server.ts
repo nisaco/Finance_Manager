@@ -27,10 +27,9 @@ import { convertAmount } from './server/services/currency.js';
 import { chatFinancialAdvisor, setupLiveWebSocket } from './server/services/gemini.js';
 import { sendPasswordResetEmail } from './server/services/email.js';
 
-// Use Render's dynamic PORT when deployed on Render, otherwise default to port 3000
-const PORT = process.env.RENDER === 'true' && process.env.PORT
-  ? parseInt(process.env.PORT, 10)
-  : 3000;
+// Always honour the platform-assigned PORT (Render, Fly, Heroku, Docker...).
+// Falls back to 3000 for local development.
+const PORT = Number.parseInt(process.env.PORT ?? '', 10) || 3000;
 
 function validateEnvironment() {
   if (!process.env.MONGODB_URI || process.env.MONGODB_URI.trim() === '') {
@@ -46,6 +45,11 @@ async function startServer() {
 
   // Disable powered-by disclosure
   app.disable('x-powered-by');
+
+  // Render terminates TLS at its edge proxy. Without this, req.ip resolves to the
+  // proxy address, so every visitor would share a single login rate-limit bucket
+  // and req.protocol would report 'http' for secure-cookie decisions.
+  app.set('trust proxy', 1);
 
   // Security Headers Middleware
   app.use((_req, res, next) => {

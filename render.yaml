@@ -1,21 +1,30 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Auto-deploys on every push to `main`.
 services:
   - type: web
     name: ledger-app
     runtime: node
     plan: free
+    region: frankfurt
+    branch: main
+    autoDeploy: true
     buildCommand: npm install && npm run build
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
+      # --- Runtime ---
+      - key: NODE_VERSION
+        value: "22.12.0"
       - key: NODE_ENV
         value: production
       - key: DEFAULT_CURRENCY
         value: GHS
+      - key: SESSION_COOKIE_NAME
+        value: ledger_session
+
+      # --- Secrets: set these in the Render dashboard (sync: false) ---
       - key: MONGODB_URI
         sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: ADMIN_SECRET_KEY
-        generateValue: true
       - key: APP_PIN_HASH
         sync: false
       - key: GEMINI_API_KEY
@@ -24,19 +33,29 @@ services:
         sync: false
       - key: PAYSTACK_PUBLIC_KEY
         sync: false
+      - key: PAYSTACK_WEBHOOK_SECRET
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: VITE_GOOGLE_CLIENT_ID
         sync: false
+
+      # --- Generated once by Render, then kept stable ---
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET_KEY
+        generateValue: true
+
+      # --- Email dispatch ---
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_SECURE
         value: "false"
+      - key: SMTP_FROM
+        value: Ledger Security <noreply@ledger.app>
       - key: SMTP_USER
         sync: false
       - key: SMTP_PASS
         sync: false
-      - key: SMTP_FROM
-        value: Ledger Security <noreply@ledger.app>
