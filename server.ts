@@ -27,7 +27,10 @@ import { convertAmount } from './server/services/currency.js';
 import { chatFinancialAdvisor, setupLiveWebSocket } from './server/services/gemini.js';
 import { sendPasswordResetEmail } from './server/services/email.js';
 
-const PORT = 3000;
+// Use Render's dynamic PORT when deployed on Render, otherwise default to port 3000
+const PORT = process.env.RENDER === 'true' && process.env.PORT
+  ? parseInt(process.env.PORT, 10)
+  : 3000;
 
 function validateEnvironment() {
   if (!process.env.MONGODB_URI || process.env.MONGODB_URI.trim() === '') {
