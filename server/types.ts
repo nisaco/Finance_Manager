@@ -6,6 +6,8 @@ export interface User {
   role: 'admin' | 'user';
   agreedToTermsAt: string;
   createdAt: string;
+  resetCode?: string;
+  resetCodeExpiresAt?: string;
 }
 
 export interface Profile {

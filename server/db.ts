@@ -482,6 +482,146 @@ export class LedgerMongoDbManager {
     return await this.findUserById(userId);
   }
 
+  public async updateUserPassword(userId: string, newPasswordHash: string): Promise<boolean> {
+    const idx = this.memUsers.findIndex((u) => u.id === userId);
+    if (idx !== -1) {
+      this.memUsers[idx].passwordHash = newPasswordHash;
+    }
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').updateOne(
+          { id: userId },
+          { $set: { passwordHash: newPasswordHash, updatedAt: new Date().toISOString() } }
+        );
+      }
+    } catch (err) {
+      console.error('[DATABASE] updateUserPassword MongoDB error:', err);
+      return false;
+    }
+
+    return true;
+  }
+
+  public async setUserResetCode(email: string, code: string, expiresAt: string): Promise<boolean> {
+    const cleanEmail = email.trim().toLowerCase();
+    const user = await this.findUserByEmail(cleanEmail);
+    if (!user) return false;
+
+    const idx = this.memUsers.findIndex((u) => u.email.toLowerCase() === cleanEmail);
+    if (idx !== -1) {
+      this.memUsers[idx].resetCode = code;
+      this.memUsers[idx].resetCodeExpiresAt = expiresAt;
+    }
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').updateOne(
+          { email: cleanEmail },
+          { $set: { resetCode: code, resetCodeExpiresAt: expiresAt } }
+        );
+      }
+    } catch (err) {
+      console.error('[DATABASE] setUserResetCode MongoDB error:', err);
+    }
+    return true;
+  }
+
+  public async resetUserPassword(
+    identifier: string,
+    code: string,
+    newPasswordHash: string
+  ): Promise<{ success: boolean; user?: User; error?: string }> {
+    const cleanIdentifier = (identifier || '').trim().toLowerCase();
+    const cleanCode = (code || '').trim();
+
+    if (!cleanCode || cleanCode.length < 6) {
+      return { success: false, error: 'Please enter a valid 6-digit verification code.' };
+    }
+
+    let user: User | null = null;
+
+    // 1. If not masked with '*', try finding by exact email or username
+    if (cleanIdentifier && !cleanIdentifier.includes('*')) {
+      user = await this.findUserByUsernameOrEmail(cleanIdentifier);
+    }
+
+    // 2. If not found or if identifier was masked (e.g. j***e@gmail.com), find by active reset code
+    if (!user) {
+      const now = Date.now();
+      // Search in memory for an active unexpired reset code
+      const memMatch = this.memUsers.find(
+        (u) =>
+          u.resetCode === cleanCode &&
+          (!u.resetCodeExpiresAt || new Date(u.resetCodeExpiresAt).getTime() >= now)
+      );
+      if (memMatch) {
+        user = this.normalizeUser(memMatch);
+      }
+
+      // If still not found and DB exists, search MongoDB
+      if (!user) {
+        try {
+          const db = await this.getDb();
+          if (db) {
+            const dbMatch = await db.collection<User>('users').findOne({
+              resetCode: cleanCode,
+              $or: [
+                { resetCodeExpiresAt: { $exists: false } },
+                { resetCodeExpiresAt: { $gte: new Date().toISOString() } },
+              ],
+            });
+            if (dbMatch) {
+              user = this.normalizeUser(dbMatch);
+            }
+          }
+        } catch (err) {
+          console.error('[DATABASE] resetUserPassword code search error:', err);
+        }
+      }
+    }
+
+    if (!user) {
+      return { success: false, error: 'Invalid or expired verification code. Please request a new one.' };
+    }
+
+    if (!user.resetCode || user.resetCode !== cleanCode) {
+      return { success: false, error: 'Invalid reset code. Please check your email and try again.' };
+    }
+
+    if (user.resetCodeExpiresAt && new Date(user.resetCodeExpiresAt).getTime() < Date.now()) {
+      return { success: false, error: 'Reset code has expired. Please request a new one.' };
+    }
+
+    const idx = this.memUsers.findIndex((u) => u.id === user.id);
+    if (idx !== -1) {
+      this.memUsers[idx].passwordHash = newPasswordHash;
+      delete this.memUsers[idx].resetCode;
+      delete this.memUsers[idx].resetCodeExpiresAt;
+    }
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').updateOne(
+          { id: user.id },
+          {
+            $set: { passwordHash: newPasswordHash, updatedAt: new Date().toISOString() },
+            $unset: { resetCode: '', resetCodeExpiresAt: '' },
+          }
+        );
+      }
+    } catch (err) {
+      console.error('[DATABASE] resetUserPassword MongoDB error:', err);
+    }
+
+    await this.logAudit('user.password_reset', 'user', user.id, { email: user.email, username: user.username });
+    const updatedUser = await this.findUserById(user.id);
+    return { success: true, user: updatedUser || user };
+  }
+
   public async getUsersCount(): Promise<number> {
     try {
       const db = await this.getDb();

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { LedgerLogo } from './LedgerLogo';
 
 interface SplashLoaderProps {
@@ -37,8 +38,28 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({
         {/* Professional App Icon Squircle */}
         <div className="relative group">
           {/* Ambient Glow */}
-          <div className="absolute -inset-2 rounded-3xl bg-emerald-500/20 blur-md" />
-          <LedgerLogo size={80} />
+          <div className="absolute -inset-3 rounded-3xl bg-emerald-500/20 dark:bg-emerald-500/25 blur-xl pointer-events-none animate-pulse" />
+          <motion.div
+            animate={{
+              rotate: [-14, 14, -14],
+              scale: [1, 1.04, 1],
+            }}
+            transition={{
+              rotate: {
+                repeat: Infinity,
+                duration: 2.4,
+                ease: 'easeInOut',
+              },
+              scale: {
+                repeat: Infinity,
+                duration: 2.4,
+                ease: 'easeInOut',
+              },
+            }}
+            className="will-change-transform drop-shadow-xl"
+          >
+            <LedgerLogo size={80} />
+          </motion.div>
         </div>
 
         {/* Minimalist Brand Typography */}

@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import crypto from 'crypto';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -24,6 +25,7 @@ import {
 import { paystackService } from './server/services/paystack.js';
 import { convertAmount } from './server/services/currency.js';
 import { chatFinancialAdvisor, setupLiveWebSocket } from './server/services/gemini.js';
+import { sendPasswordResetEmail } from './server/services/email.js';
 
 const PORT = 3000;
 
@@ -388,6 +390,217 @@ async function startServer() {
       res.json({ success: true, message: 'PIN updated successfully' });
     } catch (err: any) {
       res.status(500).json({ error: err.message || 'Failed to update PIN' });
+    }
+  });
+
+  // Google OAuth Client Configuration endpoint
+  app.get('/api/auth/google-client-id', (_req: Request, res: Response) => {
+    let clientId = process.env.VITE_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '';
+    if (!clientId) {
+      try {
+        const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
+        if (fs.existsSync(configPath)) {
+          const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          clientId = cfg.oAuthClientId || '';
+        }
+      } catch (e) {
+        console.warn('Could not read firebase-applet-config.json:', e);
+      }
+    }
+    res.json({ clientId });
+  });
+
+  // ==========================================
+  // FORGOT & RESET PASSWORD FLOW
+  // ==========================================
+  app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
+    try {
+      const rawIdentifier = (req.body.email || req.body.identifier || '').toString().trim().toLowerCase();
+      if (!rawIdentifier) {
+        return res.status(400).json({ error: 'Please enter your registered email address or username.' });
+      }
+
+      let user = await dbManager.findUserByEmail(rawIdentifier);
+      if (!user) {
+        user = await dbManager.findUserByUsername(rawIdentifier);
+      }
+
+      if (!user) {
+        return res.status(404).json({ error: 'No account found matching this email or username.' });
+      }
+
+      const cleanEmail = user.email.toLowerCase();
+
+      // Generate a secure 6-digit numeric reset code
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 mins
+
+      await dbManager.setUserResetCode(cleanEmail, resetCode, expiresAt);
+      await dbManager.logAudit('auth.password_reset_requested', 'User', user.id, {
+        email: cleanEmail,
+        username: user.username,
+      });
+
+      // Send the verification code to the user's actual email address
+      const emailResult = await sendPasswordResetEmail(cleanEmail, user.username, resetCode);
+
+      // Mask email for user reassurance (e.g. j***e@gmail.com)
+      const atIndex = cleanEmail.indexOf('@');
+      let maskedEmail = cleanEmail;
+      if (atIndex > 2) {
+        const local = cleanEmail.substring(0, atIndex);
+        const domain = cleanEmail.substring(atIndex);
+        maskedEmail = `${local[0]}${'*'.repeat(Math.max(2, local.length - 2))}${local[local.length - 1]}${domain}`;
+      } else if (atIndex > 0) {
+        maskedEmail = `${cleanEmail[0]}*${cleanEmail.substring(atIndex)}`;
+      }
+
+      // Security: NEVER return resetCode in the API response!
+      res.json({
+        success: true,
+        message: `A 6-digit verification code has been dispatched to ${maskedEmail}. Please check your inbox and spam folder.`,
+        maskedEmail,
+        email: cleanEmail,
+        emailSent: emailResult.sent,
+        isMockOrFallback: emailResult.isMockOrFallback,
+      });
+    } catch (err: any) {
+      console.error('Forgot password error:', err);
+      res.status(500).json({ error: err.message || 'Failed to process password reset request' });
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
+    try {
+      const { email, identifier, code, newPassword } = req.body;
+      const targetIdentifier = (email || identifier || '').trim();
+
+      if (!code || typeof code !== 'string' || code.trim().length < 6) {
+        return res.status(400).json({ error: 'Please enter the 6-digit verification code.' });
+      }
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+      }
+
+      const cleanCode = code.trim();
+      const newPasswordHash = bcrypt.hashSync(newPassword, 10);
+
+      const result = await dbManager.resetUserPassword(targetIdentifier, cleanCode, newPasswordHash);
+
+      if (!result.success || !result.user) {
+        return res.status(400).json({ error: result.error || 'Failed to reset password.' });
+      }
+
+      const user = result.user;
+      const token = generateToken({
+        userId: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        isStealthAdmin: user.role === 'admin',
+      });
+
+      res.cookie(COOKIE_NAME, token, COOKIE_OPTIONS);
+
+      res.json({
+        success: true,
+        message: 'Your password has been successfully reset. You are now logged in.',
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          agreedToTermsAt: user.agreedToTermsAt,
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      res.status(500).json({ error: err.message || 'Failed to reset password' });
+    }
+  });
+
+  // Auth Configuration (Google Client ID & Auth metadata)
+  app.get('/api/auth/config', (_req: Request, res: Response) => {
+    const googleClientId =
+      process.env.GOOGLE_CLIENT_ID ||
+      process.env.VITE_GOOGLE_CLIENT_ID ||
+      '326677332678-ul6bsctqil1qos6fgnvph71qbas9u8jl.apps.googleusercontent.com';
+    res.json({
+      googleClientId,
+    });
+  });
+
+  // ==========================================
+  // FORGOT PASSWORD & RESET PASSWORD
+  // ==========================================
+  app.post('/api/auth/forgot-password', async (req: Request, res: Response) => {
+    try {
+      const { identifier } = req.body;
+      if (!identifier || typeof identifier !== 'string' || !identifier.trim()) {
+        return res.status(400).json({ error: 'Please enter your registered email address or username' });
+      }
+
+      const cleanIdentifier = identifier.trim();
+      const user = await dbManager.findUserByUsernameOrEmail(cleanIdentifier);
+      if (!user) {
+        return res.status(404).json({ error: 'No user account found matching this email or username.' });
+      }
+
+      // Generate a 6-digit recovery code
+      const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+      // Valid for 15 minutes
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+      await dbManager.setUserResetCode(user.email, resetCode, expiresAt);
+      await dbManager.logAudit('auth.password_reset_requested', 'User', user.id, { email: user.email, username: user.username });
+
+      console.log(`[PASSWORD RESET] Code for ${user.email} (${user.username}): ${resetCode}`);
+
+      res.json({
+        success: true,
+        message: 'A 6-digit password reset code has been generated.',
+        email: user.email,
+        username: user.username,
+        resetCode,
+      });
+    } catch (err: any) {
+      console.error('Forgot password error:', err);
+      res.status(500).json({ error: err.message || 'Failed to process password reset request' });
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ error: 'Email, 6-digit code, and new password are required' });
+      }
+
+      if (typeof newPassword !== 'string' || newPassword.length < 6) {
+        return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanCode = code.trim();
+
+      const newPasswordHash = bcrypt.hashSync(newPassword, 10);
+      const result = await dbManager.resetUserPassword(cleanEmail, cleanCode, newPasswordHash);
+
+      if (!result.success || !result.user) {
+        return res.status(400).json({ error: result.error || 'Failed to reset password. Check your code and try again.' });
+      }
+
+      await dbManager.logAudit('auth.password_reset_completed', 'User', result.user.id, { email: result.user.email });
+
+      res.json({
+        success: true,
+        message: 'Your password has been reset successfully! You can now log in with your new password.',
+      });
+    } catch (err: any) {
+      console.error('Reset password error:', err);
+      res.status(500).json({ error: err.message || 'Failed to reset password' });
     }
   });
 

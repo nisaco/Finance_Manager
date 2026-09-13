@@ -30,6 +30,17 @@ interface AuthContextType {
     requestedUsername?: string;
   }) => Promise<{ success: boolean; isNewUser?: boolean; user?: User; error?: string }>;
   updateUsername: (newUsername: string) => Promise<{ success: boolean; error?: string }>;
+  forgotPassword: (identifier: string) => Promise<{
+    success: boolean;
+    message?: string;
+    email?: string;
+    maskedEmail?: string;
+    username?: string;
+    emailSent?: boolean;
+    isMockOrFallback?: boolean;
+    error?: string;
+  }>;
+  resetPassword: (data: { email?: string; identifier?: string; code: string; newPassword: string }) => Promise<{ success: boolean; message?: string; error?: string }>;
   requireAuthModal: boolean;
   setRequireAuthModal: (show: boolean) => void;
   openAuthModal: (mode?: 'login' | 'register') => void;
@@ -302,6 +313,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const forgotPassword = async (identifier: string) => {
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || 'Failed to request password reset' };
+      }
+      return {
+        success: true,
+        message: data.message,
+        email: data.email,
+        maskedEmail: data.maskedEmail,
+        username: data.username,
+        emailSent: data.emailSent,
+        isMockOrFallback: data.isMockOrFallback,
+      };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error requesting password reset' };
+    }
+  };
+
+  const resetPassword = async (data: { email?: string; identifier?: string; code: string; newPassword: string }) => {
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json();
+      if (!res.ok) {
+        return { success: false, error: resData.error || 'Failed to reset password' };
+      }
+      if (resData.token) {
+        localStorage.setItem('ledger_token', resData.token);
+      }
+      if (resData.user) {
+        setUser(resData.user);
+        setIsAuthenticated(true);
+        setRequireAuthModal(false);
+      }
+      return { success: true, message: resData.message };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Network error resetting password' };
+    }
+  };
+
   const logout = async (reason?: string) => {
     try {
       await fetch('/api/auth/logout', {
@@ -368,6 +429,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshUser,
         loginWithGoogle,
         updateUsername,
+        forgotPassword,
+        resetPassword,
         requireAuthModal,
         setRequireAuthModal,
         openAuthModal,

@@ -61,8 +61,19 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   // Auth
   checkAuthStatus: () => request<{ authenticated: boolean }>('/api/auth/status'),
+  getAuthConfig: () => request<{ googleClientId: string }>('/api/auth/config'),
   login: (pin: string) => request<{ success: boolean; message: string }>('/api/auth/login', { method: 'POST', body: JSON.stringify({ pin }) }),
   logout: () => request<{ success: boolean }>('/api/auth/logout', { method: 'POST' }),
+  forgotPassword: (identifier: string) =>
+    request<{ success: boolean; message: string; email: string; username?: string; resetCode?: string }>('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    }),
+  resetPassword: (data: { email?: string; identifier?: string; code: string; newPassword: string }) =>
+    request<{ success: boolean; message: string }>('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   changePin: (currentPin: string, newPin: string) =>
     request<{ success: boolean; message?: string }>('/api/auth/change-pin', {
       method: 'POST',

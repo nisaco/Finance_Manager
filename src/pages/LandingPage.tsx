@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { TermsModal } from '../components/TermsModal';
 import { PrivacyModal } from '../components/PrivacyModal';
+import { ForgotPasswordModal } from '../components/Modals/ForgotPasswordModal';
 import { AuthTransitionOverlay } from '../components/AuthTransitionOverlay';
 import { LedgerLogo } from '../components/LedgerLogo';
+import { api } from '../api/client';
 import {
   Shield,
   Layers,
@@ -23,13 +25,32 @@ import {
   X,
   Eye,
   EyeOff,
+  KeyRound,
+  RefreshCw,
+  Check,
+  ArrowLeft,
+  MailCheck,
 } from 'lucide-react';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 export const LandingPage: React.FC = () => {
-  const { login, register, loginWithGoogle, sessionExpiredMessage, clearSessionExpiredMessage } = useAuth();
+  const {
+    login,
+    register,
+    loginWithGoogle,
+    forgotPassword,
+    resetPassword,
+    sessionExpiredMessage,
+    clearSessionExpiredMessage,
+  } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
-  const [authMode, setAuthMode] = useState<'signup' | 'login'>('login');
+  const [authMode, setAuthMode] = useState<'signup' | 'login' | 'forgot_password'>('login');
 
   // Signup fields
   const [username, setUsername] = useState('');
@@ -47,6 +68,29 @@ export const LandingPage: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
+  // Forgot Password fields
+  const [forgotStep, setForgotStep] = useState<'request' | 'reset'>('request');
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [forgotCode, setForgotCode] = useState('');
+  const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState('');
+  const [forgotTargetEmail, setForgotTargetEmail] = useState('');
+  const [forgotTargetMaskedEmail, setForgotTargetMaskedEmail] = useState('');
+  const [isForgotSubmitting, setIsForgotSubmitting] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+
+  // Google Identity Services (GSI) state
+  const [googleClientId, setGoogleClientId] = useState<string>(
+    '326677332678-ul6bsctqil1qos6fgnvph71qbas9u8jl.apps.googleusercontent.com'
+  );
+  const [gsiLoaded, setGsiLoaded] = useState(false);
+  const googleBtnLoginRef = useRef<HTMLDivElement>(null);
+  const googleBtnSignupRef = useRef<HTMLDivElement>(null);
+
   // Google Sign-In & Username Selection Modal state
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
@@ -61,6 +105,121 @@ export const LandingPage: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
+  // Fetch OAuth client configuration on mount
+  useEffect(() => {
+    api
+      .getAuthConfig()
+      .then((cfg) => {
+        if (cfg?.googleClientId) {
+          setGoogleClientId(cfg.googleClientId);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Handle Google Credential Response from authentic Google Identity Services
+  const handleCredentialResponse = useCallback(
+    async (response: any) => {
+      if (!response?.credential) return;
+      setIsGoogleProcessing(true);
+      setFormError(null);
+      try {
+        const res = await loginWithGoogle({
+          credential: response.credential,
+        });
+        if (!res.success) {
+          setFormError(res.error || 'Google authentication failed');
+          setIsGoogleProcessing(false);
+        }
+      } catch (err: any) {
+        setFormError(err.message || 'Google authentication encountered an error');
+        setIsGoogleProcessing(false);
+      }
+    },
+    [loginWithGoogle]
+  );
+
+  // Initialize and render Google Identity Services buttons
+  const renderGsiButtons = useCallback(() => {
+    if (typeof window === 'undefined' || !window.google?.accounts?.id || !googleClientId) return;
+
+    try {
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleCredentialResponse,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      setGsiLoaded(true);
+
+      if (googleBtnSignupRef.current) {
+        googleBtnSignupRef.current.innerHTML = '';
+        window.google.accounts.id.renderButton(googleBtnSignupRef.current, {
+          theme: theme === 'dark' ? 'filled_black' : 'outline',
+          size: 'large',
+          type: 'standard',
+          text: 'signup_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width: 320,
+        });
+      }
+
+      if (googleBtnLoginRef.current) {
+        googleBtnLoginRef.current.innerHTML = '';
+        window.google.accounts.id.renderButton(googleBtnLoginRef.current, {
+          theme: theme === 'dark' ? 'filled_black' : 'outline',
+          size: 'large',
+          type: 'standard',
+          text: 'signin_with',
+          shape: 'rectangular',
+          logo_alignment: 'left',
+          width: 320,
+        });
+      }
+    } catch (err) {
+      console.warn('Google Identity Services render warning:', err);
+    }
+  }, [googleClientId, theme, handleCredentialResponse]);
+
+  useEffect(() => {
+    if (window.google?.accounts?.id) {
+      renderGsiButtons();
+    } else {
+      const timer = setInterval(() => {
+        if (window.google?.accounts?.id) {
+          clearInterval(timer);
+          renderGsiButtons();
+        }
+      }, 250);
+      return () => clearInterval(timer);
+    }
+  }, [renderGsiButtons, authMode]);
+
+  const handleTriggerGoogleAuth = () => {
+    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+      try {
+        const container =
+          authMode === 'signup' ? googleBtnSignupRef.current : googleBtnLoginRef.current;
+        const gsiBtn = container?.querySelector('div[role="button"]') as HTMLElement;
+        if (gsiBtn) {
+          gsiBtn.click();
+          return;
+        }
+
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            handleOpenGoogleModal();
+          }
+        });
+      } catch {
+        handleOpenGoogleModal();
+      }
+    } else {
+      handleOpenGoogleModal();
+    }
+  };
 
   const handleOpenGoogleModal = () => {
     setGoogleError(null);
@@ -106,6 +265,92 @@ export const LandingPage: React.FC = () => {
     } catch {
       setIsGoogleProcessing(false);
       setGoogleError('Failed to complete Google Sign-In. Please try again.');
+    }
+  };
+
+  // Forgot password handlers
+  const handleRequestResetCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotSuccess(null);
+
+    if (!forgotIdentifier.trim()) {
+      setForgotError('Please enter your email or username.');
+      return;
+    }
+
+    setIsForgotSubmitting(true);
+    try {
+      const res = await forgotPassword(forgotIdentifier.trim());
+      setIsForgotSubmitting(false);
+
+      if (!res.success) {
+        setForgotError(res.error || 'Failed to request password reset code');
+        return;
+      }
+
+      const realEmail = res.email || forgotIdentifier.trim();
+      const maskedDisplay = res.maskedEmail || realEmail;
+      setForgotTargetEmail(realEmail);
+      setForgotTargetMaskedEmail(maskedDisplay);
+      setForgotCode('');
+      setForgotStep('reset');
+      setForgotSuccess(res.message || 'A 6-digit recovery code has been sent to your email.');
+    } catch (err: any) {
+      setIsForgotSubmitting(false);
+      setForgotError(err.message || 'Error processing request');
+    }
+  };
+
+  const handlePerformResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotSuccess(null);
+
+    if (!forgotCode.trim() || forgotCode.trim().length !== 6) {
+      setForgotError('Please enter the 6-digit recovery code received in your email.');
+      return;
+    }
+
+    if (!forgotNewPassword || forgotNewPassword.length < 6) {
+      setForgotError('New password must be at least 6 characters.');
+      return;
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setForgotError('Passwords do not match.');
+      return;
+    }
+
+    setIsForgotSubmitting(true);
+    try {
+      const res = await resetPassword({
+        email: forgotTargetEmail || forgotIdentifier.trim(),
+        identifier: forgotIdentifier.trim(),
+        code: forgotCode.trim(),
+        newPassword: forgotNewPassword,
+      });
+      setIsForgotSubmitting(false);
+
+      if (!res.success) {
+        setForgotError(res.error || 'Failed to reset password');
+        return;
+      }
+
+      // Transition back to login with prefilled email and success notice
+      setAuthMode('login');
+      setLoginIdentifier(forgotTargetEmail || forgotIdentifier.trim());
+      setLoginPassword('');
+      setFormSuccess('Password updated successfully! Please sign in with your new password.');
+      setFormError(null);
+      // Reset forgot state
+      setForgotStep('request');
+      setForgotCode('');
+      setForgotNewPassword('');
+      setForgotConfirmPassword('');
+    } catch (err: any) {
+      setIsForgotSubmitting(false);
+      setForgotError(err.message || 'Error resetting password');
     }
   };
 
@@ -309,38 +554,59 @@ export const LandingPage: React.FC = () => {
         {/* Right Side: Auth Form Card */}
         <div className="w-full max-w-md bg-[#FFFFFF] dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl shadow-xl p-6 sm:p-8 transition-colors">
           {/* Mode Switcher Tabs */}
-          <div className="flex p-1 bg-[#F5F4F0] dark:bg-[#1B202C] rounded-xl mb-5">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('login');
-                setFormError(null);
-                setFormSuccess(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'login'
-                  ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
-                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('signup');
-                setFormError(null);
-                setFormSuccess(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'signup'
-                  ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
-                  : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
+          {authMode === 'forgot_password' ? (
+            <div className="flex items-center justify-between p-1 bg-[#F5F4F0] dark:bg-[#1B202C] rounded-xl mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('login');
+                  setForgotError(null);
+                  setForgotSuccess(null);
+                  setFormError(null);
+                }}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Back to Sign In
+              </button>
+              <span className="px-3 py-1 text-[11px] font-bold text-[#1A1A1A] dark:text-[#F3F4F6] bg-[#FFFFFF] dark:bg-[#252C3D] rounded-lg shadow-sm">
+                Password Recovery
+              </span>
+            </div>
+          ) : (
+            <div className="flex p-1 bg-[#F5F4F0] dark:bg-[#1B202C] rounded-xl mb-5">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('login');
+                  setFormError(null);
+                  setFormSuccess(null);
+                }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  authMode === 'login'
+                    ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('signup');
+                  setFormError(null);
+                  setFormSuccess(null);
+                }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
+                  authMode === 'signup'
+                    ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
+                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
 
           {/* Session Expired Notice */}
           {sessionExpiredMessage && (
@@ -367,15 +633,25 @@ export const LandingPage: React.FC = () => {
             <div className="flex items-center space-x-2 mb-2">
               <LedgerLogo size={24} />
               <span className="text-[10px] uppercase font-mono tracking-widest text-[#6B7280] dark:text-[#9CA3AF] font-bold">
-                {authMode === 'signup' ? 'New Registration' : 'Account Access'}
+                {authMode === 'signup'
+                  ? 'New Registration'
+                  : authMode === 'forgot_password'
+                  ? 'Account Recovery'
+                  : 'Account Access'}
               </span>
             </div>
             <h2 className="text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
-              {authMode === 'signup' ? 'Create your user account' : 'Welcome back to Ledger'}
+              {authMode === 'signup'
+                ? 'Create your user account'
+                : authMode === 'forgot_password'
+                ? 'Reset your password'
+                : 'Welcome back to Ledger'}
             </h2>
             <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1">
               {authMode === 'signup'
                 ? 'Sign up to manage multiple profiles, budgets, and automated financial records.'
+                : authMode === 'forgot_password'
+                ? 'Enter your account email or username to verify your identity and set a new password.'
                 : 'Enter your credentials to access your financial profiles and transactions.'}
             </p>
           </div>
@@ -558,32 +834,208 @@ export const LandingPage: React.FC = () => {
               </div>
 
               {/* Google Sign-in button */}
-              <button
-                type="button"
-                onClick={handleOpenGoogleModal}
-                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Sign up with Google (Select Username)</span>
-              </button>
+              <div className="w-full flex flex-col items-center gap-2">
+                <div
+                  ref={googleBtnSignupRef}
+                  className="w-full flex justify-center min-h-[44px]"
+                />
+                {!gsiLoaded && (
+                  <button
+                    type="button"
+                    onClick={handleTriggerGoogleAuth}
+                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                    <span>Sign up with Google</span>
+                  </button>
+                )}
+              </div>
             </form>
+          ) : authMode === 'forgot_password' ? (
+            /* FORGOT PASSWORD FORM */
+            <div className="space-y-4">
+              {/* Forgot error banner */}
+              {forgotError && (
+                <div className="p-3 rounded-xl bg-[#FEF2F2] dark:bg-[#450A0A]/40 border border-[#FCA5A5] dark:border-[#7F1D1D] text-[#B91C1C] dark:text-[#FCA5A5] text-xs flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div className="flex-1 font-medium">{forgotError}</div>
+                </div>
+              )}
+
+              {/* Forgot success banner */}
+              {forgotSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-start space-x-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                  <div className="flex-1 font-medium">{forgotSuccess}</div>
+                </div>
+              )}
+
+              {forgotStep === 'request' ? (
+                /* Step 1: Request Code */
+                <form onSubmit={handleRequestResetCode} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
+                      Registered Email or Username <span className="text-[#DC2626]">*</span>
+                    </label>
+                    <div className="relative">
+                      <Mail className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        required
+                        value={forgotIdentifier}
+                        onChange={(e) => setForgotIdentifier(e.target.value)}
+                        placeholder="Enter your email or username"
+                        className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      />
+                    </div>
+                    <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mt-1.5">
+                      We will generate a 6-digit recovery code for your account so you can securely set a new password.
+                    </p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isForgotSubmitting || !forgotIdentifier.trim()}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 shadow-md transition-all cursor-pointer"
+                  >
+                    {isForgotSubmitting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        Generating Code...
+                      </>
+                    ) : (
+                      <>
+                        Get Reset Code
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                /* Step 2: Enter Code & New Password */
+                <form onSubmit={handlePerformResetPassword} className="space-y-4">
+                  {/* Email dispatch notice */}
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
+                    <MailCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-semibold block text-[11px] text-emerald-800 dark:text-emerald-200">
+                        Check your email inbox
+                      </span>
+                      <span className="text-[11px] text-emerald-700/90 dark:text-emerald-300/80 block mt-0.5">
+                        We sent a 6-digit verification code to <strong>{forgotTargetMaskedEmail || forgotTargetEmail}</strong>. Check your inbox and spam folder, then enter the code below.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
+                      6-Digit Recovery Code <span className="text-[#DC2626]">*</span>
+                    </label>
+                    <div className="relative">
+                      <KeyRound className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        value={forgotCode}
+                        onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, ''))}
+                        placeholder="123456"
+                        className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs font-mono tracking-widest font-bold rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
+                      New Password <span className="text-[#DC2626]">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showForgotNewPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        value={forgotNewPassword}
+                        onChange={(e) => setForgotNewPassword(e.target.value)}
+                        placeholder="At least 6 characters"
+                        className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] p-1"
+                      >
+                        {showForgotNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
+                      Confirm New Password <span className="text-[#DC2626]">*</span>
+                    </label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showForgotConfirmPassword ? 'text' : 'password'}
+                        required
+                        minLength={6}
+                        value={forgotConfirmPassword}
+                        onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                        placeholder="Re-enter new password"
+                        className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotConfirmPassword(!showForgotConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] p-1"
+                      >
+                        {showForgotConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotStep('request');
+                        setForgotError(null);
+                        setForgotSuccess(null);
+                      }}
+                      className="text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:underline cursor-pointer"
+                    >
+                      Request different code
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isForgotSubmitting || forgotCode.length !== 6 || forgotNewPassword.length < 6}
+                      className="px-5 py-2.5 text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      {isForgotSubmitting ? 'Updating...' : 'Set Password'}
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           ) : (
             /* LOGIN FORM */
             <form onSubmit={handleLogin} className="space-y-4">
@@ -605,9 +1057,25 @@ export const LandingPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                  Password <span className="text-[#DC2626]">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF]">
+                    Password <span className="text-[#DC2626]">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotIdentifier(loginIdentifier);
+                      setAuthMode('forgot_password');
+                      setFormError(null);
+                      setFormSuccess(null);
+                      setForgotError(null);
+                      setForgotSuccess(null);
+                    }}
+                    className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -650,31 +1118,39 @@ export const LandingPage: React.FC = () => {
               </div>
 
               {/* Google Sign-in button */}
-              <button
-                type="button"
-                onClick={handleOpenGoogleModal}
-                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </button>
+              <div className="w-full flex flex-col items-center gap-2">
+                <div
+                  ref={googleBtnLoginRef}
+                  className="w-full flex justify-center min-h-[44px]"
+                />
+                {!gsiLoaded && (
+                  <button
+                    type="button"
+                    onClick={handleTriggerGoogleAuth}
+                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                    <span>Continue with Google</span>
+                  </button>
+                )}
+              </div>
 
               <div className="pt-3 border-t border-[#E8E5DF] dark:border-[#2D323F] flex flex-col items-center gap-2">
                 <button
@@ -731,6 +1207,11 @@ export const LandingPage: React.FC = () => {
         onClose={() => setShowPrivacyModal(false)}
         onAccept={() => setAgreedToTerms(true)}
         isAccepted={agreedToTerms}
+      />
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        initialIdentifier={loginIdentifier}
       />
 
       {/* Google Sign-in & Custom Username Modal */}

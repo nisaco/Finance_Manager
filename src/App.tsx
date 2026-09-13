@@ -30,6 +30,7 @@ import { AdminGodModeModal } from './components/Modals/AdminGodModeModal';
 import { TermsModal } from './components/TermsModal';
 import { PrivacyModal } from './components/PrivacyModal';
 import { SplashLoader } from './components/SplashLoader';
+import { SecuringWorkspaceLoader } from './components/SecuringWorkspaceLoader';
 import { OverviewSkeleton, TableSkeleton, CardsGridSkeleton } from './components/SkeletonLoader';
 
 import { Transaction, Goal, Budget, Debt } from './types';
@@ -442,16 +443,7 @@ const AppRouter: React.FC = () => {
   }
 
   if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0B0D11] flex flex-col items-center justify-center p-4">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-b from-[#252830] to-[#121418] text-white dark:from-[#FFFFFF] dark:to-[#E5E7EB] dark:text-[#111317] flex items-center justify-center font-bold text-lg mb-4 shadow-xl border border-white/10 dark:border-white/40 animate-pulse">
-          L
-        </div>
-        <div className="text-[11px] font-mono tracking-[0.2em] text-[#6B7280] dark:text-[#9CA3AF] uppercase">
-          Securing Workspace...
-        </div>
-      </div>
-    );
+    return <SecuringWorkspaceLoader />;
   }
 
   if (!isAuthenticated) {
