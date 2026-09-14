@@ -45,7 +45,6 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
     overallPercentage >= 100 ? 'neg' : overallPercentage >= 80 ? 'warn' : 'ink';
 
   return (
-    <div className="space-y-5">
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* ---- Page header ---- */}
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -135,7 +134,6 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
             const remaining = b.limit - spent;
 
             return (
-              <article key={b.id} className="lg-card p-4 sm:p-5 flex flex-col">
               <article key={b.id} className="lg-card lg-card-interactive p-4 sm:p-5 flex flex-col">
                 {/* Name and controls */}
                 <div className="flex items-start justify-between gap-2">

@@ -71,7 +71,6 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
   ];
 
   return (
-    <div className="space-y-5">
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* ---- Page header ---- */}
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -175,7 +174,6 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
             const pct = Math.min(100, Math.round((paid / d.amount) * 100));
 
             return (
-              <article key={d.id} className="lg-card p-4 sm:p-5 flex flex-col">
               <article key={d.id} className="lg-card lg-card-interactive p-4 sm:p-5 flex flex-col">
                 {/* Person and controls */}
                 <div className="flex items-start justify-between gap-2">

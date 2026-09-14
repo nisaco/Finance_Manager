@@ -104,7 +104,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     setIsResettingBalance(true);
     try {
       await api.resetProfileBalance(activeProfile.id);
-      notify('Active net balance reset to 0.00. Previous transactions safely archived to Monthly History.');
+      notify('Active net balance reset to 0.00. Previous records preserved in Monthly History.');
       setShowResetConfirmModal(false);
       await refreshData();
     } catch (err: any) {
@@ -140,7 +140,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         NGN: parseFloat(ngnRate),
         GHS: 1.0,
       });
-      notify('Exchange rates updated successfully');
+      notify('Exchange rates updated');
       await refreshData();
     } catch (err: any) {
       notify(err.message || 'Failed to update rates', 'error');
@@ -154,7 +154,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     if (!newProfileName.trim()) return;
 
     if (newProfileLock && (!newProfilePin || newProfilePin.trim().length < 4)) {
-      notify('Security PIN must be at least 4 digits to lock this profile', 'error');
+      notify('PIN must be at least 4 digits to lock this profile', 'error');
       return;
     }
 
@@ -168,7 +168,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         isLocked: newProfileLock,
         pin: newProfileLock ? newProfilePin.trim() : undefined,
       });
-      notify(newProfileLock ? `Protected profile "${p.name}" created with PIN` : `Profile "${p.name}" created`);
+      notify(newProfileLock ? `Protected profile "${p.name}" created` : `Profile "${p.name}" created`);
       setNewProfileName('');
       setNewProfileLock(false);
       setNewProfilePin('');
@@ -192,7 +192,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       downloadAnchor.click();
       downloadAnchor.remove();
       notify('Ledger backup downloaded');
-    } catch (err: any) {
+    } catch {
       notify('Failed to generate backup', 'error');
     }
   };
@@ -216,234 +216,155 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-8 max-w-6xl mx-auto">
+    <div className="space-y-6 pb-8 max-w-5xl mx-auto animate-in fade-in duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="flex items-center space-x-2">
-            <Settings className="w-5 h-5 text-accent" strokeWidth={1.8} />
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-ink">
-              Settings &amp; Preferences
-            </h1>
-          </div>
-          <p className="text-xs text-ink-3 mt-0.5">
-            Profiles, theme appearance, exchange rates, and data backup
+          <h1 className="t-title text-ink font-bold">Settings</h1>
+          <p className="t-meta text-ink-3 mt-0.5">
+            Profiles, appearance, financial cycle rollover, and backups
           </p>
         </div>
 
         <button
           type="button"
           onClick={onOpenAuditLogs}
-          className="lg-btn lg-btn-quiet lg-btn-sm self-start sm:self-auto"
+          className="lg-btn lg-btn-quiet text-xs self-start sm:self-auto"
         >
-          <History className="w-4 h-4 text-ink-3" strokeWidth={1.8} />
-          <span>System Audit Trail</span>
+          <History className="w-3.5 h-3.5 text-ink-3" strokeWidth={1.8} />
+          <span>Audit Log</span>
         </button>
       </div>
 
-      {/* User Account & Paystack Referencing Card */}
+      {/* User Account Card */}
       {user && (
-        <div className="lg-card p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-line pb-4 gap-3">
+        <div className="lg-card p-4 sm:p-5 space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3.5">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
-                <UserCheck className="w-5 h-5 text-accent" strokeWidth={1.8} />
+              <div className="w-9 h-9 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
+                <UserCheck className="w-4 h-4 text-accent" strokeWidth={1.8} />
               </div>
               <div>
-                <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-                  User Account &amp; Paystack Profile
-                </h2>
-                <p className="text-xs text-ink-3">
-                  Primary account holder credentials and receipt routing
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => logout()}
-              className="lg-btn lg-btn-danger lg-btn-sm self-start sm:self-auto"
-            >
-              <LogOut className="w-3.5 h-3.5" strokeWidth={1.8} />
-              <span>Sign Out</span>
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="p-3.5 bg-sunken rounded-xl border border-line">
-              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-3 block font-semibold">
-                Username
-              </span>
-              <span className="text-sm font-bold text-ink mt-0.5 block truncate">
-                @{user.username}
-              </span>
-            </div>
-
-            <div className="p-3.5 bg-sunken rounded-xl border border-line">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-3 block font-semibold">
-                  Email (Receipts)
-                </span>
-                <span className="lg-tag lg-tag-pos text-[9px] py-0.5 px-1.5">
-                  Linked
-                </span>
-              </div>
-              <span className="text-sm font-bold text-ink mt-0.5 block truncate flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-ink-3 shrink-0" strokeWidth={1.8} />
-                <span className="truncate">{user.email}</span>
-              </span>
-            </div>
-
-            <div className="p-3.5 bg-sunken rounded-xl border border-line">
-              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-3 block font-semibold">
-                Terms &amp; Privacy Agreement
-              </span>
-              <div className="flex items-center space-x-2 mt-1.5">
-                <button
-                  type="button"
-                  onClick={() => setShowTermsModal(true)}
-                  className="text-xs text-accent hover:underline font-semibold"
-                >
-                  Terms
-                </button>
-                <span className="text-ink-4">•</span>
-                <button
-                  type="button"
-                  onClick={() => setShowPrivacyModal(true)}
-                  className="text-xs text-accent hover:underline font-semibold"
-                >
-                  Privacy
-                </button>
-                <CheckCircle2 className="w-3.5 h-3.5 text-pos" strokeWidth={1.8} />
-              </div>
-            </div>
-          </div>
-
-          {/* Account Role & Database Schema Access */}
-          <div className="pt-3 border-t border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start sm:items-center space-x-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-sunken text-accent border border-line">
-                <Crown className="w-4 h-4 text-accent" strokeWidth={1.8} />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2 flex-wrap">
-                  <span className="text-xs font-bold text-ink">
-                    Account Role:
-                  </span>
-                  <span className={`lg-tag ${user.role === 'admin' ? 'lg-tag-accent' : ''} text-[10px]`}>
-                    {user.role === 'admin' ? 'Super Admin (Platform Owner)' : 'Standard User'}
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-bold text-ink font-display">
+                    @{user.username}
+                  </h2>
+                  <span className={`lg-tag text-[9px] ${user.role === 'admin' ? 'lg-tag-accent' : ''}`}>
+                    {user.role === 'admin' ? 'Super Admin' : 'Member'}
                   </span>
                 </div>
-                <p className="text-[11px] text-ink-3 mt-0.5">
-                  {isOwner
-                    ? 'Authorized platform administrator (jnkpappoe@gmail.com). Exclusive authority over platform payouts, user oversight, and protocol fees.'
-                    : 'Standard user account. Payout authorizations and system governance are managed by the platform administrator.'}
+                <p className="text-xs text-ink-3 flex items-center gap-1 mt-0.5">
+                  <Mail className="w-3 h-3" strokeWidth={1.8} />
+                  <span>{user.email}</span>
+                  <span className="text-line-strong">•</span>
+                  <span className="text-pos font-semibold">Receipts Linked</span>
                 </p>
               </div>
             </div>
 
-            {/* Seamless Role Toggle for verified platform owner */}
-            {isOwner && (
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const targetRole = user.role === 'admin' ? 'user' : 'admin';
+                    setIsSwitchingRole(true);
+                    const res = await setUserRole(targetRole);
+                    setIsSwitchingRole(false);
+                    if (res.success) {
+                      notify(targetRole === 'admin' ? 'Switched to Admin View' : 'Switched to User View');
+                    } else {
+                      notify(res.error || 'Failed to update role', 'error');
+                    }
+                  }}
+                  disabled={isSwitchingRole}
+                  className="lg-btn lg-btn-quiet text-xs"
+                >
+                  <Crown className="w-3.5 h-3.5 text-accent" strokeWidth={1.8} />
+                  <span>{isSwitchingRole ? 'Updating...' : user.role === 'admin' ? 'User View' : 'Admin View'}</span>
+                </button>
+              )}
+
               <button
                 type="button"
-                onClick={async () => {
-                  const targetRole = user.role === 'admin' ? 'user' : 'admin';
-                  setIsSwitchingRole(true);
-                  const res = await setUserRole(targetRole);
-                  setIsSwitchingRole(false);
-                  if (res.success) {
-                    notify(targetRole === 'admin' ? 'Switched to Admin mode' : 'Switched to standard user mode');
-                  } else {
-                    notify(res.error || 'Failed to update role', 'error');
-                  }
-                }}
-                disabled={isSwitchingRole}
-                className="lg-btn lg-btn-solid lg-btn-sm shrink-0 self-start sm:self-auto"
+                onClick={() => logout()}
+                className="lg-btn lg-btn-danger text-xs"
               >
-                <Crown className="w-3.5 h-3.5" strokeWidth={1.8} />
-                <span>
-                  {isSwitchingRole
-                    ? 'Updating...'
-                    : user.role === 'admin'
-                    ? 'Switch to User View'
-                    : 'Switch to Admin View'}
-                </span>
+                <LogOut className="w-3.5 h-3.5" strokeWidth={1.8} />
+                <span>Sign Out</span>
               </button>
-            )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-3 pt-0.5">
+            <div className="flex items-center gap-3">
+              <span>Legal Agreements:</span>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(true)}
+                className="text-accent underline font-semibold hover:text-ink"
+              >
+                Terms
+              </button>
+              <span>•</span>
+              <button
+                type="button"
+                onClick={() => setShowPrivacyModal(true)}
+                className="text-accent underline font-semibold hover:text-ink"
+              >
+                Privacy Policy
+              </button>
+              <CheckCircle2 className="w-3.5 h-3.5 text-pos" strokeWidth={1.8} />
+            </div>
           </div>
         </div>
       )}
 
-      {/* Admin Operations Section (Strictly visible only to verified owner) */}
+      {/* Admin Operations Banner (Strictly for owner with admin role) */}
       {isOwner && user?.role === 'admin' && onOpenAdminModal && (
-        <div className="lg-card p-5 space-y-4 border-accent/40 bg-accent/5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-accent/20 pb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center shrink-0">
-                <Crown className="w-5 h-5" strokeWidth={1.8} />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-                    Admin Portal Console
-                  </h2>
-                  <span className="lg-tag lg-tag-accent text-[9px]">
-                    Owner Exclusive
-                  </span>
-                </div>
-                <p className="text-xs text-ink-3">
-                  Administrative authority for Savings Vault payouts, protocol fees (2% standard &amp; 10% early penalty), user accounts, and AI quota limits.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={onOpenAdminModal}
-              className="lg-btn lg-btn-accent lg-btn-sm shrink-0 self-start sm:self-auto"
-            >
+        <div className="lg-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-accent/40 bg-accent-soft">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-xl bg-accent text-white flex items-center justify-center shrink-0">
               <Crown className="w-4 h-4" strokeWidth={1.8} />
-              <span>Launch Admin Portal</span>
-            </button>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-ink">Admin Console</h3>
+                <span className="lg-tag lg-tag-accent text-[9px]">Owner</span>
+              </div>
+              <p className="text-xs text-ink-3">
+                Vault payouts, 2% standard fees &amp; user management.
+              </p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-ink">
-            <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
-              <ShieldCheck className="w-4 h-4 text-accent shrink-0" strokeWidth={1.8} />
-              <span className="font-medium">Approve / Reject Vault Withdrawals</span>
-            </div>
-            <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
-              <Coins className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
-              <span className="font-medium">Track 2% Standard &amp; 10% Early Fees</span>
-            </div>
-            <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
-              <Users className="w-4 h-4 text-ink shrink-0" strokeWidth={1.8} />
-              <span className="font-medium">Full System &amp; Quota Oversight</span>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={onOpenAdminModal}
+            className="lg-btn lg-btn-solid text-xs shrink-0 self-start sm:self-auto"
+          >
+            <Crown className="w-3.5 h-3.5" strokeWidth={1.8} />
+            <span>Launch Admin Portal</span>
+          </button>
         </div>
       )}
 
-      {/* Interface Appearance & Layout Options */}
-      <div className="lg-card p-5 space-y-5">
+      {/* Interface Theme & Layout */}
+      <div className="lg-card p-4 sm:p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-line pb-3">
           <div className="flex items-center space-x-2">
             <Palette className="w-4 h-4 text-accent" strokeWidth={1.8} />
-            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-              Interface Appearance &amp; Display
-            </h2>
+            <h2 className="text-sm font-bold text-ink">Interface Appearance</h2>
           </div>
           <span className="text-xs font-mono-num text-ink-3">
-            Theme: <strong className="text-ink uppercase">{theme}</strong>
+            Current: <strong className="text-ink uppercase">{theme}</strong>
           </span>
         </div>
 
-        {/* Color Palette & Density Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Theme Mode */}
           <div>
-            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2">
-              Color Theme
+            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5 font-mono-num">
+              Theme Mode
             </label>
             <div className="lg-seg">
               <button
@@ -473,9 +394,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
           </div>
 
-          {/* Spacing & Density */}
           <div>
-            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-1.5 font-mono-num">
               Layout Density
             </label>
             <div className="lg-seg">
@@ -485,7 +405,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${uiDensity === 'standard' ? 'active' : ''}`}
               >
                 <Sliders className="w-3.5 h-3.5" strokeWidth={1.8} />
-                <span>Comfortable</span>
+                <span>Standard</span>
               </button>
               <button
                 type="button"
@@ -500,380 +420,275 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
       </div>
 
-      {/* Financial Cycle & Net Balance Reset Section */}
-      <div className="lg-card p-5 space-y-5">
+      {/* Financial Cycles & Balance Reset */}
+      <div className="lg-card p-4 sm:p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-line pb-3">
           <div className="flex items-center space-x-2">
             <RotateCcw className="w-4 h-4 text-accent" strokeWidth={1.8} />
-            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-              Financial Cycles &amp; Balance Reset
+            <h2 className="text-sm font-bold text-ink">
+              Financial Cycles &amp; Net Balance Reset
             </h2>
           </div>
           <span className="text-xs font-mono-num text-ink-3">
-            Active Cycle: <strong className="text-ink">{summary?.cycleMonth || 'Current Month'}</strong>
+            Cycle: <strong className="text-ink">{summary?.cycleMonth || 'Current Month'}</strong>
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Active Balance Status Card */}
-          <div className="p-4 rounded-xl border border-line bg-sunken space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-ink-3 uppercase tracking-wider">
+          <div className="p-3.5 rounded-xl border border-line bg-sunken space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-ink-3 font-semibold uppercase tracking-wider font-mono-num">
                 Active Net Balance
               </span>
-              <span className="lg-tag lg-tag-pos text-[10px]">
-                {activeProfile?.autoMonthlyReset !== false ? 'Monthly Cycle' : 'All-Time'}
+              <span className="lg-tag lg-tag-pos text-[9px]">
+                {activeProfile?.autoMonthlyReset !== false ? 'Monthly' : 'All-Time'}
               </span>
             </div>
 
-            <div className="text-2xl font-bold font-mono-num num text-ink">
+            <div className="text-xl font-bold font-mono-num num text-ink">
               {formatCurrency(summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
             </div>
 
             <div className="pt-2 border-t border-line flex items-center justify-between text-xs text-ink-3">
-              <span>Cumulative All-Time Balance:</span>
+              <span>All-Time Cumulative:</span>
               <span className="font-mono-num num font-bold text-ink">
                 {formatCurrency(summary?.allTimeNetBalance ?? summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
               </span>
             </div>
-
-            {activeProfile?.balanceResetAt && (
-              <div className="text-[11px] text-ink-3">
-                Cycle manually restarted: <span className="num font-semibold">{new Date(activeProfile.balanceResetAt).toLocaleDateString()}</span>
-              </div>
-            )}
           </div>
 
-          {/* Reset Action & Controls */}
-          <div className="p-4 rounded-xl border border-line bg-sunken flex flex-col justify-between space-y-4">
-            <div className="space-y-1.5">
-              <div className="text-xs font-bold text-ink">
-                Start a Fresh Cycle / Reset Balance
-              </div>
-              <p className="text-[11px] text-ink-3 leading-relaxed">
-                Reset your active dashboard balance to 0.00 to start tracking a fresh period. All previous transactions are permanently preserved in your <strong>Monthly History</strong> archive.
+          <div className="p-3.5 rounded-xl border border-line bg-sunken flex flex-col justify-between space-y-3">
+            <div className="space-y-1 text-xs">
+              <div className="font-bold text-ink">Start a Fresh Cycle</div>
+              <p className="text-[11px] text-ink-3">
+                Resets active dashboard balance to 0.00. Completed transactions remain permanently archived in <strong>Monthly History</strong>. Vaults &amp; debts never reset.
               </p>
-              <div className="text-[11px] text-pos font-medium flex items-center space-x-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
-                <span>Savings Vaults and debts are essential and never reset.</span>
-              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 pt-2">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               <button
                 type="button"
                 onClick={() => setShowResetConfirmModal(true)}
                 disabled={isResettingBalance}
-                className="lg-btn lg-btn-solid lg-btn-sm"
+                className="lg-btn lg-btn-solid text-xs"
               >
-                <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
-                <span>{isResettingBalance ? 'Resetting...' : 'Reset Net Balance to 0.00'}</span>
+                <RotateCcw className="w-3 h-3" strokeWidth={1.8} />
+                <span>{isResettingBalance ? 'Resetting...' : 'Reset Net Balance'}</span>
               </button>
 
               {onNavigateToHistory && (
                 <button
                   type="button"
                   onClick={onNavigateToHistory}
-                  className="lg-btn lg-btn-quiet lg-btn-sm"
+                  className="lg-btn lg-btn-quiet text-xs"
                 >
-                  <History className="w-3.5 h-3.5" strokeWidth={1.8} />
-                  <span>Open Monthly History</span>
+                  <History className="w-3 h-3" strokeWidth={1.8} />
+                  <span>View History</span>
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Monthly Rollover Switch */}
-        <div className="p-4 rounded-xl border border-line bg-sunken flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="space-y-0.5">
-            <div className="font-bold text-ink">
-              Automatic Monthly Rollover
-            </div>
+        {/* Rollover Toggle */}
+        <div className="p-3 rounded-xl border border-line bg-sunken flex items-center justify-between gap-3 text-xs">
+          <div>
+            <div className="font-bold text-ink">Automatic Monthly Rollover</div>
             <p className="text-[11px] text-ink-3">
-              Every 1st of the month, active balance resets to 0.00 for the new month, keeping completed months organized in Monthly History.
+              Automatically starts a fresh 0.00 cycle on the 1st of every month.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleToggleAutoMonthlyReset}
-            className={`lg-btn lg-btn-sm shrink-0 ${
-              activeProfile?.autoMonthlyReset !== false
-                ? 'lg-btn-solid'
-                : 'lg-btn-quiet'
+            className={`lg-btn text-xs shrink-0 ${
+              activeProfile?.autoMonthlyReset !== false ? 'lg-btn-solid' : 'lg-btn-quiet'
             }`}
           >
-            {activeProfile?.autoMonthlyReset !== false ? 'Enabled (Monthly Cycle)' : 'Disabled (All-Time)'}
+            {activeProfile?.autoMonthlyReset !== false ? 'Enabled' : 'Disabled'}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. Multi-Profile Management */}
-        <div className="lg-card p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-line pb-3">
-            <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-accent" strokeWidth={1.8} />
-              <div>
-                <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-                  Profiles &amp; Entity Vaults
-                </h2>
-                <p className="text-xs text-ink-3">
-                  Isolate finances across entities and protect them with security PIN locks.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={openCreateProfileModal}
-              className="lg-btn lg-btn-solid lg-btn-sm shrink-0"
-            >
-              <UserPlus className="w-3.5 h-3.5" strokeWidth={1.8} />
-              <span>+ Add Profile</span>
-            </button>
+      {/* Multi-Profile Management */}
+      <div className="lg-card p-4 sm:p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="flex items-center space-x-2">
+            <Users className="w-4 h-4 text-accent" strokeWidth={1.8} />
+            <h2 className="text-sm font-bold text-ink">Profiles &amp; Entity Vaults</h2>
           </div>
+          <button
+            type="button"
+            onClick={openCreateProfileModal}
+            className="lg-btn lg-btn-solid text-xs"
+          >
+            <UserPlus className="w-3.5 h-3.5" strokeWidth={1.8} />
+            <span>+ Add Profile</span>
+          </button>
+        </div>
 
-          {/* Current Profiles List */}
-          <div className="space-y-2.5">
-            {profiles.map((p) => {
-              const isActive = p.id === activeProfile?.id;
-              const isLockedForUser = isProfileLockedForUser(p);
+        <div className="space-y-2">
+          {profiles.map((p) => {
+            const isActive = p.id === activeProfile?.id;
+            const isLockedForUser = isProfileLockedForUser(p);
 
-              return (
-                <div
-                  key={p.id}
-                  className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
-                    isActive
-                      ? 'bg-sunken border-line-strong shadow-xs'
-                      : 'bg-surface border-line hover:border-line-strong'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <span
-                      className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: p.color || 'var(--lg-ink)' }}
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                        <span className="font-bold text-ink truncate text-sm">{p.name}</span>
-                        <span className="lg-tag text-[10px] uppercase font-mono-num font-semibold">
-                          {p.type || 'personal'}
+            return (
+              <div
+                key={p.id}
+                className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs ${
+                  isActive
+                    ? 'bg-sunken border-line-strong shadow-xs'
+                    : 'bg-surface border-line hover:border-line-strong'
+                }`}
+              >
+                <div className="flex items-center space-x-2.5 min-w-0">
+                  <span
+                    className="w-3 h-3 rounded-full shrink-0 shadow-xs"
+                    style={{ backgroundColor: p.color || 'var(--lg-ink)' }}
+                  />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-ink truncate">{p.name}</span>
+                      <span className="lg-tag text-[9px] uppercase font-mono-num">{p.type || 'personal'}</span>
+                      <span className="lg-tag text-[9px] font-mono-num font-bold">{p.displayCurrency}</span>
+                      {p.isLocked && (
+                        <span className={`inline-flex items-center gap-1 text-[9px] px-1.5 py-0.2 rounded font-semibold ${
+                          isLockedForUser ? 'text-warn bg-warn-soft' : 'text-pos bg-pos-soft'
+                        }`}>
+                          {isLockedForUser ? <Lock className="w-2.5 h-2.5" /> : <Unlock className="w-2.5 h-2.5" />}
+                          {isLockedForUser ? 'Locked' : 'Unlocked'}
                         </span>
-                        <span className="lg-tag text-[10px] font-mono-num font-bold">
-                          {p.displayCurrency}
-                        </span>
-                      </div>
-
-                      {/* Lock Status indicator */}
-                      <div className="flex items-center space-x-1.5 mt-1">
-                        {p.isLocked ? (
-                          <span
-                            className={`inline-flex items-center space-x-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                              isLockedForUser
-                                ? 'bg-warn/15 text-warn border border-warn/30'
-                                : 'bg-pos/15 text-pos border border-pos/30'
-                            }`}
-                          >
-                            {isLockedForUser ? (
-                              <>
-                                <Lock className="w-2.5 h-2.5" strokeWidth={1.8} />
-                                <span>PIN Locked</span>
-                              </>
-                            ) : (
-                              <>
-                                <Unlock className="w-2.5 h-2.5" strokeWidth={1.8} />
-                                <span>Unlocked (Session)</span>
-                              </>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center space-x-1 text-[10px] text-ink-3">
-                            <span>Open Access (No PIN)</span>
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </div>
+                </div>
 
-                  {/* Profile Actions */}
-                  <div className="flex items-center space-x-1.5 self-end sm:self-center shrink-0">
-                    {p.isLocked && !isLockedForUser && (
-                      <button
-                        type="button"
-                        onClick={() => lockProfile(p.id)}
-                        className="lg-btn lg-btn-quiet lg-btn-sm text-warn hover:bg-warn/10"
-                        title="Re-lock this profile"
-                      >
-                        <Lock className="w-3 h-3" strokeWidth={1.8} />
-                        <span>Lock</span>
-                      </button>
-                    )}
-
-                    {isActive ? (
-                      <span className="lg-tag lg-tag-accent text-xs font-mono-num font-bold">
-                        Active Profile
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => selectProfile(p.id)}
-                        className="lg-btn lg-btn-quiet lg-btn-sm"
-                      >
-                        Switch To
-                      </button>
-                    )}
-
+                <div className="flex items-center space-x-1.5 self-end sm:self-center shrink-0">
+                  {p.isLocked && !isLockedForUser && (
                     <button
                       type="button"
-                      onClick={() => openEditProfileModal(p)}
-                      className="lg-iconbtn"
-                      title="Edit Profile & PIN Lock Settings"
-                      aria-label="Edit Profile"
+                      onClick={() => lockProfile(p.id)}
+                      className="lg-btn lg-btn-quiet text-xs text-warn"
+                      title="Lock this profile"
                     >
-                      <Edit3 className="w-4 h-4 text-ink-3" strokeWidth={1.8} />
+                      <Lock className="w-3 h-3" />
+                      <span>Lock</span>
                     </button>
-                  </div>
+                  )}
+
+                  {isActive ? (
+                    <span className="lg-tag lg-tag-accent text-[10px] font-bold">
+                      Active
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => selectProfile(p.id)}
+                      className="lg-btn lg-btn-quiet text-xs"
+                    >
+                      Switch
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => openEditProfileModal(p)}
+                    className="lg-iconbtn"
+                    title="Edit Profile"
+                    aria-label="Edit Profile"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-ink-3 hover:text-ink" strokeWidth={1.8} />
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick Add Profile */}
+        <form onSubmit={handleCreateProfile} className="pt-2 border-t border-line space-y-2.5">
+          <span className="text-xs font-bold text-ink block">Quick Add Profile</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input
+              type="text"
+              required
+              placeholder="Profile name"
+              value={newProfileName}
+              onChange={(e) => setNewProfileName(e.target.value)}
+              className="lg-input text-xs"
+            />
+            <select
+              value={newProfileType}
+              onChange={(e) => setNewProfileType(e.target.value as any)}
+              className="lg-select text-xs"
+            >
+              <option value="personal">Personal</option>
+              <option value="family">Family</option>
+              <option value="business">Business</option>
+            </select>
+            <select
+              value={newProfileCurrency}
+              onChange={(e) => setNewProfileCurrency(e.target.value)}
+              className="lg-select text-xs"
+            >
+              <option value="GHS">GHS (Ghana)</option>
+              <option value="USD">USD (Dollar)</option>
+              <option value="EUR">EUR (Euro)</option>
+              <option value="GBP">GBP (Pound)</option>
+              <option value="NGN">NGN (Naira)</option>
+            </select>
           </div>
 
-          {/* Quick Inline Creation Form */}
-          <form onSubmit={handleCreateProfile} className="pt-3 border-t border-line space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-ink block">
-                Quick Add Profile
-              </span>
-              <button
-                type="button"
-                onClick={openCreateProfileModal}
-                className="text-xs text-accent hover:underline font-medium"
-              >
-                Full Setup Modal
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+            <label className="flex items-center space-x-2 text-xs text-ink-3 cursor-pointer">
               <input
-                type="text"
-                required
-                placeholder="Profile name (e.g. Consulting)"
-                value={newProfileName}
-                onChange={(e) => setNewProfileName(e.target.value)}
-                className="lg-input text-xs"
+                type="checkbox"
+                checked={newProfileLock}
+                onChange={(e) => setNewProfileLock(e.target.checked)}
+                className="rounded border-line text-accent focus:ring-accent"
               />
-              <select
-                value={newProfileType}
-                onChange={(e) => setNewProfileType(e.target.value as any)}
-                className="lg-select text-xs"
-              >
-                <option value="personal">Personal</option>
-                <option value="family">Family Member</option>
-                <option value="business">Business / Ops</option>
-              </select>
-              <select
-                value={newProfileCurrency}
-                onChange={(e) => setNewProfileCurrency(e.target.value)}
-                className="lg-select text-xs"
-              >
-                <option value="GHS">GHS (Ghana)</option>
-                <option value="USD">USD (Dollar)</option>
-                <option value="EUR">EUR (Euro)</option>
-                <option value="GBP">GBP (Pound)</option>
-                <option value="NGN">NGN (Naira)</option>
-              </select>
-            </div>
-
-            {/* Optional Lock Toggle in Quick Add */}
-            <div className="p-3 rounded-xl bg-sunken border border-line space-y-2">
-              <label className="flex items-center justify-between cursor-pointer">
-                <div className="flex items-center space-x-2">
-                  <Lock className="w-3.5 h-3.5 text-ink-3" strokeWidth={1.8} />
-                  <span className="text-xs text-ink font-semibold">Lock this profile with a PIN</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={newProfileLock}
-                  onChange={(e) => setNewProfileLock(e.target.checked)}
-                  className="rounded border-line text-accent focus:ring-accent"
-                />
-              </label>
-
+              <span>PIN Protection</span>
               {newProfileLock && (
-                <div className="pt-2 border-t border-line flex flex-col sm:flex-row sm:items-center gap-2">
-                  <input
-                    type="password"
-                    maxLength={6}
-                    placeholder="4-6 digit PIN"
-                    value={newProfilePin}
-                    onChange={(e) => setNewProfilePin(e.target.value.replace(/\D/g, ''))}
-                    className="w-full sm:w-36 lg-input text-xs font-mono-num tracking-widest text-center"
-                  />
-                  <span className="text-[11px] text-ink-3">
-                    Only authorized users with this PIN can access this profile.
-                  </span>
-                </div>
+                <input
+                  type="password"
+                  maxLength={6}
+                  placeholder="PIN"
+                  value={newProfilePin}
+                  onChange={(e) => setNewProfilePin(e.target.value.replace(/\D/g, ''))}
+                  className="w-20 lg-input text-xs font-mono-num text-center tracking-widest ml-2"
+                />
               )}
-            </div>
+            </label>
 
             <button
               type="submit"
               disabled={isCreatingProfile || !newProfileName.trim()}
-              className="lg-btn lg-btn-solid lg-btn-sm w-full sm:w-auto"
+              className="lg-btn lg-btn-solid text-xs"
             >
               <Plus className="w-3.5 h-3.5" strokeWidth={1.8} />
               <span>{isCreatingProfile ? 'Creating...' : 'Create Profile'}</span>
             </button>
-          </form>
-        </div>
-
-        {/* 2. Payment & Transfer Gateway */}
-        <div className="lg-card p-5 space-y-4">
-          <div className="flex items-center space-x-2 border-b border-line pb-3">
-            <CreditCard className="w-4 h-4 text-accent" strokeWidth={1.8} />
-            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-              Payment &amp; Transfer Gateway
-            </h2>
           </div>
+        </form>
+      </div>
 
-          <div className="space-y-3 text-xs">
-            <div className="p-3.5 bg-sunken rounded-xl border border-line space-y-2.5">
-              <div className="flex justify-between items-center">
-                <span className="text-ink-3 font-medium">Gateway Status:</span>
-                <span className="inline-flex items-center text-pos font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" strokeWidth={1.8} />
-                  Active &amp; Connected
-                </span>
-              </div>
-              <div className="flex justify-between items-center flex-wrap gap-1">
-                <span className="text-ink-3 font-medium">Supported Channels:</span>
-                <span className="text-ink font-semibold">
-                  Mobile Money (MTN, Telecel, AT), Cards &amp; Bank
-                </span>
-              </div>
+      {/* Exchange Rates & Backup Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Forex Rates */}
+        <div className="lg-card p-4 sm:p-5 space-y-3.5">
+          <div className="flex items-center justify-between border-b border-line pb-3">
+            <div className="flex items-center space-x-2">
+              <Coins className="w-4 h-4 text-accent" strokeWidth={1.8} />
+              <h2 className="text-sm font-bold text-ink">Exchange Rates (vs GHS)</h2>
             </div>
-
-            <p className="text-[11px] text-ink-3 leading-relaxed">
-              Automated savings transfers and deposits are credited directly to your profile ledgers with instant email confirmation and receipt reference tracking.
-            </p>
-          </div>
-        </div>
-
-        {/* 3. Live Forex Rates to GHS */}
-        <div className="lg-card p-5 space-y-4">
-          <div className="flex items-center space-x-2 border-b border-line pb-3">
-            <Coins className="w-4 h-4 text-accent" strokeWidth={1.8} />
-            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-              Exchange Rates (Pegged to GHS)
-            </h2>
           </div>
 
           <form onSubmit={handleSaveRates} className="space-y-3 text-xs">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
-                  1 USD = (GHS)
+                <label className="block text-[10px] uppercase font-mono-num text-ink-3 font-bold mb-1">
+                  1 USD (GHS)
                 </label>
                 <input
                   type="number"
@@ -883,10 +698,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   className="lg-input text-xs font-mono-num num"
                 />
               </div>
-
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
-                  1 EUR = (GHS)
+                <label className="block text-[10px] uppercase font-mono-num text-ink-3 font-bold mb-1">
+                  1 EUR (GHS)
                 </label>
                 <input
                   type="number"
@@ -896,10 +710,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   className="lg-input text-xs font-mono-num num"
                 />
               </div>
-
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
-                  1 GBP = (GHS)
+                <label className="block text-[10px] uppercase font-mono-num text-ink-3 font-bold mb-1">
+                  1 GBP (GHS)
                 </label>
                 <input
                   type="number"
@@ -909,10 +722,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   className="lg-input text-xs font-mono-num num"
                 />
               </div>
-
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
-                  1 NGN = (GHS)
+                <label className="block text-[10px] uppercase font-mono-num text-ink-3 font-bold mb-1">
+                  1 NGN (GHS)
                 </label>
                 <input
                   type="number"
@@ -927,50 +739,42 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <button
               type="submit"
               disabled={isSavingRates}
-              className="lg-btn lg-btn-quiet lg-btn-sm font-bold"
+              className="lg-btn lg-btn-quiet text-xs font-semibold"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSavingRates ? 'animate-spin' : ''}`} strokeWidth={1.8} />
+              <RefreshCw className={`w-3 h-3 ${isSavingRates ? 'animate-spin' : ''}`} strokeWidth={1.8} />
               <span>Update Conversion Rates</span>
             </button>
           </form>
         </div>
 
-        {/* 4. Complete Data Backup & Restore */}
-        <div className="lg-card p-5 space-y-4">
+        {/* Data Backup & Recovery */}
+        <div className="lg-card p-4 sm:p-5 space-y-3.5">
           <div className="flex items-center space-x-2 border-b border-line pb-3">
             <Shield className="w-4 h-4 text-accent" strokeWidth={1.8} />
-            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-              Data Backup &amp; Recovery
-            </h2>
+            <h2 className="text-sm font-bold text-ink">Backup &amp; Recovery</h2>
           </div>
 
-          <div className="space-y-4 text-xs">
-            {/* Export */}
-            <div className="space-y-2 p-3.5 bg-sunken rounded-xl border border-line">
-              <span className="font-bold text-ink block">
-                Export Ledger Backup
-              </span>
-              <p className="text-ink-3 text-[11px] leading-relaxed">
-                Download a clean, structured JSON file of your financial data including profiles, transactions, debts, goals, and transfer logs.
-              </p>
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between p-3 bg-sunken rounded-xl border border-line">
+              <div>
+                <span className="font-bold text-ink block">Export Data</span>
+                <span className="text-[11px] text-ink-3">Download full JSON snapshot.</span>
+              </div>
               <button
                 type="button"
                 onClick={handleDownloadBackup}
-                className="lg-btn lg-btn-solid lg-btn-sm"
+                className="lg-btn lg-btn-solid text-xs"
               >
-                <Download className="w-3.5 h-3.5" strokeWidth={1.8} />
-                <span>Download Ledger Backup (JSON)</span>
+                <Download className="w-3 h-3" strokeWidth={1.8} />
+                <span>Export JSON</span>
               </button>
             </div>
 
-            {/* Restore */}
-            <div className="space-y-2 p-3.5 bg-sunken rounded-xl border border-line">
-              <span className="font-bold text-ink block">
-                Import / Restore Backup
-              </span>
+            <div className="p-3 bg-sunken rounded-xl border border-line space-y-2">
+              <span className="font-bold text-ink block">Restore Backup</span>
               <textarea
                 rows={2}
-                placeholder="Paste backup JSON content here..."
+                placeholder="Paste backup JSON data..."
                 value={restoreJson}
                 onChange={(e) => setRestoreJson(e.target.value)}
                 className="lg-input font-mono-num text-[11px] p-2 resize-y"
@@ -979,10 +783,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={handleRestoreBackup}
                 disabled={isRestoring || !restoreJson.trim()}
-                className="lg-btn lg-btn-quiet lg-btn-sm font-bold"
+                className="lg-btn lg-btn-quiet text-xs font-semibold"
               >
-                <Upload className="w-3.5 h-3.5" strokeWidth={1.8} />
-                <span>Restore from Backup</span>
+                <Upload className="w-3 h-3" strokeWidth={1.8} />
+                <span>Restore Snapshot</span>
               </button>
             </div>
           </div>
@@ -1002,34 +806,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
       {/* Reset Balance Confirmation Modal */}
       {showResetConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-ink/60 backdrop-blur-xs">
-          <div className="lg-card max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-ink/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="lg-card max-w-md w-full p-5 space-y-4">
             <div className="flex items-start space-x-3">
-              <div className="p-2.5 rounded-xl bg-warn/15 text-warn border border-warn/30 shrink-0">
+              <div className="p-2.5 rounded-xl bg-warn-soft text-warn border border-line shrink-0">
                 <RotateCcw className="w-5 h-5" strokeWidth={1.8} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-ink">
-                  Reset Net Balance to 0.00?
+                <h3 className="text-sm font-bold text-ink">
+                  Reset Active Net Balance to 0.00?
                 </h3>
                 <p className="text-xs text-ink-3 leading-relaxed">
-                  This restarts your active dashboard ledger at <strong>0.00</strong> so you can track a clean, new financial cycle.
+                  Restarts active dashboard calculation for a new financial period. All past transactions remain permanently in <strong>Monthly History</strong>.
                 </p>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-sunken border border-line text-xs space-y-2 text-ink">
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
-                <span><strong>Zero Data Loss:</strong> Past transactions are permanently stored in <strong>Monthly History</strong>.</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
-                <span><strong>Savings Vaults Untouched:</strong> Target goals and locked vaults never reset.</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
-                <span><strong>Debts Preserved:</strong> All receivables and payables remain intact.</span>
               </div>
             </div>
 
@@ -1038,7 +827,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={() => setShowResetConfirmModal(false)}
                 disabled={isResettingBalance}
-                className="lg-btn lg-btn-quiet lg-btn-sm"
+                className="lg-btn lg-btn-quiet text-xs"
               >
                 Cancel
               </button>
@@ -1046,7 +835,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={handleResetBalance}
                 disabled={isResettingBalance}
-                className="lg-btn lg-btn-solid lg-btn-sm"
+                className="lg-btn lg-btn-solid text-xs"
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${isResettingBalance ? 'animate-spin' : ''}`} strokeWidth={1.8} />
                 <span>{isResettingBalance ? 'Resetting...' : 'Yes, Reset to 0.00'}</span>

@@ -6,5 +6,4 @@
  * Increment this on each release so cache-busters, support tickets and bug
  * reports all refer to the same build.
  */
-export const APP_VERSION = '1.3';
 export const APP_VERSION = '1.6.5';
