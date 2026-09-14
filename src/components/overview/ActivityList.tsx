@@ -15,12 +15,16 @@ import { Transaction } from '../../types';
 import { formatAmount, formatDayMonth } from '../../design/tokens';
 import { SectionCard } from './SectionCard';
 
+import { useHapticLongPress } from '../../hooks/useHapticLongPress';
+import { HapticPopoutModal } from '../ios/HapticPopoutModal';
+
 interface ActivityListProps {
   transactions: Transaction[];
   totalCount: number;
   onViewAll: () => void;
   onEdit: (tx: Transaction) => void;
   onRecord: () => void;
+  onDelete?: (id: string) => void;
 }
 
 /**
@@ -36,6 +40,7 @@ export const ActivityList: React.FC<ActivityListProps> = ({
   onViewAll,
   onEdit,
   onRecord,
+  onDelete,
 }) => (
   <SectionCard
     title="Recent activity"
@@ -57,7 +62,7 @@ export const ActivityList: React.FC<ActivityListProps> = ({
       <>
         <ul className="divide-y divide-line">
           {transactions.map((tx) => (
-            <ActivityRow key={tx.id} tx={tx} onEdit={onEdit} />
+            <ActivityRow key={tx.id} tx={tx} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </ul>
         <div className="border-t border-line px-5 py-3.5 text-center">
@@ -77,17 +82,23 @@ export const ActivityList: React.FC<ActivityListProps> = ({
 const ActivityRow: React.FC<{
   tx: Transaction;
   onEdit: (tx: Transaction) => void;
-}> = ({ tx, onEdit }) => {
+  onDelete?: (id: string) => void;
+}> = ({ tx, onEdit, onDelete }) => {
+  const [isPopoutOpen, setIsPopoutOpen] = React.useState(false);
   const isIncome = tx.type === 'income';
   const Icon = iconForCategory(tx.category);
   const label = tx.description?.trim() || tx.note?.trim() || tx.category;
 
+  const longPressHandlers = useHapticLongPress({
+    onLongPress: () => setIsPopoutOpen(true),
+    onClick: () => onEdit(tx),
+  });
+
   return (
     <li>
-      <button
-        type="button"
-        onClick={() => onEdit(tx)}
-        className="group w-full flex items-center gap-3.5 px-5 py-3.5 text-left hover:bg-sunken active:scale-[0.99] transition-all duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+      <div
+        {...longPressHandlers}
+        className="group w-full flex items-center gap-3.5 px-5 py-3.5 text-left hover:bg-sunken active:scale-[0.99] transition-all duration-150 cursor-pointer select-none"
       >
         <span
           aria-hidden="true"
@@ -115,7 +126,16 @@ const ActivityRow: React.FC<{
         >
           {isIncome ? '+' : '−'} {formatAmount(tx.amount)}
         </span>
-      </button>
+      </div>
+
+      <HapticPopoutModal
+        transaction={tx}
+        displayCurrency="GHS"
+        isOpen={isPopoutOpen}
+        onClose={() => setIsPopoutOpen(false)}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
     </li>
   );
 };

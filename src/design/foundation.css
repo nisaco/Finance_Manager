@@ -454,6 +454,11 @@
                 transform var(--lg-base) var(--lg-ease-ios);
   }
 
+  .lg-card:hover {
+    border-color: var(--lg-line-strong);
+    box-shadow: var(--lg-e2);
+  }
+
   /* Interactive card with tactile hover lift and iOS-grade press */
   .lg-card-interactive {
     background-color: var(--lg-surface);
