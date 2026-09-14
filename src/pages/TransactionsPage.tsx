@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, Upload, Plus, History, X } from 'lucide-react';
+import { Search, Download, Upload, Plus, History, X, ChevronDown, FileSpreadsheet, FileText, File } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { ReceiptRow } from '../components/ReceiptRow';
 import { Transaction } from '../types';
 import { formatCurrency } from '../design/tokens';
 import { api } from '../api/client';
+import { exportTransactionsCsv, exportTransactionsExcel, exportTransactionsPdf } from '../utils/exportTransactions';
 
 interface TransactionsPageProps {
   onOpenNewTx: () => void;
@@ -26,6 +27,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
   const currency = activeProfile?.displayCurrency || 'GHS';
 
@@ -78,15 +80,36 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
     }
   };
 
-  const handleExportCsv = () => {
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     if (!activeProfile) return;
-    window.location.href = `/api/transactions/export?profileId=${activeProfile.id}`;
+    setExportDropdownOpen(false);
+
+    const exportData = {
+      profile: activeProfile,
+      transactions: filteredTransactions,
+      title: `${activeProfile.name} Transactions Statement`,
+      subtitle: isFiltered
+        ? `Filtered View (${filteredTransactions.length} entries)`
+        : `Complete Transaction Record (${filteredTransactions.length} entries)`,
+      filenamePrefix: `transactions_${activeProfile.name.toLowerCase()}`,
+    };
+
+    try {
+      if (format === 'csv') {
+        exportTransactionsCsv(exportData);
+        notify(`Exported ${filteredTransactions.length} entries as CSV`);
+      } else if (format === 'excel') {
+        exportTransactionsExcel(exportData);
+        notify(`Exported ${filteredTransactions.length} entries as Excel spreadsheet (.xlsx)`);
+      } else if (format === 'pdf') {
+        exportTransactionsPdf(exportData);
+        notify(`Generated and downloaded PDF Statement`);
+      }
+    } catch (err: any) {
+      notify(`Export failed: ${err.message}`, 'error');
+    }
   };
 
-  /* formatCurrency() is shared by the whole app and returns an unsigned
-     string (it runs Math.abs internally), so a negative net used to render as
-     a positive figure that was only distinguishable by its colour. Colour
-     alone is not a signal, so the sign is stated here. Zero stays unsigned. */
   const signed = (value: number) => {
     const text = formatCurrency(Math.abs(value), currency);
     if (value > 0) return `+${text}`;
@@ -136,20 +159,78 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           <button
             onClick={onOpenCsvImport}
             className="lg-btn lg-btn-quiet lg-btn-sm"
-            aria-label="Import transactions from a CSV file"
+            aria-label="Import transactions from CSV or Excel file"
           >
             <Upload className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-            <span className="hidden sm:inline">Import</span>
+            <span className="hidden sm:inline">Import (CSV / Excel)</span>
+            <span className="sm:hidden">Import</span>
           </button>
 
-          <button
-            onClick={handleExportCsv}
-            className="lg-btn lg-btn-quiet lg-btn-sm"
-            aria-label="Export transactions to a CSV file"
-          >
-            <Download className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+              className="lg-btn lg-btn-quiet lg-btn-sm"
+              aria-label="Export transactions in various formats"
+              aria-expanded={exportDropdownOpen}
+            >
+              <Download className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+              <span className="hidden sm:inline">Export</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${exportDropdownOpen ? 'rotate-180' : ''}`} strokeWidth={1.7} />
+            </button>
+
+            {exportDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setExportDropdownOpen(false)}
+                />
+                <div className="lg-pop fixed sm:absolute right-3 sm:right-0 left-3 sm:left-auto mt-2 sm:w-56 z-50 overflow-hidden shadow-2xl">
+                  <div className="px-3.5 py-2 border-b border-line">
+                    <span className="t-eyebrow block">Export Format</span>
+                    <span className="t-meta text-[11px] block text-ink-3">
+                      {filteredTransactions.length} entries selected
+                    </span>
+                  </div>
+
+                  <div className="p-1.5 space-y-1">
+                    <button
+                      onClick={() => handleExport('csv')}
+                      className="lg-row w-full text-left"
+                    >
+                      <File className="w-4 h-4 text-accent shrink-0" strokeWidth={1.8} />
+                      <div className="flex-1 min-w-0">
+                        <span className="t-body block text-xs font-bold text-ink">CSV File (.csv)</span>
+                        <span className="t-meta block text-[11px]">Standard delimited table</span>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => handleExport('excel')}
+                      className="lg-row w-full text-left"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
+                      <div className="flex-1 min-w-0">
+                        <span className="t-body block text-xs font-bold text-ink">Excel Workbook (.xlsx)</span>
+                        <span className="t-meta block text-[11px]">Formatted with summaries</span>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => handleExport('pdf')}
+                      className="lg-row w-full text-left"
+                    >
+                      <FileText className="w-4 h-4 text-warn shrink-0" strokeWidth={1.8} />
+                      <div className="flex-1 min-w-0">
+                        <span className="t-body block text-xs font-bold text-ink">PDF Statement (.pdf)</span>
+                        <span className="t-meta block text-[11px]">Printable formal report</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
 
           {onNavigateToHistory && (
             <button
@@ -162,7 +243,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             </button>
           )}
 
-          <button onClick={onOpenNewTx} className="lg-btn lg-btn-accent">
+          <button onClick={onOpenNewTx} className="lg-btn lg-btn-accent lg-btn-sm">
             <Plus className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
             New entry
           </button>
@@ -184,7 +265,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search transactions"
-            className="lg-input pl-11"
+            className="lg-input pl-11 text-xs"
           />
         </div>
 
@@ -195,6 +276,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
               key={t.id}
               role="tab"
               aria-selected={selectedType === t.id}
+              className={`lg-seg-btn ${selectedType === t.id ? 'active' : ''}`}
               onClick={() => setSelectedType(t.id)}
             >
               {t.label}
@@ -212,7 +294,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
               id="tx-filter-category"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="lg-select"
+              className="lg-select text-xs"
             >
               <option value="all">All categories</option>
               {categories.map((cat) => (
@@ -232,12 +314,10 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="lg-input num"
+              className="lg-input num text-xs"
             />
           </div>
 
-          {/* The "to" bound had state but no control, so the upper half of the
-              date range could never be set. It has one now. */}
           <div>
             <label className="lg-label" htmlFor="tx-filter-to">
               To
@@ -247,7 +327,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="lg-input num"
+              className="lg-input num text-xs"
             />
           </div>
         </div>
@@ -263,12 +343,12 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
       {/* ---- What the filter selected ---- */}
       <section className="lg-card p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="t-meta">
+          <p className="t-meta text-xs">
             Showing <span className="num font-bold text-ink">{filteredTransactions.length}</span> of{' '}
             <span className="num">{transactions.length}</span>{' '}
             {transactions.length === 1 ? 'entry' : 'entries'}
           </p>
-          <span className="lg-tag">
+          <span className="lg-tag text-[10px]">
             {selectedType === 'all' ? 'All entries' : selectedType === 'income' ? 'Income' : 'Expense'}
           </span>
         </div>
@@ -311,17 +391,17 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
         {filteredTransactions.length === 0 ? (
           <div className="p-8 sm:p-12 text-center">
             <p className="t-card">{isFiltered ? 'Nothing matches' : 'No transactions yet'}</p>
-            <p className="t-meta mt-1.5 max-w-sm mx-auto">
+            <p className="t-meta mt-1.5 max-w-sm mx-auto text-xs">
               {isFiltered
                 ? 'Try widening the date range or clearing a filter.'
                 : 'Record your first entry and this page fills itself in.'}
             </p>
             {isFiltered ? (
-              <button onClick={clearFilters} className="lg-btn lg-btn-quiet mt-5">
+              <button onClick={clearFilters} className="lg-btn lg-btn-quiet lg-btn-sm mt-5">
                 Clear filters
               </button>
             ) : (
-              <button onClick={onOpenNewTx} className="lg-btn lg-btn-accent mt-5">
+              <button onClick={onOpenNewTx} className="lg-btn lg-btn-accent lg-btn-sm mt-5">
                 <Plus className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
                 New entry
               </button>

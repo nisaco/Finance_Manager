@@ -39,14 +39,6 @@ interface NavbarProps {
   onOpenStealthAdmin?: () => void;
 }
 
-/**
- * Application chrome.
- *
- * Same props, same handlers, same tab ids as before — this is a visual rebuild.
- * What changed structurally: phones now navigate from a bottom tab bar instead
- * of a hamburger, so the mobile header carries identity only and the primary
- * action moved to where a thumb can reach it.
- */
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   onTabChange,
@@ -101,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* ---- Identity, profile, tools ---------------------------------- */}
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-              {/* Menu. Phones navigate from the drawer, as they always have. */}
+              {/* Menu for Mobile */}
               <button
                 onClick={() => setMobileDrawerOpen(true)}
                 className="lg-iconbtn md:hidden shrink-0 -ml-1 active:scale-95 transition-transform"
@@ -124,8 +116,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <span className="h-5 w-px bg-line shrink-0 hidden xs:block" aria-hidden="true" />
 
-              {/* Profile switcher. On a phone this is the only header control,
-                  so it gets the room the tools used to take. */}
+              {/* Profile switcher */}
               {activeProfile && (
                 <div className="relative min-w-0">
                   <button
@@ -163,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="fixed inset-0 z-40"
                         onClick={() => setProfileDropdownOpen(false)}
                       />
-                      <div className="lg-pop absolute left-0 mt-2 w-[19rem] max-w-[calc(100vw-2rem)] z-50 overflow-hidden">
+                      <div className="lg-pop fixed left-3 right-3 sm:absolute sm:left-0 sm:right-auto top-[4.25rem] sm:top-full sm:mt-2 sm:w-[19rem] sm:max-w-none z-50 overflow-hidden shadow-2xl">
                         <div className="flex items-center justify-between px-4 py-2.5 border-b border-line">
                           <span className="t-eyebrow">Profiles</span>
                           <span className="t-eyebrow num">{profiles.length} active</span>
@@ -342,8 +333,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
-            {/* The primary action stays on screen at every width — on a phone as
-                a single filled icon button rather than a labelled one. */}
+            {/* The primary action stays on screen at every width */}
             <button
               onClick={onOpenNewTx}
               aria-label="Record an entry"

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar,
   Search,
@@ -10,12 +10,17 @@ import {
   PieChart,
   RefreshCw,
   RotateCcw,
+  ChevronDown,
+  FileSpreadsheet,
+  FileText,
+  File,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { api } from '../api/client';
 import { MonthlyHistoryRecord, Transaction } from '../types';
 import { formatCurrency, getCategoryColor } from '../design/tokens';
 import { ReceiptRow } from '../components/ReceiptRow';
+import { exportTransactionsCsv, exportTransactionsExcel, exportTransactionsPdf } from '../utils/exportTransactions';
 
 interface HistoryPageProps {
   onEditTx?: (tx: Transaction) => void;
@@ -32,6 +37,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [activeSubTab, setActiveSubTab] = useState<'ledger' | 'breakdown'>('ledger');
+  const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
 
   const currency = activeProfile?.displayCurrency || 'GHS';
 
@@ -59,20 +65,20 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
     loadHistory();
   }, [activeProfile?.id, allTx.length]);
 
-  // Selected month data
+  // Selected month data object
   const selectedMonth = useMemo(() => {
-    return historyMonths.find((m) => m.yearMonth === selectedMonthKey) || historyMonths[0] || null;
+    return historyMonths.find((m) => m.yearMonth === selectedMonthKey) || null;
   }, [historyMonths, selectedMonthKey]);
 
-  // Categories in selected month
+  // Unique categories in selected month
   const availableCategories = useMemo(() => {
     if (!selectedMonth) return [];
-    const set = new Set<string>();
-    selectedMonth.transactions.forEach((t) => set.add(t.category));
-    return Array.from(set).sort();
+    const cats = new Set<string>();
+    selectedMonth.transactions.forEach((t) => cats.add(t.category));
+    return Array.from(cats).sort();
   }, [selectedMonth]);
 
-  // Filtered transactions for the selected month
+  // Filtered transactions within selected month
   const filteredTransactions = useMemo(() => {
     if (!selectedMonth) return [];
     return selectedMonth.transactions.filter((t) => {
@@ -90,29 +96,33 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
     });
   }, [selectedMonth, filterType, filterCategory, searchQuery]);
 
-  // Export current month as CSV
-  const handleExportMonthCsv = () => {
-    if (!selectedMonth) return;
-    const headers = ['Date', 'Type', 'Category', 'Amount', 'Currency', 'Notes', 'Payment Method'];
-    const rows = selectedMonth.transactions.map((t) => [
-      t.date,
-      t.type,
-      `"${t.category.replace(/"/g, '""')}"`,
-      t.amount,
-      t.currency,
-      `"${(t.note || '').replace(/"/g, '""')}"`,
-      (t as any).paymentMethod || 'cash',
-    ]);
+  // Export handlers
+  const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    if (!selectedMonth || !activeProfile) return;
+    setExportDropdownOpen(false);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `financial-statement-${selectedMonth.yearMonth}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    notify(`Downloaded ${selectedMonth.label} CSV statement`);
+    const exportData = {
+      profile: activeProfile,
+      transactions: filteredTransactions.length > 0 ? filteredTransactions : selectedMonth.transactions,
+      title: `${selectedMonth.label} Statement (${activeProfile.name})`,
+      subtitle: `Monthly Archive Statement · Period: ${selectedMonth.label} · Total Transactions: ${selectedMonth.transactionCount}`,
+      filenamePrefix: `statement_${selectedMonth.yearMonth}_${activeProfile.name.toLowerCase()}`,
+    };
+
+    try {
+      if (format === 'csv') {
+        exportTransactionsCsv(exportData);
+        notify(`Exported ${selectedMonth.label} CSV statement`);
+      } else if (format === 'excel') {
+        exportTransactionsExcel(exportData);
+        notify(`Exported ${selectedMonth.label} Excel spreadsheet (.xlsx)`);
+      } else if (format === 'pdf') {
+        exportTransactionsPdf(exportData);
+        notify(`Generated and downloaded ${selectedMonth.label} PDF Statement`);
+      }
+    } catch (err: any) {
+      notify(`Export failed: ${err.message}`, 'error');
+    }
   };
 
   return (
@@ -121,7 +131,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="t-title text-ink font-bold">Monthly Financial History</h1>
-          <p className="t-meta text-ink-3 mt-1">
+          <p className="t-meta text-ink-3 mt-1 text-xs">
             Archived records of past monthly billing cycles. Select any month to inspect detailed cash flow.
           </p>
         </div>
@@ -131,7 +141,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
             type="button"
             onClick={loadHistory}
             disabled={isLoading}
-            className="lg-btn lg-btn-quiet text-xs"
+            className="lg-btn lg-btn-quiet lg-btn-sm text-xs"
             title="Refresh History"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} strokeWidth={1.7} />
@@ -142,10 +152,10 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
             <button
               type="button"
               onClick={onNavigateToSettings}
-              className="lg-btn lg-btn-ghost text-xs text-ink-3"
+              className="lg-btn lg-btn-ghost lg-btn-sm text-xs text-ink-3"
             >
               <RotateCcw className="w-3.5 h-3.5 text-ink-3" strokeWidth={1.7} />
-              <span>Reset Settings</span>
+              <span>Cycle Settings</span>
             </button>
           )}
         </div>
@@ -207,13 +217,13 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
                   onClick={() => setSelectedMonthKey(m.yearMonth)}
                   className={`text-left p-3.5 rounded-xl border transition-all relative overflow-hidden ${
                     isSelected
-                      ? 'bg-surface border-ink shadow-xs ring-1 ring-ink'
+                      ? 'bg-surface border-line-strong shadow-xs ring-1 ring-accent/40'
                       : 'bg-surface border-line hover:border-line-strong hover:bg-sunken'
                   }`}
                 >
                   {/* Active Month Indicator Pill */}
                   {m.isCurrentMonth && (
-                    <span className="absolute top-2.5 right-2.5 lg-tag bg-ink text-surface">
+                    <span className="absolute top-2.5 right-2.5 lg-tag lg-tag-accent text-[9px]">
                       Current
                     </span>
                   )}
@@ -268,7 +278,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
                     {selectedMonth.label} Statement
                   </h2>
                   {selectedMonth.isCurrentMonth && (
-                    <span className="lg-tag bg-pos-soft text-pos border-line">
+                    <span className="lg-tag lg-tag-pos">
                       Active Cycle
                     </span>
                   )}
@@ -278,15 +288,70 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Multi-Format Export Dropdown */}
+              <div className="relative self-start sm:self-auto">
                 <button
                   type="button"
-                  onClick={handleExportMonthCsv}
-                  className="lg-btn lg-btn-solid text-xs"
+                  onClick={() => setExportDropdownOpen(!exportDropdownOpen)}
+                  className="lg-btn lg-btn-solid lg-btn-sm"
+                  aria-expanded={exportDropdownOpen}
                 >
-                  <Download className="w-3.5 h-3.5" strokeWidth={1.7} />
-                  <span>Export {selectedMonth.label} (CSV)</span>
+                  <Download className="w-3.5 h-3.5" strokeWidth={1.8} />
+                  <span>Export Statement</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${exportDropdownOpen ? 'rotate-180' : ''}`} strokeWidth={1.8} />
                 </button>
+
+                {exportDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setExportDropdownOpen(false)}
+                    />
+                    <div className="lg-pop fixed sm:absolute right-3 sm:right-0 left-3 sm:left-auto mt-2 sm:w-56 z-50 overflow-hidden shadow-2xl">
+                      <div className="px-3.5 py-2 border-b border-line">
+                        <span className="t-eyebrow block">Export {selectedMonth.label}</span>
+                        <span className="t-meta text-[11px] block text-ink-3">
+                          {selectedMonth.transactionCount} transactions
+                        </span>
+                      </div>
+
+                      <div className="p-1.5 space-y-1">
+                        <button
+                          onClick={() => handleExport('csv')}
+                          className="lg-row w-full text-left"
+                        >
+                          <File className="w-4 h-4 text-accent shrink-0" strokeWidth={1.8} />
+                          <div className="flex-1 min-w-0">
+                            <span className="t-body block text-xs font-bold text-ink">CSV Statement (.csv)</span>
+                            <span className="t-meta block text-[11px]">Standard delimited table</span>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => handleExport('excel')}
+                          className="lg-row w-full text-left"
+                        >
+                          <FileSpreadsheet className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
+                          <div className="flex-1 min-w-0">
+                            <span className="t-body block text-xs font-bold text-ink">Excel Spreadsheet (.xlsx)</span>
+                            <span className="t-meta block text-[11px]">Formatted with summaries</span>
+                          </div>
+                        </button>
+
+                        <button
+                          onClick={() => handleExport('pdf')}
+                          className="lg-row w-full text-left"
+                        >
+                          <FileText className="w-4 h-4 text-warn shrink-0" strokeWidth={1.8} />
+                          <div className="flex-1 min-w-0">
+                            <span className="t-body block text-xs font-bold text-ink">PDF Statement (.pdf)</span>
+                            <span className="t-meta block text-[11px]">Official formal statement</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -373,7 +438,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder={`Search ${selectedMonth.label} transactions...`}
-                      className="lg-input w-full pl-9"
+                      className="lg-input w-full pl-9 text-xs"
                     />
                   </div>
 
@@ -381,7 +446,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
                     <select
                       value={filterType}
                       onChange={(e) => setFilterType(e.target.value as any)}
-                      className="lg-select"
+                      className="lg-select text-xs"
                     >
                       <option value="all">All Types</option>
                       <option value="income">Income Only</option>
@@ -391,7 +456,7 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
                     <select
                       value={filterCategory}
                       onChange={(e) => setFilterCategory(e.target.value)}
-                      className="lg-select"
+                      className="lg-select text-xs"
                     >
                       <option value="all">All Categories</option>
                       {availableCategories.map((c) => (
@@ -443,15 +508,15 @@ export const HistoryPage: React.FC<HistoryPageProps> = ({ onEditTx, onNavigateTo
                               style={{ backgroundColor: color }}
                               aria-hidden="true"
                             />
-                            <span className="t-card font-semibold text-ink truncate">
+                            <span className="t-card font-semibold text-ink truncate text-xs">
                               {cat.category}
                             </span>
                           </div>
                           <div className="text-right shrink-0 pl-3">
-                            <div className="num font-bold text-ink text-sm">
+                            <div className="num font-bold text-ink text-xs">
                               {formatCurrency(cat.amount, currency)}
                             </div>
-                            <div className="num text-xs font-semibold text-ink-3 mt-0.5">
+                            <div className="num text-[11px] font-semibold text-ink-3 mt-0.5">
                               {cat.percentage}% of spend
                             </div>
                           </div>

@@ -26,7 +26,6 @@ import {
   Crown,
   RotateCcw,
   Sliders,
-  ArrowRight,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -64,6 +63,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     isProfileLockedForUser,
     lockProfile,
     openCreateProfileModal,
+    openEditProfileModal,
     fetchProfiles,
   } = useLedger();
   const { theme, setTheme, uiDensity, setUiDensity } = useTheme();
@@ -164,7 +164,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         name: newProfileName.trim(),
         type: newProfileType,
         displayCurrency: newProfileCurrency,
-        color: newProfileType === 'family' ? '#4FA878' : newProfileType === 'business' ? '#5E81AC' : '#C9A24B',
+        color: newProfileType === 'family' ? '#4FA878' : newProfileType === 'business' ? '#5E81AC' : '#0284C7',
         isLocked: newProfileLock,
         pin: newProfileLock ? newProfilePin.trim() : undefined,
       });
@@ -216,17 +216,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6 pb-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <Settings className="w-5 h-5 text-ink" />
+            <Settings className="w-5 h-5 text-accent" strokeWidth={1.8} />
             <h1 className="font-display text-xl sm:text-2xl font-bold text-ink">
               Settings &amp; Preferences
             </h1>
           </div>
-          <p className="text-xs text-ink-muted mt-0.5">
+          <p className="text-xs text-ink-3 mt-0.5">
             Profiles, theme appearance, exchange rates, and data backup
           </p>
         </div>
@@ -234,9 +234,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <button
           type="button"
           onClick={onOpenAuditLogs}
-          className="lg-btn-quiet self-start sm:self-auto text-xs"
+          className="lg-btn lg-btn-quiet lg-btn-sm self-start sm:self-auto"
         >
-          <History className="w-4 h-4 text-ink-muted" />
+          <History className="w-4 h-4 text-ink-3" strokeWidth={1.8} />
           <span>System Audit Trail</span>
         </button>
       </div>
@@ -247,13 +247,13 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-line pb-4 gap-3">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
-                <UserCheck className="w-5 h-5 text-accent" />
+                <UserCheck className="w-5 h-5 text-accent" strokeWidth={1.8} />
               </div>
               <div>
                 <h2 className="font-display text-sm sm:text-base font-bold text-ink">
                   User Account &amp; Paystack Profile
                 </h2>
-                <p className="text-xs text-ink-muted">
+                <p className="text-xs text-ink-3">
                   Primary account holder credentials and receipt routing
                 </p>
               </div>
@@ -262,16 +262,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <button
               type="button"
               onClick={() => logout()}
-              className="lg-btn-quiet text-neg hover:bg-neg/10 border-neg/30 self-start sm:self-auto text-xs"
+              className="lg-btn lg-btn-danger lg-btn-sm self-start sm:self-auto"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3.5 h-3.5" strokeWidth={1.8} />
               <span>Sign Out</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3.5 bg-sunken rounded-xl border border-line">
-              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-muted block font-semibold">
+              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-3 block font-semibold">
                 Username
               </span>
               <span className="text-sm font-bold text-ink mt-0.5 block truncate">
@@ -281,21 +281,21 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
             <div className="p-3.5 bg-sunken rounded-xl border border-line">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-muted block font-semibold">
+                <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-3 block font-semibold">
                   Email (Receipts)
                 </span>
-                <span className="lg-pill lg-pill-pos text-[9px] py-0.5 px-1.5">
+                <span className="lg-tag lg-tag-pos text-[9px] py-0.5 px-1.5">
                   Linked
                 </span>
               </div>
               <span className="text-sm font-bold text-ink mt-0.5 block truncate flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+                <Mail className="w-3.5 h-3.5 text-ink-3 shrink-0" strokeWidth={1.8} />
                 <span className="truncate">{user.email}</span>
               </span>
             </div>
 
             <div className="p-3.5 bg-sunken rounded-xl border border-line">
-              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-muted block font-semibold">
+              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-3 block font-semibold">
                 Terms &amp; Privacy Agreement
               </span>
               <div className="flex items-center space-x-2 mt-1.5">
@@ -306,7 +306,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 >
                   Terms
                 </button>
-                <span className="text-ink-muted">•</span>
+                <span className="text-ink-4">•</span>
                 <button
                   type="button"
                   onClick={() => setShowPrivacyModal(true)}
@@ -314,7 +314,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 >
                   Privacy
                 </button>
-                <CheckCircle2 className="w-3.5 h-3.5 text-pos" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-pos" strokeWidth={1.8} />
               </div>
             </div>
           </div>
@@ -322,23 +322,19 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           {/* Account Role & Database Schema Access */}
           <div className="pt-3 border-t border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-start sm:items-center space-x-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                user.role === 'admin'
-                  ? 'bg-accent/15 text-accent border border-accent/30'
-                  : 'bg-sunken text-ink-muted border border-line'
-              }`}>
-                <Crown className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-sunken text-accent border border-line">
+                <Crown className="w-4 h-4 text-accent" strokeWidth={1.8} />
               </div>
               <div>
                 <div className="flex items-center space-x-2 flex-wrap">
                   <span className="text-xs font-bold text-ink">
                     Account Role:
                   </span>
-                  <span className={`lg-pill ${user.role === 'admin' ? 'lg-pill-accent' : 'lg-pill-dim'} text-[10px]`}>
+                  <span className={`lg-tag ${user.role === 'admin' ? 'lg-tag-accent' : ''} text-[10px]`}>
                     {user.role === 'admin' ? 'Super Admin (Platform Owner)' : 'Standard User'}
                   </span>
                 </div>
-                <p className="text-[11px] text-ink-muted mt-0.5">
+                <p className="text-[11px] text-ink-3 mt-0.5">
                   {isOwner
                     ? 'Authorized platform administrator (jnkpappoe@gmail.com). Exclusive authority over platform payouts, user oversight, and protocol fees.'
                     : 'Standard user account. Payout authorizations and system governance are managed by the platform administrator.'}
@@ -362,9 +358,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   }
                 }}
                 disabled={isSwitchingRole}
-                className="lg-btn-solid text-xs shrink-0 self-start sm:self-auto"
+                className="lg-btn lg-btn-solid lg-btn-sm shrink-0 self-start sm:self-auto"
               >
-                <Crown className="w-3.5 h-3.5" />
+                <Crown className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>
                   {isSwitchingRole
                     ? 'Updating...'
@@ -384,18 +380,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-accent/20 pb-4">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center shrink-0">
-                <Crown className="w-5 h-5" />
+                <Crown className="w-5 h-5" strokeWidth={1.8} />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
                   <h2 className="font-display text-sm sm:text-base font-bold text-ink">
                     Admin Portal Console
                   </h2>
-                  <span className="lg-pill lg-pill-accent text-[9px]">
+                  <span className="lg-tag lg-tag-accent text-[9px]">
                     Owner Exclusive
                   </span>
                 </div>
-                <p className="text-xs text-ink-muted">
+                <p className="text-xs text-ink-3">
                   Administrative authority for Savings Vault payouts, protocol fees (2% standard &amp; 10% early penalty), user accounts, and AI quota limits.
                 </p>
               </div>
@@ -404,24 +400,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <button
               type="button"
               onClick={onOpenAdminModal}
-              className="lg-btn-solid bg-accent text-white hover:bg-accent/90 text-xs shrink-0 self-start sm:self-auto"
+              className="lg-btn lg-btn-accent lg-btn-sm shrink-0 self-start sm:self-auto"
             >
-              <Crown className="w-4 h-4" />
+              <Crown className="w-4 h-4" strokeWidth={1.8} />
               <span>Launch Admin Portal</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-ink">
             <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
-              <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
+              <ShieldCheck className="w-4 h-4 text-accent shrink-0" strokeWidth={1.8} />
               <span className="font-medium">Approve / Reject Vault Withdrawals</span>
             </div>
             <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
-              <Coins className="w-4 h-4 text-pos shrink-0" />
+              <Coins className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
               <span className="font-medium">Track 2% Standard &amp; 10% Early Fees</span>
             </div>
             <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
-              <Users className="w-4 h-4 text-ink shrink-0" />
+              <Users className="w-4 h-4 text-ink shrink-0" strokeWidth={1.8} />
               <span className="font-medium">Full System &amp; Quota Oversight</span>
             </div>
           </div>
@@ -432,7 +428,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <div className="lg-card p-5 space-y-5">
         <div className="flex items-center justify-between border-b border-line pb-3">
           <div className="flex items-center space-x-2">
-            <Palette className="w-4 h-4 text-accent" />
+            <Palette className="w-4 h-4 text-accent" strokeWidth={1.8} />
             <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Interface Appearance &amp; Display
             </h2>
@@ -455,7 +451,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 onClick={() => setTheme('light')}
                 className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${theme === 'light' ? 'active' : ''}`}
               >
-                <Sun className="w-3.5 h-3.5" />
+                <Sun className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>Light</span>
               </button>
               <button
@@ -463,7 +459,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 onClick={() => setTheme('dark')}
                 className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${theme === 'dark' ? 'active' : ''}`}
               >
-                <Moon className="w-3.5 h-3.5" />
+                <Moon className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>Dark</span>
               </button>
               <button
@@ -471,7 +467,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 onClick={() => setTheme('system')}
                 className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${theme === 'system' ? 'active' : ''}`}
               >
-                <Monitor className="w-3.5 h-3.5" />
+                <Monitor className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>System</span>
               </button>
             </div>
@@ -488,7 +484,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 onClick={() => setUiDensity('standard')}
                 className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${uiDensity === 'standard' ? 'active' : ''}`}
               >
-                <Sliders className="w-3.5 h-3.5" />
+                <Sliders className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>Comfortable</span>
               </button>
               <button
@@ -496,7 +492,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 onClick={() => setUiDensity('compact')}
                 className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${uiDensity === 'compact' ? 'active' : ''}`}
               >
-                <Sliders className="w-3.5 h-3.5" />
+                <Sliders className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>Compact</span>
               </button>
             </div>
@@ -508,12 +504,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <div className="lg-card p-5 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-line pb-3">
           <div className="flex items-center space-x-2">
-            <RotateCcw className="w-4 h-4 text-ink" />
+            <RotateCcw className="w-4 h-4 text-accent" strokeWidth={1.8} />
             <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Financial Cycles &amp; Balance Reset
             </h2>
           </div>
-          <span className="text-xs font-mono-num text-ink-muted">
+          <span className="text-xs font-mono-num text-ink-3">
             Active Cycle: <strong className="text-ink">{summary?.cycleMonth || 'Current Month'}</strong>
           </span>
         </div>
@@ -522,10 +518,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           {/* Active Balance Status Card */}
           <div className="p-4 rounded-xl border border-line bg-sunken space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">
+              <span className="text-xs font-semibold text-ink-3 uppercase tracking-wider">
                 Active Net Balance
               </span>
-              <span className="lg-pill lg-pill-pos text-[10px]">
+              <span className="lg-tag lg-tag-pos text-[10px]">
                 {activeProfile?.autoMonthlyReset !== false ? 'Monthly Cycle' : 'All-Time'}
               </span>
             </div>
@@ -534,7 +530,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               {formatCurrency(summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
             </div>
 
-            <div className="pt-2 border-t border-line flex items-center justify-between text-xs text-ink-muted">
+            <div className="pt-2 border-t border-line flex items-center justify-between text-xs text-ink-3">
               <span>Cumulative All-Time Balance:</span>
               <span className="font-mono-num num font-bold text-ink">
                 {formatCurrency(summary?.allTimeNetBalance ?? summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
@@ -542,7 +538,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
 
             {activeProfile?.balanceResetAt && (
-              <div className="text-[11px] text-ink-muted">
+              <div className="text-[11px] text-ink-3">
                 Cycle manually restarted: <span className="num font-semibold">{new Date(activeProfile.balanceResetAt).toLocaleDateString()}</span>
               </div>
             )}
@@ -554,11 +550,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <div className="text-xs font-bold text-ink">
                 Start a Fresh Cycle / Reset Balance
               </div>
-              <p className="text-[11px] text-ink-muted leading-relaxed">
+              <p className="text-[11px] text-ink-3 leading-relaxed">
                 Reset your active dashboard balance to 0.00 to start tracking a fresh period. All previous transactions are permanently preserved in your <strong>Monthly History</strong> archive.
               </p>
               <div className="text-[11px] text-pos font-medium flex items-center space-x-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
                 <span>Savings Vaults and debts are essential and never reset.</span>
               </div>
             </div>
@@ -568,9 +564,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={() => setShowResetConfirmModal(true)}
                 disabled={isResettingBalance}
-                className="lg-btn-solid text-xs"
+                className="lg-btn lg-btn-solid lg-btn-sm"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>{isResettingBalance ? 'Resetting...' : 'Reset Net Balance to 0.00'}</span>
               </button>
 
@@ -578,9 +574,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <button
                   type="button"
                   onClick={onNavigateToHistory}
-                  className="lg-btn-quiet text-xs"
+                  className="lg-btn lg-btn-quiet lg-btn-sm"
                 >
-                  <History className="w-3.5 h-3.5" />
+                  <History className="w-3.5 h-3.5" strokeWidth={1.8} />
                   <span>Open Monthly History</span>
                 </button>
               )}
@@ -589,12 +585,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         </div>
 
         {/* Monthly Rollover Switch */}
-        <div className="p-4 rounded-xl border border-line bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="p-4 rounded-xl border border-line bg-sunken flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="space-y-0.5">
             <div className="font-bold text-ink">
               Automatic Monthly Rollover
             </div>
-            <p className="text-[11px] text-ink-muted">
+            <p className="text-[11px] text-ink-3">
               Every 1st of the month, active balance resets to 0.00 for the new month, keeping completed months organized in Monthly History.
             </p>
           </div>
@@ -602,10 +598,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <button
             type="button"
             onClick={handleToggleAutoMonthlyReset}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 ${
+            className={`lg-btn lg-btn-sm shrink-0 ${
               activeProfile?.autoMonthlyReset !== false
-                ? 'bg-ink text-canvas border-ink shadow-xs'
-                : 'bg-surface text-ink-muted border-line hover:text-ink'
+                ? 'lg-btn-solid'
+                : 'lg-btn-quiet'
             }`}
           >
             {activeProfile?.autoMonthlyReset !== false ? 'Enabled (Monthly Cycle)' : 'Disabled (All-Time)'}
@@ -618,12 +614,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         <div className="lg-card p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-line pb-3">
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-ink" />
+              <Users className="w-4 h-4 text-accent" strokeWidth={1.8} />
               <div>
                 <h2 className="font-display text-sm sm:text-base font-bold text-ink">
                   Profiles &amp; Entity Vaults
                 </h2>
-                <p className="text-xs text-ink-muted">
+                <p className="text-xs text-ink-3">
                   Isolate finances across entities and protect them with security PIN locks.
                 </p>
               </div>
@@ -631,9 +627,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <button
               type="button"
               onClick={openCreateProfileModal}
-              className="lg-btn-solid text-xs shrink-0"
+              className="lg-btn lg-btn-solid lg-btn-sm shrink-0"
             >
-              <UserPlus className="w-3.5 h-3.5" />
+              <UserPlus className="w-3.5 h-3.5" strokeWidth={1.8} />
               <span>+ Add Profile</span>
             </button>
           </div>
@@ -649,22 +645,22 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   key={p.id}
                   className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
                     isActive
-                      ? 'bg-sunken border-ink/40 shadow-xs'
-                      : 'bg-surface border-line hover:border-ink/20'
+                      ? 'bg-sunken border-line-strong shadow-xs'
+                      : 'bg-surface border-line hover:border-line-strong'
                   }`}
                 >
                   <div className="flex items-center space-x-3 min-w-0">
                     <span
                       className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: p.color || 'var(--ink)' }}
+                      style={{ backgroundColor: p.color || 'var(--lg-ink)' }}
                     />
                     <div className="min-w-0">
                       <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                         <span className="font-bold text-ink truncate text-sm">{p.name}</span>
-                        <span className="lg-pill lg-pill-dim text-[10px] uppercase font-mono-num font-semibold">
+                        <span className="lg-tag text-[10px] uppercase font-mono-num font-semibold">
                           {p.type || 'personal'}
                         </span>
-                        <span className="lg-pill lg-pill-dim text-[10px] font-mono-num font-bold">
+                        <span className="lg-tag text-[10px] font-mono-num font-bold">
                           {p.displayCurrency}
                         </span>
                       </div>
@@ -675,24 +671,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                           <span
                             className={`inline-flex items-center space-x-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                               isLockedForUser
-                                ? 'bg-amber-500/15 text-amber-600 border border-amber-500/30'
+                                ? 'bg-warn/15 text-warn border border-warn/30'
                                 : 'bg-pos/15 text-pos border border-pos/30'
                             }`}
                           >
                             {isLockedForUser ? (
                               <>
-                                <Lock className="w-2.5 h-2.5" />
+                                <Lock className="w-2.5 h-2.5" strokeWidth={1.8} />
                                 <span>PIN Locked</span>
                               </>
                             ) : (
                               <>
-                                <Unlock className="w-2.5 h-2.5" />
+                                <Unlock className="w-2.5 h-2.5" strokeWidth={1.8} />
                                 <span>Unlocked (Session)</span>
                               </>
                             )}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center space-x-1 text-[10px] text-ink-muted">
+                          <span className="inline-flex items-center space-x-1 text-[10px] text-ink-3">
                             <span>Open Access (No PIN)</span>
                           </span>
                         )}
@@ -706,23 +702,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                       <button
                         type="button"
                         onClick={() => lockProfile(p.id)}
-                        className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-colors border border-amber-500/30"
+                        className="lg-btn lg-btn-quiet lg-btn-sm text-warn hover:bg-warn/10"
                         title="Re-lock this profile"
                       >
-                        <Lock className="w-3 h-3" />
+                        <Lock className="w-3 h-3" strokeWidth={1.8} />
                         <span>Lock</span>
                       </button>
                     )}
 
                     {isActive ? (
-                      <span className="lg-pill lg-pill-accent text-xs font-mono-num font-bold">
+                      <span className="lg-tag lg-tag-accent text-xs font-mono-num font-bold">
                         Active Profile
                       </span>
                     ) : (
                       <button
                         type="button"
                         onClick={() => selectProfile(p.id)}
-                        className="lg-btn-quiet text-xs"
+                        className="lg-btn lg-btn-quiet lg-btn-sm"
                       >
                         Switch To
                       </button>
@@ -731,11 +727,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     <button
                       type="button"
                       onClick={() => openEditProfileModal(p)}
-                      className="p-2 text-ink-muted hover:text-ink hover:bg-sunken rounded-lg transition-colors border border-transparent hover:border-line"
+                      className="lg-iconbtn"
                       title="Edit Profile & PIN Lock Settings"
                       aria-label="Edit Profile"
                     >
-                      <Edit3 className="w-4 h-4" />
+                      <Edit3 className="w-4 h-4 text-ink-3" strokeWidth={1.8} />
                     </button>
                   </div>
                 </div>
@@ -752,7 +748,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <button
                 type="button"
                 onClick={openCreateProfileModal}
-                className="text-xs text-ink-muted hover:text-ink underline font-medium"
+                className="text-xs text-accent hover:underline font-medium"
               >
                 Full Setup Modal
               </button>
@@ -793,14 +789,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <div className="p-3 rounded-xl bg-sunken border border-line space-y-2">
               <label className="flex items-center justify-between cursor-pointer">
                 <div className="flex items-center space-x-2">
-                  <Lock className="w-3.5 h-3.5 text-ink-muted" />
+                  <Lock className="w-3.5 h-3.5 text-ink-3" strokeWidth={1.8} />
                   <span className="text-xs text-ink font-semibold">Lock this profile with a PIN</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={newProfileLock}
                   onChange={(e) => setNewProfileLock(e.target.checked)}
-                  className="rounded border-line text-ink focus:ring-accent"
+                  className="rounded border-line text-accent focus:ring-accent"
                 />
               </label>
 
@@ -814,7 +810,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                     onChange={(e) => setNewProfilePin(e.target.value.replace(/\D/g, ''))}
                     className="w-full sm:w-36 lg-input text-xs font-mono-num tracking-widest text-center"
                   />
-                  <span className="text-[11px] text-ink-muted">
+                  <span className="text-[11px] text-ink-3">
                     Only authorized users with this PIN can access this profile.
                   </span>
                 </div>
@@ -824,9 +820,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <button
               type="submit"
               disabled={isCreatingProfile || !newProfileName.trim()}
-              className="lg-btn-solid text-xs w-full sm:w-auto"
+              className="lg-btn lg-btn-solid lg-btn-sm w-full sm:w-auto"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.8} />
               <span>{isCreatingProfile ? 'Creating...' : 'Create Profile'}</span>
             </button>
           </form>
@@ -835,7 +831,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         {/* 2. Payment & Transfer Gateway */}
         <div className="lg-card p-5 space-y-4">
           <div className="flex items-center space-x-2 border-b border-line pb-3">
-            <CreditCard className="w-4 h-4 text-ink" />
+            <CreditCard className="w-4 h-4 text-accent" strokeWidth={1.8} />
             <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Payment &amp; Transfer Gateway
             </h2>
@@ -844,21 +840,21 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <div className="space-y-3 text-xs">
             <div className="p-3.5 bg-sunken rounded-xl border border-line space-y-2.5">
               <div className="flex justify-between items-center">
-                <span className="text-ink-muted font-medium">Gateway Status:</span>
+                <span className="text-ink-3 font-medium">Gateway Status:</span>
                 <span className="inline-flex items-center text-pos font-bold">
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" strokeWidth={1.8} />
                   Active &amp; Connected
                 </span>
               </div>
               <div className="flex justify-between items-center flex-wrap gap-1">
-                <span className="text-ink-muted font-medium">Supported Channels:</span>
+                <span className="text-ink-3 font-medium">Supported Channels:</span>
                 <span className="text-ink font-semibold">
                   Mobile Money (MTN, Telecel, AT), Cards &amp; Bank
                 </span>
               </div>
             </div>
 
-            <p className="text-[11px] text-ink-muted leading-relaxed">
+            <p className="text-[11px] text-ink-3 leading-relaxed">
               Automated savings transfers and deposits are credited directly to your profile ledgers with instant email confirmation and receipt reference tracking.
             </p>
           </div>
@@ -867,7 +863,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         {/* 3. Live Forex Rates to GHS */}
         <div className="lg-card p-5 space-y-4">
           <div className="flex items-center space-x-2 border-b border-line pb-3">
-            <Coins className="w-4 h-4 text-ink" />
+            <Coins className="w-4 h-4 text-accent" strokeWidth={1.8} />
             <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Exchange Rates (Pegged to GHS)
             </h2>
@@ -876,7 +872,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           <form onSubmit={handleSaveRates} className="space-y-3 text-xs">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
                   1 USD = (GHS)
                 </label>
                 <input
@@ -889,7 +885,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
                   1 EUR = (GHS)
                 </label>
                 <input
@@ -902,7 +898,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
                   1 GBP = (GHS)
                 </label>
                 <input
@@ -915,7 +911,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-3 font-mono-num mb-1 font-bold">
                   1 NGN = (GHS)
                 </label>
                 <input
@@ -931,9 +927,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <button
               type="submit"
               disabled={isSavingRates}
-              className="lg-btn-quiet text-xs font-bold"
+              className="lg-btn lg-btn-quiet lg-btn-sm font-bold"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSavingRates ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isSavingRates ? 'animate-spin' : ''}`} strokeWidth={1.8} />
               <span>Update Conversion Rates</span>
             </button>
           </form>
@@ -942,7 +938,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         {/* 4. Complete Data Backup & Restore */}
         <div className="lg-card p-5 space-y-4">
           <div className="flex items-center space-x-2 border-b border-line pb-3">
-            <Shield className="w-4 h-4 text-ink" />
+            <Shield className="w-4 h-4 text-accent" strokeWidth={1.8} />
             <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Data Backup &amp; Recovery
             </h2>
@@ -954,15 +950,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <span className="font-bold text-ink block">
                 Export Ledger Backup
               </span>
-              <p className="text-ink-muted text-[11px] leading-relaxed">
+              <p className="text-ink-3 text-[11px] leading-relaxed">
                 Download a clean, structured JSON file of your financial data including profiles, transactions, debts, goals, and transfer logs.
               </p>
               <button
                 type="button"
                 onClick={handleDownloadBackup}
-                className="lg-btn-solid text-xs"
+                className="lg-btn lg-btn-solid lg-btn-sm"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Download className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>Download Ledger Backup (JSON)</span>
               </button>
             </div>
@@ -983,9 +979,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={handleRestoreBackup}
                 disabled={isRestoring || !restoreJson.trim()}
-                className="lg-btn-quiet text-xs font-bold"
+                className="lg-btn lg-btn-quiet lg-btn-sm font-bold"
               >
-                <Upload className="w-3.5 h-3.5" />
+                <Upload className="w-3.5 h-3.5" strokeWidth={1.8} />
                 <span>Restore from Backup</span>
               </button>
             </div>
@@ -1006,17 +1002,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
       {/* Reset Balance Confirmation Modal */}
       {showResetConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/60 backdrop-blur-xs">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-ink/60 backdrop-blur-xs">
           <div className="lg-card max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start space-x-3">
-              <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 border border-amber-500/30 shrink-0">
-                <RotateCcw className="w-5 h-5" />
+              <div className="p-2.5 rounded-xl bg-warn/15 text-warn border border-warn/30 shrink-0">
+                <RotateCcw className="w-5 h-5" strokeWidth={1.8} />
               </div>
               <div className="space-y-1">
                 <h3 className="text-base font-bold text-ink">
                   Reset Net Balance to 0.00?
                 </h3>
-                <p className="text-xs text-ink-muted leading-relaxed">
+                <p className="text-xs text-ink-3 leading-relaxed">
                   This restarts your active dashboard ledger at <strong>0.00</strong> so you can track a clean, new financial cycle.
                 </p>
               </div>
@@ -1024,15 +1020,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
             <div className="p-3.5 rounded-xl bg-sunken border border-line text-xs space-y-2 text-ink">
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
                 <span><strong>Zero Data Loss:</strong> Past transactions are permanently stored in <strong>Monthly History</strong>.</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
                 <span><strong>Savings Vaults Untouched:</strong> Target goals and locked vaults never reset.</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" strokeWidth={1.8} />
                 <span><strong>Debts Preserved:</strong> All receivables and payables remain intact.</span>
               </div>
             </div>
@@ -1042,7 +1038,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={() => setShowResetConfirmModal(false)}
                 disabled={isResettingBalance}
-                className="lg-btn-quiet text-xs"
+                className="lg-btn lg-btn-quiet lg-btn-sm"
               >
                 Cancel
               </button>
@@ -1050,9 +1046,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 type="button"
                 onClick={handleResetBalance}
                 disabled={isResettingBalance}
-                className="lg-btn-solid text-xs"
+                className="lg-btn lg-btn-solid lg-btn-sm"
               >
-                <RotateCcw className={`w-3.5 h-3.5 ${isResettingBalance ? 'animate-spin' : ''}`} />
+                <RotateCcw className={`w-3.5 h-3.5 ${isResettingBalance ? 'animate-spin' : ''}`} strokeWidth={1.8} />
                 <span>{isResettingBalance ? 'Resetting...' : 'Yes, Reset to 0.00'}</span>
               </button>
             </div>
