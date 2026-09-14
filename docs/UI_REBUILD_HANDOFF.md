@@ -314,3 +314,62 @@ Paste this, and attach or point at this repository.
   repo → pick the branch, or merge to `main` first).
 - Earlier non-UI fixes already on this branch: the server now honours `PORT`, and the
   rate-limit bucket no longer collapses every client into one key behind a proxy.
+
+---
+
+## Round 2 — progress bars removed, three pages rebuilt (commit e6bfaac)
+
+The user rejected progress bars outright: "You see all those apps I gave you to
+reference didn't have those." The rule is now absolute — **a bar is never an
+acceptable way to show a proportion in this app.** State the figure instead.
+`.lg-track` still exists in `foundation.css` but has zero callers; delete it if
+nothing needs it by the end of the rebuild.
+
+What each screen says now instead of drawing a bar:
+
+| Was a bar | Now reads |
+| --- | --- |
+| Savings rate (BalanceHero) | "You kept 29.2% of what came in this month." |
+| Category spend | a ranked list, amount + "N% of spend" |
+| Budget usage (Overview + Budgets) | "GH₵ 300.00 left" / "GH₵ 340.00 over", plus Used N% |
+| Goal funding (VaultList) | "GH₵ 6,200.00 of 10,000.00 · 62% funded" |
+| Debt settled | "Still outstanding GH₵ 2,000.00", "Settled so far GH₵ 400.00 · 17%" |
+
+### Rebuilt this round
+
+`src/pages/TransactionsPage.tsx`, `src/pages/BudgetsPage.tsx`,
+`src/pages/DebtsPage.tsx`. All three are registered in the preview harness —
+open `?screen=transactions|budgets|debts`, add `&state=empty` for the empty
+state.
+
+### Bugs found and fixed while rebuilding
+
+1. **`dateTo` was unreachable.** TransactionsPage held `dateTo` state and
+   filtered on it, but rendered only a "from" input. There is now a "To" input.
+2. **Negative totals rendered as positive.** `formatCurrency()` in
+   `src/design/tokens.ts` runs `Math.abs()` internally, so a negative net
+   printed as a positive figure distinguished only by its colour. The shared
+   formatter was left alone (every other caller depends on its output); a local
+   `signed()` helper in TransactionsPage prepends `+` / `−` and leaves zero
+   unsigned. **Any other screen that prints a signed total has this same bug —
+   check it when you rebuild that screen.**
+3. **Totals truncated at 390px.** Three columns of currency ellipsised; they
+   stack as labelled rows below `sm`.
+4. **`xs:` variants were dead.** No `xs` breakpoint exists in this Tailwind v4
+   setup, so `hidden xs:inline` meant permanently hidden. Replaced with `sm:`.
+5. **`.lg-seg` buttons were 34px tall** — under the tap-target floor. Now 40px,
+   which with the 3px container padding clears 44px.
+
+### Verified
+
+`npx tsc --noEmit` and `npm run build` clean. All three screens inspected in a
+real browser at 360 / 390 / 834 / 1280 px: no horizontal overflow, no clipped
+text apart from the deliberate category-name ellipsis in `ReceiptRow`, empty
+states render.
+
+### Known, not yet fixed
+
+- `ReceiptRow` (shared with HistoryPage) is still the old design and contains
+  10px text, below the 12px floor. Rebuild it once and verify both pages.
+- `.t-eyebrow` is 11px. Consistent across the app, but under the stated floor.
+- Dark mode is still broken on rebuilt screens; tokens are light-only.
