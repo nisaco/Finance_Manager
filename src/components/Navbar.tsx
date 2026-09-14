@@ -19,7 +19,6 @@ import {
   Sparkles,
   Mic,
   Crown,
-  Palette,
   Menu,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
@@ -74,11 +73,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     lockProfile,
   } = useLedger();
   const { user, logout } = useAuth();
-  const { resolvedTheme, toggleTheme, uiStyle, setUiStyle } = useTheme();
   const { resolvedTheme, toggleTheme } = useTheme();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
 
   const isAdmin =
     user?.role === 'admin' ||
@@ -297,67 +294,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
 
-            {/* Tools. Desktop only — on a phone these live in the More drawer,
-                which is why the mobile header stays quiet. */}
             {/* Tools. Desktop only */}
             <div className="hidden md:flex items-center gap-1.5 shrink-0">
-              <div className="relative">
-                <button
-                  onClick={() => setStyleDropdownOpen(!styleDropdownOpen)}
-                  title="Customize interface style"
-                  aria-label="Customize interface style"
-                  aria-expanded={styleDropdownOpen}
-                  className="lg-btn lg-btn-ghost lg-btn-sm"
-                >
-                  <Palette className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-                  <span className="capitalize">{uiStyle}</span>
-                </button>
-
-                {styleDropdownOpen && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setStyleDropdownOpen(false)}
-                    />
-                    <div
-                      className="lg-pop absolute right-0 mt-2 w-60 p-2 z-50"
-                      style={{ ['--lg-pop-origin' as string]: 'right' }}
-                    >
-                      <div className="t-eyebrow px-2 py-1.5">Interface appearance</div>
-                      {[
-                        { id: 'modern', label: 'Modern clean', desc: 'Clean slate and sans-serif' },
-                        { id: 'minimal', label: 'Minimalist mono', desc: 'Monochrome and crisp' },
-                        { id: 'slate', label: 'Nordic slate', desc: 'Cool indigo accent' },
-                        { id: 'editorial', label: 'Editorial paper', desc: 'Classic warm serif' },
-                      ].map((st) => {
-                        const selected = uiStyle === st.id;
-                        return (
-                          <button
-                            key={st.id}
-                            onClick={() => {
-                              setUiStyle(st.id as any);
-                              setStyleDropdownOpen(false);
-                            }}
-                            aria-current={selected ? 'true' : undefined}
-                            className={`w-full text-left px-3 py-2 rounded-xl transition-colors ${
-                              selected ? 'bg-accent-soft' : 'hover:bg-sunken'
-                            }`}
-                          >
-                            <span
-                              className={`block ${selected ? 't-card' : 't-body text-ink'}`}
-                              style={selected ? { color: 'var(--lg-accent)' } : undefined}
-                            >
-                              {st.label}
-                            </span>
-                            <span className="t-meta block">{st.desc}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-
               <button
                 onClick={toggleTheme}
                 title={`Switch to ${resolvedTheme === 'dark' ? 'light' : 'dark'} mode`}
