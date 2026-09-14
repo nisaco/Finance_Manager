@@ -88,9 +88,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       aria-modal="true"
       aria-label="Navigation menu"
     >
-      <div className="lg-drawer-scrim" onClick={onClose} aria-hidden="true" />
+      <div className="lg-drawer-scrim backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
-      <aside className="lg-drawer w-[19rem] max-w-[85vw] z-10 overscroll-contain touch-pan-y">
+      <aside className="lg-drawer w-[19.5rem] max-w-[85vw] z-10 overscroll-contain touch-pan-y shadow-2xl">
+        {/* iOS Drag Pill for tactile native mobile feel */}
+        <div className="w-9 h-1 rounded-full bg-ink-4/35 mx-auto mt-2 -mb-1" aria-hidden="true" />
+
         {/* ---- Identity ---- */}
         <div className="flex items-center justify-between gap-3 px-4 h-16 border-b border-line shrink-0">
           <button
@@ -98,11 +101,11 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
               onClose();
               onTabChange('overview');
             }}
-            className="flex items-center gap-2.5 min-w-0 text-left"
+            className="flex items-center gap-2.5 min-w-0 text-left active:scale-95 transition-transform"
           >
             <LedgerLogo size={30} />
             <span className="min-w-0">
-              <span className="t-card block">Ledger</span>
+              <span className="t-card block tracking-tight">Ledger</span>
               <span className="t-meta block truncate">
                 {user ? `@${user.username}` : 'Signed out'}
                 {activeProfile ? ` · ${activeProfile.name}` : ''}
@@ -110,7 +113,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             </span>
           </button>
 
-          <button onClick={onClose} className="lg-iconbtn shrink-0" aria-label="Close menu">
+          <button onClick={onClose} className="lg-iconbtn shrink-0 active:scale-90 transition-transform" aria-label="Close menu">
             <X className="w-5 h-5" strokeWidth={1.7} />
           </button>
         </div>
@@ -131,7 +134,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   onTabChange(item.id);
                   onClose();
                 }}
-                className="lg-row"
+                className="lg-row active:scale-[0.98] transition-transform"
                 style={delay()}
                 aria-current={isActive ? 'page' : undefined}
               >

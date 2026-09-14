@@ -32,7 +32,7 @@ export const SectionCard: React.FC<SectionCardProps> = ({
       {action ? (
         <button
           onClick={action.onClick}
-          className="shrink-0 inline-flex items-center gap-1 text-[0.875rem] font-bold text-accent hover:text-accent-hover transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded"
+          className="shrink-0 inline-flex items-center gap-1 text-[0.875rem] font-bold text-accent hover:text-accent-hover active:scale-95 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded"
         >
           {action.label}
           {action.icon === 'chevron' ? (

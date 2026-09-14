@@ -87,11 +87,11 @@ const ActivityRow: React.FC<{
       <button
         type="button"
         onClick={() => onEdit(tx)}
-        className="w-full flex items-center gap-3.5 px-5 py-3.5 text-left hover:bg-sunken transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        className="group w-full flex items-center gap-3.5 px-5 py-3.5 text-left hover:bg-sunken active:scale-[0.99] transition-all duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
       >
         <span
           aria-hidden="true"
-          className="w-9 h-9 rounded-[10px] border border-line bg-sunken flex items-center justify-center text-ink-3 shrink-0"
+          className="w-9 h-9 rounded-[10px] border border-line bg-sunken flex items-center justify-center text-ink-3 shrink-0 transition-transform duration-200 group-hover:scale-105"
         >
           <Icon className="w-[17px] h-[17px] stroke-[1.7]" />
         </span>

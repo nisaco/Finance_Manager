@@ -125,6 +125,10 @@
     --ticket-notch: #0F1115;
   }
 
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   html {
     overflow-x: clip;
     width: 100%;
@@ -144,7 +148,7 @@
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x pan-y;
     overscroll-behavior: auto;
-    transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
+    transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
   }
 }
 

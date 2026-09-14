@@ -127,27 +127,18 @@
   --lg-e3: 0 12px 24px -4px rgba(10, 25, 47, 0.08), 0 4px 8px -2px rgba(10, 25, 47, 0.04);
   --lg-e4: 0 24px 48px -8px rgba(10, 25, 47, 0.12), 0 8px 16px -4px rgba(10, 25, 47, 0.06);
 
-  /* --- Motion: two curves, three durations, used everywhere ---------------
-     `exit` is symmetrical; `enter` decelerates hard so a panel arrives like it
-     has mass instead of sliding at a constant speed. --- */
-  --lg-ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
-  --lg-ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
-  /* --- Motion ------------------------------------------------------------- */
+  /* --- Motion: Apple iOS inspired curves and physics ---------------------- */
   --lg-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --lg-ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
-  --lg-fast: 160ms;
+  --lg-ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+  --lg-ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+  --lg-fast: 150ms;
   --lg-base: 240ms;
-  --lg-slow: 340ms;
   --lg-slow: 360ms;
 
-  /* --- Type ------------------------------------------------------------- */
-  --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system,
-    sans-serif;
-  --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   /* --- Typography --------------------------------------------------------- */
   --lg-font: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   --lg-font-serif: "Plus Jakarta Sans", "Inter", -apple-system, sans-serif;
-  --lg-font-mono: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
   --lg-font-mono: "JetBrains Mono", "SF Mono", "Segoe UI Mono", monospace;
 }
 
@@ -451,55 +442,101 @@
      Structural Containers & Cards with Depth
      ========================================================================== */
 
-  /* A card. Hairline + surface tone. No shadow, no gradient, no lift on hover. */
+  /* A card. Hairline + surface tone with subtle warm depth. */
   .lg-card {
-    background: var(--lg-surface);
     background-color: var(--lg-surface);
     border: 1px solid var(--lg-line);
-    border-radius: 16px;
+    border-radius: 18px;
     box-shadow: var(--lg-e1);
     transition: background-color var(--lg-base) var(--lg-ease-enter),
                 border-color var(--lg-base) var(--lg-ease-enter),
-                box-shadow var(--lg-base) var(--lg-ease-enter);
+                box-shadow var(--lg-base) var(--lg-ease-enter),
+                transform var(--lg-base) var(--lg-ease-ios);
   }
 
-  /* Small status/provenance badge (Paystack, Recurring, Vault ...). */
+  /* Interactive card with tactile hover lift and iOS-grade press */
+  .lg-card-interactive {
+    background-color: var(--lg-surface);
+    border: 1px solid var(--lg-line);
+    border-radius: 18px;
+    box-shadow: var(--lg-e1);
+    transition: background-color var(--lg-fast) ease,
+                border-color var(--lg-fast) ease,
+                box-shadow var(--lg-base) var(--lg-ease-ios),
+                transform var(--lg-base) var(--lg-ease-ios);
+    cursor: pointer;
+  }
+
+  .lg-card-interactive:hover {
+    transform: translateY(-2px);
+    border-color: var(--lg-line-strong);
+    box-shadow: var(--lg-e2);
+  }
+
+  .lg-card-interactive:active {
+    transform: scale(0.985);
+    transition-duration: 70ms;
+  }
+
+  /* Ambient warmth mesh behind hero containers */
+  .lg-warmth-mesh {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lg-warmth-mesh::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 10% 15%, rgba(2, 132, 199, 0.045) 0%, transparent 55%),
+                radial-gradient(circle at 90% 85%, rgba(217, 119, 6, 0.035) 0%, transparent 55%);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .dark .lg-warmth-mesh::before {
+    background: radial-gradient(circle at 12% 15%, rgba(56, 189, 248, 0.04) 0%, transparent 60%),
+                radial-gradient(circle at 88% 85%, rgba(30, 58, 102, 0.16) 0%, transparent 60%);
+  }
+
+  /* Subtle status/provenance badge with micro-scale on hover */
   .lg-tag {
     display: inline-flex;
     align-items: center;
     height: 22px;
     padding: 0 8px;
     border: 1px solid var(--lg-line);
-    border-radius: 6px;
-    background: var(--lg-sunken);
+    border-radius: 7px;
     background-color: var(--lg-sunken);
     color: var(--lg-ink-3);
-    font-size: 0.625rem; /* 10px — a badge is a label, not content */
     font-size: 0.625rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     white-space: nowrap;
     flex: none;
-    transition: background-color var(--lg-fast) ease, color var(--lg-fast) ease;
+    transition: background-color var(--lg-fast) ease,
+                color var(--lg-fast) ease,
+                transform var(--lg-fast) var(--lg-ease-spring);
+  }
+
+  .lg-tag:hover {
+    transform: translateY(-0.5px);
   }
 
   .lg-tag-pos {
-    background: var(--lg-pos-soft);
     background-color: var(--lg-pos-soft);
     border-color: transparent;
     color: var(--lg-pos);
   }
 
   .lg-tag-neg {
-    background: var(--lg-neg-soft);
     background-color: var(--lg-neg-soft);
     border-color: transparent;
     color: var(--lg-neg);
   }
 
   .lg-tag-warn {
-    background: var(--lg-warn-soft);
     background-color: var(--lg-warn-soft);
     border-color: transparent;
     color: var(--lg-warn);
@@ -517,9 +554,9 @@
     color: var(--lg-gold);
   }
 
-  /* Progress track. One rule, so every bar in the product is the same bar. */
+  /* Progress track with smooth width physics */
   .lg-track {
-    display: block; /* an inline span ignores height — the bar disappears */
+    display: block;
     position: relative;
     height: 6px;
     border-radius: 999px;
@@ -868,7 +905,6 @@
     gap: 8px;
     min-height: 84px;
     padding: 12px 8px;
-    background: var(--lg-surface);
     background-color: var(--lg-surface);
     border: 1px solid var(--lg-line);
     border-radius: 14px;
@@ -878,24 +914,27 @@
     line-height: 1.25;
     text-align: center;
     cursor: pointer;
-    transition:
-      background-color 180ms ease,
-      border-color 180ms ease;
     box-shadow: var(--lg-e1);
     transition: background-color var(--lg-fast) ease,
                 border-color var(--lg-fast) ease,
-                box-shadow var(--lg-fast) ease;
+                box-shadow var(--lg-base) var(--lg-ease-ios),
+                transform var(--lg-fast) var(--lg-ease-ios);
   }
 
   .lg-tile:hover {
-    background: var(--lg-sunken);
     background-color: var(--lg-sunken);
     border-color: var(--lg-line-strong);
     box-shadow: var(--lg-e2);
+    transform: translateY(-2px);
+  }
+
+  .lg-tile:hover svg {
+    transform: scale(1.08);
   }
 
   .lg-tile svg {
     color: var(--lg-accent);
+    transition: transform var(--lg-fast) var(--lg-ease-spring);
   }
 
   /* ==========================================================================
@@ -1097,40 +1136,85 @@
     }
   }
 
-  /* Press feedback. A control that yields under the finger is the cheapest
-     signal that the tap registered — it matters most on slow connections,
-     where nothing else has happened yet. */
-  .lg-btn:active:not(:disabled),
-  .lg-tile:active,
-  .lg-iconbtn:active,
+  /* Press feedback: iOS tactile spring compression */
+  .lg-btn:active:not(:disabled) {
+    transform: scale(0.96);
+    transition-duration: 70ms;
+  }
+
+  .lg-tile:active {
+    transform: scale(0.935);
+    transition-duration: 70ms;
+  }
+
+  .lg-iconbtn:active {
+    transform: scale(0.92);
+    transition-duration: 70ms;
+  }
+
   .lg-seg button:active {
-    transform: scale(0.975);
+    transform: scale(0.95);
+    transition-duration: 70ms;
   }
 
   .lg-row:active {
-    background: var(--lg-line);
-    background-color: var(--lg-line);
+    background-color: var(--lg-sunken);
+    transform: scale(0.995);
+    transition-duration: 70ms;
   }
 
   .lg-btn,
   .lg-tile,
-  .lg-iconbtn {
+  .lg-iconbtn,
+  .lg-seg button {
     transition:
       background-color var(--lg-fast) var(--lg-ease-exit),
       border-color var(--lg-fast) var(--lg-ease-exit),
       color var(--lg-fast) var(--lg-ease-exit),
       box-shadow var(--lg-fast) var(--lg-ease-exit),
-      transform var(--lg-fast) var(--lg-ease-exit);
+      transform var(--lg-fast) var(--lg-ease-spring);
   }
 
-  /* The one honest use of elevation on a button: the primary action lifts a
-     little on hover, so the eye finds it without a colour change. */
+  /* Subtle breathing pulse keyframe for live metrics and hero balance */
+  @keyframes lg-breathe-subtle {
+    0%, 100% {
+      opacity: 0.94;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.002);
+    }
+  }
+
+  .lg-breathe {
+    animation: lg-breathe-subtle 7s ease-in-out infinite;
+  }
+
+  /* Status pulse indicator */
+  @keyframes lg-live-pulse {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.5;
+      transform: scale(0.85);
+    }
+  }
+
+  .lg-pulse-dot {
+    animation: lg-live-pulse 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Elevation on primary solid action buttons */
   .lg-btn-solid {
     box-shadow: var(--lg-e1);
   }
 
   .lg-btn-solid:hover:not(:disabled) {
     box-shadow: var(--lg-e2);
+    transform: translateY(-0.5px);
   }
 
   /* Motion is a courtesy, not a requirement. Anyone who has asked their system
@@ -1139,14 +1223,17 @@
     .lg-drawer,
     .lg-drawer-scrim,
     .lg-pop,
-    .lg-stagger > * {
+    .lg-stagger > *,
+    .lg-breathe,
+    .lg-pulse-dot {
       animation: none;
     }
 
     .lg-btn:active:not(:disabled),
     .lg-tile:active,
     .lg-iconbtn:active,
-    .lg-seg button:active {
+    .lg-seg button:active,
+    .lg-row:active {
       transform: none;
     }
   }

@@ -128,8 +128,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const categoryList = type === 'income' ? DEFAULT_INCOME_CATEGORIES : DEFAULT_EXPENSE_CATEGORIES;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-ink/60 backdrop-blur-xs">
-      <div className="lg-card w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150 p-0">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink/60 backdrop-blur-sm transition-opacity">
+      <div className="lg-card w-full max-w-md rounded-t-[24px] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in-50 slide-in-from-bottom-6 sm:zoom-in-95 duration-200 p-0 border-line">
+        {/* iOS Drag Handle on mobile */}
+        <div className="w-10 h-1 rounded-full bg-ink-4/40 mx-auto mt-2.5 -mb-1 sm:hidden" aria-hidden="true" />
+
         {/* Modal Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
           <h2 className="font-display text-base font-bold text-ink">
@@ -138,7 +141,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken transition-colors"
+            className="p-1.5 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken active:scale-90 transition-all"
             aria-label="Close modal"
           >
             <X className="w-4 h-4" />
@@ -269,14 +272,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="lg-btn-quiet text-xs"
+              className="lg-btn lg-btn-quiet text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="lg-btn-solid text-xs"
+              className="lg-btn lg-btn-solid text-xs"
             >
               {isSubmitting ? 'Saving...' : initialData ? 'Update Entry' : 'Post to Ledger'}
             </button>

@@ -63,7 +63,7 @@ export const VaultList: React.FC<VaultListProps> = ({
             const last4 = g.paystackDestination?.accountLast4;
 
             return (
-              <li key={g.id} className="rounded-xl border border-line bg-sunken p-3.5">
+              <li key={g.id} className="rounded-xl border border-line bg-sunken p-3.5 transition-all duration-200 hover:border-line-strong hover:bg-surface/80">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="t-card truncate flex items-center gap-1.5">
@@ -86,15 +86,13 @@ export const VaultList: React.FC<VaultListProps> = ({
 
                   <button
                     onClick={() => onFund(g)}
-                    className="shrink-0 h-8 px-3 rounded-lg bg-surface border border-line-strong hover:bg-canvas text-ink text-[0.8125rem] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="shrink-0 h-8 px-3 rounded-lg bg-surface border border-line-strong hover:bg-canvas active:scale-95 text-ink text-[0.8125rem] font-bold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent shadow-2xs"
                   >
                     Fund
                   </button>
                 </div>
 
-                {/* Saved, target and share as one sentence of figures. The bar
-                    that used to sit here restated the percentage in a second
-                    form without making it any clearer. */}
+                {/* Saved, target and share */}
                 <div className="mt-2.5 flex items-baseline justify-between gap-3 flex-wrap">
                   <span className="num text-[0.9375rem] font-bold text-ink whitespace-nowrap">
                     {symbol} {formatAmount(g.current)}
@@ -106,6 +104,17 @@ export const VaultList: React.FC<VaultListProps> = ({
                   >
                     {pct >= 100 ? 'Funded' : `${pct}% funded`}
                   </span>
+                </div>
+
+                {/* Fluid hairline progress track */}
+                <div className="mt-2 h-1.5 w-full bg-line/80 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor: pct >= 100 ? 'var(--lg-pos)' : 'var(--lg-accent)',
+                    }}
+                  />
                 </div>
               </li>
             );

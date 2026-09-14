@@ -57,7 +57,7 @@ export const BudgetMonitor: React.FC<BudgetMonitorProps> = ({ budgets, onManage,
             return (
               <li
                 key={b.id}
-                className={`px-4 sm:px-5 py-3.5 ${i > 0 ? 'border-t border-line' : ''}`}
+                className={`px-4 sm:px-5 py-3.5 hover:bg-sunken/60 transition-colors ${i > 0 ? 'border-t border-line' : ''}`}
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="t-body text-ink font-semibold truncate min-w-0">
@@ -98,6 +98,17 @@ export const BudgetMonitor: React.FC<BudgetMonitorProps> = ({ budgets, onManage,
                   >
                     {pct}%
                   </span>
+                </div>
+
+                {/* Subtle progress track */}
+                <div className="mt-2 h-1 w-full bg-line/60 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${Math.min(100, pct)}%`,
+                      backgroundColor: isOver ? 'var(--lg-neg)' : isNear ? 'var(--lg-warn)' : 'var(--lg-accent)',
+                    }}
+                  />
                 </div>
               </li>
             );

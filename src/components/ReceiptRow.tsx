@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { ArrowUpRight, ArrowDownRight, Repeat, Trash2, Edit2 } from 'lucide-react';
 import { Transaction } from '../types';
 import { formatCurrency, formatDate, getCategoryColor } from '../design/tokens';
@@ -23,10 +23,10 @@ export const ReceiptRow: React.FC<ReceiptRowProps> = ({
   const amount = formatCurrency(transaction.amount, transaction.currency || displayCurrency);
 
   return (
-    <div className="group flex items-center justify-between gap-3 sm:gap-4 border-b border-line px-3 sm:px-4 py-3 last:border-b-0 transition-colors hover:bg-sunken min-h-[56px]">
+    <div className="group flex items-center justify-between gap-3 sm:gap-4 border-b border-line px-3 sm:px-4 py-3 last:border-b-0 transition-all duration-150 hover:bg-sunken active:scale-[0.995] min-h-[56px]">
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-transform duration-200 group-hover:scale-105 ${
             isIncome
               ? 'border-line bg-pos-soft text-pos'
               : 'border-line bg-neg-soft text-neg'
@@ -91,7 +91,7 @@ export const ReceiptRow: React.FC<ReceiptRowProps> = ({
               <button
                 type="button"
                 onClick={() => onEdit(transaction)}
-                className="lg-iconbtn"
+                className="lg-iconbtn active:scale-90 transition-transform"
                 title="Edit Entry"
                 aria-label="Edit transaction"
               >
@@ -102,7 +102,7 @@ export const ReceiptRow: React.FC<ReceiptRowProps> = ({
               <button
                 type="button"
                 onClick={() => onDelete(transaction.id)}
-                className="lg-iconbtn"
+                className="lg-iconbtn active:scale-90 transition-transform"
                 title="Delete Entry"
                 aria-label="Delete transaction"
               >

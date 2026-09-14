@@ -73,12 +73,13 @@ export const BalanceHero: React.FC<BalanceHeroProps> = ({
   ];
 
   return (
-    <section className="lg-card overflow-hidden">
+    <section className="lg-card lg-warmth-mesh overflow-hidden relative shadow-sm">
       <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr]">
         {/* ---- The figure ---- */}
-        <div className="p-5 sm:p-7 lg:p-8">
+        <div className="p-5 sm:p-7 lg:p-8 relative z-10">
           <div className="flex items-start justify-between gap-3">
-            <p className="t-eyebrow">
+            <p className="t-eyebrow flex items-center">
+              <span className="w-2 h-2 rounded-full bg-accent inline-block mr-2 lg-pulse-dot" aria-hidden="true" />
               Net balance
               {profile?.name ? (
                 <span className="normal-case tracking-normal font-medium text-ink-4">
@@ -91,7 +92,7 @@ export const BalanceHero: React.FC<BalanceHeroProps> = ({
             <button
               type="button"
               onClick={() => setHidden((v) => !v)}
-              className="lg-iconbtn -mt-2.5 -mr-2.5 shrink-0"
+              className="lg-iconbtn -mt-2.5 -mr-2.5 shrink-0 active:scale-90 transition-transform duration-150"
               aria-pressed={hidden}
               aria-label={hidden ? 'Show balance' : 'Hide balance'}
               title={hidden ? 'Show balance' : 'Hide balance'}
@@ -106,10 +107,9 @@ export const BalanceHero: React.FC<BalanceHeroProps> = ({
 
           {/* The symbol and the decimals are stepped down and set on the same
               baseline, so the figure reads as one number with the part that
-              matters carrying the weight. Sizes are explicit rather than em —
-              em would resolve against the inherited size, not the hero size. */}
-          <div className="mt-2 flex items-baseline">
-            <span className="num mr-2.5 text-[clamp(1rem,2.2vw,1.5rem)] font-medium text-ink-3">
+              matters carrying the weight. */}
+          <div className="mt-2.5 flex items-baseline select-none">
+            <span className="num mr-2.5 text-[clamp(1.125rem,2.4vw,1.625rem)] font-medium text-ink-3">
               {symbol}
             </span>
             {hidden ? (
@@ -149,9 +149,7 @@ export const BalanceHero: React.FC<BalanceHeroProps> = ({
             <span className="t-meta">net movement this month</span>
           </div>
 
-          {/* Four tiles rather than a row of buttons: it is the grid every money
-              app opens with, it wraps to 2×2 on a phone without reflowing text,
-              and each target clears 44px. */}
+          {/* Four tiles: iOS tactile micro-press and spring */}
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {actions.map(({ label, icon: Icon, onClick }) => (
               <button key={label} type="button" onClick={onClick} className="lg-tile">
@@ -229,7 +227,7 @@ const StatRow: React.FC<{
   value: string;
   tone: 'pos' | 'neg' | 'ink';
 }> = ({ label, value, tone }) => (
-  <div className="flex items-center justify-between gap-4 py-3 border-b border-line last:border-b-0">
+  <div className="flex items-center justify-between gap-4 py-3 border-b border-line last:border-b-0 hover:bg-surface/40 px-2 -mx-2 rounded-xl transition-colors">
     <span className="t-body inline-flex items-center gap-2.5 min-w-0">
       <i
         aria-hidden="true"

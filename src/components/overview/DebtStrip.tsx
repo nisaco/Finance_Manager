@@ -56,7 +56,7 @@ const Figure: React.FC<{
   value: string;
   tone: 'pos' | 'ink';
 }> = ({ label, symbol, value, tone }) => (
-  <div className="px-4 sm:px-5 py-4 min-w-0">
+  <div className="px-4 sm:px-5 py-4 min-w-0 transition-colors hover:bg-sunken/40">
     <p className="t-eyebrow">{label}</p>
     <p
       className={`mt-2 flex items-baseline gap-1 whitespace-nowrap ${

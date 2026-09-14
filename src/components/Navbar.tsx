@@ -96,7 +96,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-surface border-b border-line">
+      <header className="sticky top-0 z-40 bg-surface/85 backdrop-blur-md border-b border-line transition-colors">
         <div className="lg-page">
           {/* ---- Identity, profile, tools ---------------------------------- */}
           <div className="flex items-center justify-between h-16">
@@ -104,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Menu. Phones navigate from the drawer, as they always have. */}
               <button
                 onClick={() => setMobileDrawerOpen(true)}
-                className="lg-iconbtn md:hidden shrink-0 -ml-1"
+                className="lg-iconbtn md:hidden shrink-0 -ml-1 active:scale-95 transition-transform"
                 aria-label="Open navigation menu"
                 aria-expanded={mobileDrawerOpen}
                 id="navbar-menu-button"
@@ -114,12 +114,12 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               <button
                 onClick={() => handleTabChange('overview')}
-                className="flex items-center gap-2.5 text-left shrink-0 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-lg"
+                className="flex items-center gap-2.5 text-left shrink-0 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-lg active:scale-95 transition-transform"
                 title="Ledger Financial Platform"
                 id="navbar-brand-button"
               >
                 <LedgerLogo size={30} />
-                <span className="t-card hidden xs:block sm:text-base">Ledger</span>
+                <span className="t-card hidden xs:block sm:text-base tracking-tight">Ledger</span>
               </button>
 
               <span className="h-5 w-px bg-line shrink-0 hidden xs:block" aria-hidden="true" />
@@ -131,7 +131,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     id="navbar-profile-selector-btn"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="flex items-center gap-2 h-10 px-3 rounded-xl border border-line bg-sunken hover:border-line-strong transition-colors max-w-[170px] sm:max-w-[260px] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    className="flex items-center gap-2 h-10 px-3 rounded-xl border border-line bg-sunken hover:border-line-strong active:scale-95 transition-all max-w-[170px] sm:max-w-[260px] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     aria-label="Switch profile"
                     aria-expanded={profileDropdownOpen}
                   >
@@ -355,7 +355,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* ---- Desktop section navigation -------------------------------- */}
           <nav
-            className="hidden md:flex items-center gap-1 border-t border-line py-2 overflow-x-auto scrollbar-none"
+            className="hidden md:flex items-center gap-1.5 border-t border-line py-2 overflow-x-auto scrollbar-none"
             aria-label="Sections"
           >
             {navItems.map((item) => {
@@ -367,9 +367,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   id={`nav-tab-${item.id}`}
                   onClick={() => handleTabChange(item.id)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex items-center gap-2 h-9 px-3 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 transition-colors focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                  className={`flex items-center gap-2 h-9 px-3 rounded-xl text-sm font-semibold whitespace-nowrap shrink-0 transition-all duration-150 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.96] ${
                     isActive
-                      ? 'bg-solid text-on-solid'
+                      ? 'bg-solid text-on-solid shadow-xs'
                       : 'text-ink-3 hover:text-ink hover:bg-sunken'
                   }`}
                 >
