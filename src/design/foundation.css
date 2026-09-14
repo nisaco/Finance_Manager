@@ -1,6 +1,7 @@
 /* ============================================================================
    Ledger — Design Foundation (light)
    Ledger — Design Foundation (Light & Dark System)
+   Ledger — Design Foundation (Pan-African Cobalt & Midnight Obsidian System)
    ----------------------------------------------------------------------------
    The single source of truth for surface, ink, accent and semantic colour.
    Components consume these through Tailwind utilities (bg-surface, text-ink-3,
@@ -18,6 +19,8 @@
    - Nordic Slate
    - Minimalist Mono
    - Classic Editorial
+   Light Mode: Pan-African Royal Cobalt (#0284C7 / #0369A1) & Sun Gold (#D97706 / #FEF3C7)
+   Dark Mode:  Deep Institutional Midnight Obsidian (#070B12 / #0E1626) & Ice Sapphire (#38BDF8) — NO GOLD
    ========================================================================== */
 
 :root {
@@ -29,12 +32,19 @@
   --lg-canvas: #f4f5f7;
   --lg-surface: #ffffff;
   --lg-sunken: #f8f9fb;
+  /* --- Surfaces: Light Mode (Pan-African Cobalt & Sun Gold) ----------------- */
+  --lg-canvas: #f0f4f9; /* high-clarity slate canvas */
+  --lg-surface: #ffffff; /* crisp white cards and panels */
+  --lg-sunken: #e6eef7; /* inset wells, table stripes, tab wells */
 
   /* --- Hairlines: depth comes from these, never from shadows -------------- */
   --lg-line: #e7e9ee;
   --lg-line-strong: #d6dae1;
   --lg-line: #e2e6ed;
   --lg-line-strong: #cbd2df;
+  /* --- Hairlines: crisp architectural separation -------------------------- */
+  --lg-line: #d0dceb;
+  --lg-line-strong: #a8c0db;
 
   /* --- Ink: four steps, each with a job ---------------------------------- */
   --lg-ink: #0c111d; /* primary values and headings */
@@ -45,6 +55,11 @@
   --lg-ink-2: #334155;
   --lg-ink-3: #64748b;
   --lg-ink-4: #94a3b8;
+  /* --- Ink: four steps of deep oceanic navy ------------------------------- */
+  --lg-ink: #0a192f; /* primary values and headings */
+  --lg-ink-2: #243b5a; /* labels, body copy */
+  --lg-ink-3: #526e91; /* metadata, secondary */
+  --lg-ink-4: #86a0c0; /* eyebrows, disabled, placeholders */
 
   /* --- Accent: interaction only. Never decoration. ----------------------- */
   --lg-accent: #0f5257;
@@ -53,6 +68,10 @@
   --lg-accent: #0f766e;
   --lg-accent-hover: #0d9488;
   --lg-accent-soft: #e6f4f1;
+  /* --- Brand Accent: Royal Cobalt ----------------------------------------- */
+  --lg-accent: #0284c7;
+  --lg-accent-hover: #0369a1;
+  --lg-accent-soft: #e0f2fe;
 
   /* --- Semantic: money and status only ----------------------------------- */
   --lg-pos: #067a55;
@@ -61,16 +80,31 @@
   --lg-neg-soft: #fdecea;
   --lg-warn: #b54708;
   --lg-warn-soft: #fef3e8;
+  /* --- Brand Gold: Sun Gold for badges, vaults, Paystack in Light Mode ----- */
+  --lg-gold: #d97706;
+  --lg-gold-soft: #fef3c7;
 
   /* --- Solid action colour (primary buttons) ----------------------------- */
   --lg-solid: #101828;
   --lg-solid-hover: #1d2939;
   --lg-solid: #0f172a;
   --lg-solid-hover: #1e293b;
+  /* --- Semantic: Money & Status ------------------------------------------- */
+  --lg-pos: #059669;
+  --lg-pos-soft: #ecfdf5;
+  --lg-neg: #dc2626;
+  --lg-neg-soft: #fef2f2;
+  --lg-warn: #d97706;
+  --lg-warn-soft: #fef3c7;
+
+  /* --- Solid Action Color (Primary buttons) ------------------------------- */
+  --lg-solid: #0369a1;
+  --lg-solid-hover: #075985;
   --lg-on-solid: #ffffff;
 
   /* --- Layout: one place decides page gutters and thumb-reach -------------- */
   --lg-tap: 44px; /* minimum touch target; anything smaller is a miss on a phone */
+  /* --- Layout & Touch Targets --------------------------------------------- */
   --lg-tap: 44px;
   --lg-safe-b: env(safe-area-inset-bottom, 0px);
 
@@ -87,12 +121,18 @@
   --lg-e2: 0 4px 10px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
   --lg-e3: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
   --lg-e4: 0 24px 48px -8px rgba(15, 23, 42, 0.12), 0 8px 16px -4px rgba(15, 23, 42, 0.06);
+  /* --- Elevation: Light Mode ----------------------------------------------- */
+  --lg-e1: 0 1px 3px rgba(10, 25, 47, 0.05), 0 1px 2px rgba(10, 25, 47, 0.03);
+  --lg-e2: 0 4px 10px -2px rgba(10, 25, 47, 0.06), 0 2px 4px -1px rgba(10, 25, 47, 0.04);
+  --lg-e3: 0 12px 24px -4px rgba(10, 25, 47, 0.08), 0 4px 8px -2px rgba(10, 25, 47, 0.04);
+  --lg-e4: 0 24px 48px -8px rgba(10, 25, 47, 0.12), 0 8px 16px -4px rgba(10, 25, 47, 0.06);
 
   /* --- Motion: two curves, three durations, used everywhere ---------------
      `exit` is symmetrical; `enter` decelerates hard so a panel arrives like it
      has mass instead of sliding at a constant speed. --- */
   --lg-ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
   --lg-ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
+  /* --- Motion ------------------------------------------------------------- */
   --lg-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
   --lg-ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
   --lg-fast: 160ms;
@@ -104,8 +144,11 @@
   --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system,
     sans-serif;
   --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+  /* --- Typography --------------------------------------------------------- */
+  --lg-font: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
   --lg-font-serif: "Plus Jakarta Sans", "Inter", -apple-system, sans-serif;
   --lg-font-mono: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --lg-font-mono: "JetBrains Mono", "SF Mono", "Segoe UI Mono", monospace;
 }
 
 /* Expose the foundation to Tailwind so utilities generate from it.
@@ -169,6 +212,7 @@
 
 /* ============================================================================
    DARK MODE SYSTEM — Rich Obsidian & Luminous High-Legibility Slate
+   DARK MODE SYSTEM — Institutional Midnight Obsidian & Ice Sapphire (NO GOLD)
    ========================================================================== */
 .dark,
 [data-theme="dark"] {
@@ -176,35 +220,64 @@
   --lg-canvas: #090d14;
   --lg-surface: #111722;
   --lg-sunken: #161e2c;
+  --lg-canvas: #070b12; /* deepest midnight obsidian */
+  --lg-surface: #0e1626; /* high-contrast midnight card surface */
+  --lg-sunken: #141f36; /* inset wells and table rows */
 
   --lg-line: #1c2738;
   --lg-line-strong: #2a3a52;
+  --lg-line: #1d2c47;
+  --lg-line-strong: #2b4168;
 
   --lg-ink: #f8fafc;
   --lg-ink-2: #cbd5e1;
   --lg-ink-3: #94a3b8;
   --lg-ink-4: #64748b;
+  --lg-ink: #f8fafc; /* stark diamond white values and headers */
+  --lg-ink-2: #cbd5e1; /* crisp body copy */
+  --lg-ink-3: #8ea2be; /* slate metadata */
+  --lg-ink-4: #5d7290; /* disabled / placeholders */
 
   --lg-accent: #14b8a6;
   --lg-accent-hover: #2dd4bf;
   --lg-accent-soft: rgba(20, 184, 166, 0.15);
+  /* Ice Sapphire Accent — crisp, clean, zero AI glow */
+  --lg-accent: #38bdf8;
+  --lg-accent-hover: #7dd3fc;
+  --lg-accent-soft: rgba(56, 189, 248, 0.12);
+
+  /* In dark mode: NO gold — uses clean frost sapphire tone */
+  --lg-gold: #38bdf8;
+  --lg-gold-soft: rgba(56, 189, 248, 0.12);
 
   --lg-pos: #22c55e;
   --lg-pos-soft: rgba(34, 197, 94, 0.14);
+  --lg-pos-soft: rgba(34, 197, 94, 0.12);
   --lg-neg: #f87171;
   --lg-neg-soft: rgba(239, 68, 68, 0.14);
   --lg-warn: #fbbf24;
   --lg-warn-soft: rgba(245, 158, 11, 0.14);
+  --lg-neg-soft: rgba(248, 113, 113, 0.12);
+  --lg-warn: #38bdf8;
+  --lg-warn-soft: rgba(56, 189, 248, 0.12);
 
   --lg-solid: #f8fafc;
   --lg-solid-hover: #e2e8f0;
   --lg-on-solid: #090d14;
+  --lg-solid: #38bdf8;
+  --lg-solid-hover: #7dd3fc;
+  --lg-on-solid: #070b12;
 
   /* Elevation: Dark mode deep ambient glow and edge illumination */
   --lg-e1: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --lg-e2: 0 4px 12px -2px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
   --lg-e3: 0 12px 28px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
   --lg-e4: 0 24px 56px -8px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.12);
+  /* Elevation: Dark mode clean architectural depth */
+  --lg-e1: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --lg-e2: 0 4px 12px -2px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --lg-e3: 0 12px 28px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  --lg-e4: 0 24px 56px -8px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.11);
 }
 
 /* --- Style: Nordic Slate (Dark) ------------------------------------------- */
@@ -430,6 +503,18 @@
     background-color: var(--lg-warn-soft);
     border-color: transparent;
     color: var(--lg-warn);
+  }
+
+  .lg-tag-accent {
+    background-color: var(--lg-accent-soft);
+    border-color: transparent;
+    color: var(--lg-accent);
+  }
+
+  .lg-tag-gold {
+    background-color: var(--lg-gold-soft);
+    border-color: transparent;
+    color: var(--lg-gold);
   }
 
   /* Progress track. One rule, so every bar in the product is the same bar. */

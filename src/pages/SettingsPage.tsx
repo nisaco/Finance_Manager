@@ -64,10 +64,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     isProfileLockedForUser,
     lockProfile,
     openCreateProfileModal,
-    openEditProfileModal,
     fetchProfiles,
   } = useLedger();
-  const { theme, setTheme, uiStyle, setUiStyle, uiDensity, setUiDensity } = useTheme();
+  const { theme, setTheme, uiDensity, setUiDensity } = useTheme();
   const isOwner = user?.email?.toLowerCase() === 'jnkpappoe@gmail.com';
 
   // Exchange rate local states
@@ -433,130 +432,18 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       <div className="lg-card p-5 space-y-5">
         <div className="flex items-center justify-between border-b border-line pb-3">
           <div className="flex items-center space-x-2">
-            <Palette className="w-4 h-4 text-ink" />
+            <Palette className="w-4 h-4 text-accent" />
             <h2 className="font-display text-sm sm:text-base font-bold text-ink">
-              Interface Appearance &amp; Layout
+              Interface Appearance &amp; Display
             </h2>
           </div>
-          <span className="text-xs font-mono-num text-ink-muted">
-            Active: <strong className="text-ink capitalize">{uiStyle}</strong>
+          <span className="text-xs font-mono-num text-ink-3">
+            Theme: <strong className="text-ink uppercase">{theme}</strong>
           </span>
         </div>
 
-        {/* 1. Interface Style Cards */}
-        <div className="space-y-2">
-          <label className="block text-xs font-bold text-ink uppercase tracking-wider">
-            Choose Preferred Style
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Modern Clean */}
-            <button
-              type="button"
-              onClick={() => setUiStyle('modern')}
-              className={`p-4 rounded-xl border text-left transition-all relative ${
-                uiStyle === 'modern'
-                  ? 'border-accent bg-accent/5 ring-1 ring-accent'
-                  : 'border-line bg-surface hover:border-ink/20'
-              }`}
-            >
-              {uiStyle === 'modern' && (
-                <span className="absolute top-3 right-3 lg-pill lg-pill-accent text-[9px]">
-                  Active
-                </span>
-              )}
-              <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center font-bold text-sm mb-2.5">
-                Aa
-              </div>
-              <div className="text-xs font-bold text-ink">
-                Modern Clean
-              </div>
-              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
-                Fintech standard interface with uncluttered slate cards and clear contrast.
-              </p>
-            </button>
-
-            {/* Minimalist Mono */}
-            <button
-              type="button"
-              onClick={() => setUiStyle('minimal')}
-              className={`p-4 rounded-xl border text-left transition-all relative ${
-                uiStyle === 'minimal'
-                  ? 'border-ink bg-sunken ring-1 ring-ink'
-                  : 'border-line bg-surface hover:border-ink/20'
-              }`}
-            >
-              {uiStyle === 'minimal' && (
-                <span className="absolute top-3 right-3 lg-pill lg-pill-dim text-[9px]">
-                  Active
-                </span>
-              )}
-              <div className="w-8 h-8 rounded-lg bg-sunken border border-line text-ink flex items-center justify-center font-mono font-bold text-sm mb-2.5">
-                #
-              </div>
-              <div className="text-xs font-bold text-ink">
-                Minimalist Mono
-              </div>
-              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
-                Ultra-crisp monochrome layout with zero decorative clutter.
-              </p>
-            </button>
-
-            {/* Nordic Slate */}
-            <button
-              type="button"
-              onClick={() => setUiStyle('slate')}
-              className={`p-4 rounded-xl border text-left transition-all relative ${
-                uiStyle === 'slate'
-                  ? 'border-accent bg-accent/5 ring-1 ring-accent'
-                  : 'border-line bg-surface hover:border-ink/20'
-              }`}
-            >
-              {uiStyle === 'slate' && (
-                <span className="absolute top-3 right-3 lg-pill lg-pill-accent text-[9px]">
-                  Active
-                </span>
-              )}
-              <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center font-bold text-sm mb-2.5">
-                S
-              </div>
-              <div className="text-xs font-bold text-ink">
-                Nordic Slate
-              </div>
-              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
-                Executive fintech appearance with cool slate hues and crisp accents.
-              </p>
-            </button>
-
-            {/* Classic Editorial */}
-            <button
-              type="button"
-              onClick={() => setUiStyle('editorial')}
-              className={`p-4 rounded-xl border text-left transition-all relative ${
-                uiStyle === 'editorial'
-                  ? 'border-ink bg-sunken ring-1 ring-ink'
-                  : 'border-line bg-surface hover:border-ink/20'
-              }`}
-            >
-              {uiStyle === 'editorial' && (
-                <span className="absolute top-3 right-3 lg-pill lg-pill-dim text-[9px]">
-                  Active
-                </span>
-              )}
-              <div className="w-8 h-8 rounded-lg bg-sunken border border-line text-ink flex items-center justify-center font-serif font-bold text-sm mb-2.5">
-                §
-              </div>
-              <div className="text-xs font-bold text-ink">
-                Classic Editorial
-              </div>
-              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
-                Warm paper styling, refined serif headers, and ticket stub styling.
-              </p>
-            </button>
-          </div>
-        </div>
-
-        {/* 2. Color Palette & Density Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-line">
+        {/* Color Palette & Density Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Theme Mode */}
           <div>
             <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2">

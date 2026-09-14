@@ -75,6 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   } = useLedger();
   const { user, logout } = useAuth();
   const { resolvedTheme, toggleTheme, uiStyle, setUiStyle } = useTheme();
+  const { resolvedTheme, toggleTheme } = useTheme();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [styleDropdownOpen, setStyleDropdownOpen] = useState(false);
@@ -298,6 +299,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Tools. Desktop only — on a phone these live in the More drawer,
                 which is why the mobile header stays quiet. */}
+            {/* Tools. Desktop only */}
             <div className="hidden md:flex items-center gap-1.5 shrink-0">
               <div className="relative">
                 <button
