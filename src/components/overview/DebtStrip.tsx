@@ -34,28 +34,39 @@ export const DebtStrip: React.FC<DebtStripProps> = ({
         {/* Zero owed is not good news, it is no news — so it is not green. */}
         <Figure
           label="Owed to me"
-          value={`${symbol} ${formatAmount(owedToMe)}`}
+          symbol={symbol}
+          value={formatAmount(owedToMe)}
           tone={owedToMe > 0 ? 'pos' : 'ink'}
         />
-        <Figure label="I owe" value={`${symbol} ${formatAmount(iOwe)}`} tone="ink" />
+        <Figure label="I owe" symbol={symbol} value={formatAmount(iOwe)} tone="ink" />
       </div>
     </SectionCard>
   );
 };
 
-const Figure: React.FC<{ label: string; value: string; tone: 'pos' | 'ink' }> = ({
-  label,
-  value,
-  tone,
-}) => (
-  <div className="px-5 py-4">
+/**
+ * Two of these sit side by side, so each gets half a phone screen minus gutters.
+ * The figure never wraps: an amount split across two lines reads as two amounts.
+ * The size is fluid instead of fixed, and the symbol is stepped down and set on
+ * the same baseline so the number keeps the weight.
+ */
+const Figure: React.FC<{
+  label: string;
+  symbol: string;
+  value: string;
+  tone: 'pos' | 'ink';
+}> = ({ label, symbol, value, tone }) => (
+  <div className="px-4 sm:px-5 py-4 min-w-0">
     <p className="t-eyebrow">{label}</p>
     <p
-      className={`num mt-2 text-[1.375rem] font-bold tracking-[-0.02em] ${
+      className={`mt-2 flex items-baseline gap-1 whitespace-nowrap ${
         tone === 'pos' ? 'text-pos' : 'text-ink'
       }`}
     >
-      {value}
+      <span className="num text-[0.8125rem] font-semibold text-ink-3">{symbol}</span>
+      <span className="num text-[clamp(1.0625rem,4.4vw,1.375rem)] font-bold tracking-[-0.02em]">
+        {value}
+      </span>
     </p>
   </div>
 );

@@ -87,6 +87,7 @@ export const Overview: React.FC<OverviewProps> = ({
         onAddTransaction={onOpenNewTx}
         onFundVault={handleFundVault}
         onSetBudget={onOpenNewBudget}
+        onViewReports={() => onNavigateTab('reports')}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">

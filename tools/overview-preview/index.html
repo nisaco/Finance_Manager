@@ -3,13 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Overview — design preview</title>
+    <title>Ledger — design preview</title>
     <link rel="preconnect" href="https://api.fontshare.com" crossorigin />
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   </head>
   <body class="bg-canvas text-ink antialiased">
+    <!-- Stands in for browser storage inside the review iframe. Same surface,
+         no persistence — see the `define` block in vite.preview.config.ts. -->
+    <script>
+      (function () {
+        var m = Object.create(null);
+        window.__lgMemStore = {
+          getItem: function (k) {
+            return Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null;
+          },
+          setItem: function (k, v) {
+            m[k] = String(v);
+          },
+          removeItem: function (k) {
+            delete m[k];
+          },
+          clear: function () {
+            m = Object.create(null);
+          },
+          key: function (i) {
+            return Object.keys(m)[i] ?? null;
+          },
+          get length() {
+            return Object.keys(m).length;
+          },
+        };
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="./main.tsx"></script>
   </body>
