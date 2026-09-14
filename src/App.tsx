@@ -191,8 +191,7 @@ const MainShell: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-canvas dark:bg-[#0F1115] text-ink dark:text-[#F3F4F6] flex flex-col font-sans selection:bg-[#1A1A1A] dark:selection:bg-[#F3F4F6] selection:text-[#FDFCFB] dark:selection:text-[#111317] transition-colors">
-      
+    <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans transition-colors duration-200">
       {/* Top Fixed Header & Navigation */}
       <Navbar
         activeTab={activeTab}

@@ -1,5 +1,6 @@
 /* ============================================================================
    Ledger — Design Foundation (light)
+   Ledger — Design Foundation (Light & Dark System)
    ----------------------------------------------------------------------------
    The single source of truth for surface, ink, accent and semantic colour.
    Components consume these through Tailwind utilities (bg-surface, text-ink-3,
@@ -9,6 +10,14 @@
    component is a bug.
 
    Purely presentational. Nothing in this file touches state, data or routing.
+   Components consume these through Tailwind utilities (bg-canvas, bg-surface,
+   bg-sunken, text-ink, text-ink-2, text-ink-3, text-ink-4, border-line, ...)
+   
+   Supports 4 curated interface styles in both Light and Dark modes:
+   - Modern Clean (Default)
+   - Nordic Slate
+   - Minimalist Mono
+   - Classic Editorial
    ========================================================================== */
 
 :root {
@@ -16,21 +25,34 @@
   --lg-canvas: #f4f5f7; /* page behind everything */
   --lg-surface: #ffffff; /* cards, panels, sheets */
   --lg-sunken: #fafafb; /* inset rows, wells, table stripes */
+  /* --- Default Light Mode: Modern Clean ----------------------------------- */
+  --lg-canvas: #f4f5f7;
+  --lg-surface: #ffffff;
+  --lg-sunken: #f8f9fb;
 
   /* --- Hairlines: depth comes from these, never from shadows -------------- */
   --lg-line: #e7e9ee;
   --lg-line-strong: #d6dae1;
+  --lg-line: #e2e6ed;
+  --lg-line-strong: #cbd2df;
 
   /* --- Ink: four steps, each with a job ---------------------------------- */
   --lg-ink: #0c111d; /* primary values and headings */
   --lg-ink-2: #344054; /* labels, body copy */
   --lg-ink-3: #667085; /* metadata, secondary */
   --lg-ink-4: #98a2b3; /* eyebrows, disabled, placeholders */
+  --lg-ink: #0f172a;
+  --lg-ink-2: #334155;
+  --lg-ink-3: #64748b;
+  --lg-ink-4: #94a3b8;
 
   /* --- Accent: interaction only. Never decoration. ----------------------- */
   --lg-accent: #0f5257;
   --lg-accent-hover: #0b3e42;
   --lg-accent-soft: #eaf1f1;
+  --lg-accent: #0f766e;
+  --lg-accent-hover: #0d9488;
+  --lg-accent-soft: #e6f4f1;
 
   /* --- Semantic: money and status only ----------------------------------- */
   --lg-pos: #067a55;
@@ -43,10 +65,13 @@
   /* --- Solid action colour (primary buttons) ----------------------------- */
   --lg-solid: #101828;
   --lg-solid-hover: #1d2939;
+  --lg-solid: #0f172a;
+  --lg-solid-hover: #1e293b;
   --lg-on-solid: #ffffff;
 
   /* --- Layout: one place decides page gutters and thumb-reach -------------- */
   --lg-tap: 44px; /* minimum touch target; anything smaller is a miss on a phone */
+  --lg-tap: 44px;
   --lg-safe-b: env(safe-area-inset-bottom, 0px);
 
   /* --- Elevation: depth for things that float above the page --------------
@@ -57,25 +82,191 @@
   --lg-e2: 0 4px 8px -2px rgb(12 17 29 / 8%), 0 12px 24px -6px rgb(12 17 29 / 10%);
   --lg-e3: 0 8px 16px -4px rgb(12 17 29 / 10%), 0 24px 48px -12px rgb(12 17 29 / 18%);
   --lg-e4: 0 16px 32px -8px rgb(12 17 29 / 14%), 0 40px 80px -16px rgb(12 17 29 / 28%);
+  /* Elevation: Light mode layered shadows */
+  --lg-e1: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03);
+  --lg-e2: 0 4px 10px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+  --lg-e3: 0 12px 24px -4px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
+  --lg-e4: 0 24px 48px -8px rgba(15, 23, 42, 0.12), 0 8px 16px -4px rgba(15, 23, 42, 0.06);
 
   /* --- Motion: two curves, three durations, used everywhere ---------------
      `exit` is symmetrical; `enter` decelerates hard so a panel arrives like it
      has mass instead of sliding at a constant speed. --- */
   --lg-ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
   --lg-ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
+  --lg-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --lg-ease-exit: cubic-bezier(0.4, 0, 0.2, 1);
   --lg-fast: 160ms;
   --lg-base: 240ms;
   --lg-slow: 340ms;
+  --lg-slow: 360ms;
 
   /* --- Type ------------------------------------------------------------- */
   --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system,
     sans-serif;
+  --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system, sans-serif;
+  --lg-font-serif: "Plus Jakarta Sans", "Inter", -apple-system, sans-serif;
+  --lg-font-mono: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
 /* Expose the foundation to Tailwind so utilities generate from it.
    The var() indirection is deliberate: re-point the :root values and every
    surface in the product follows, which is what makes theming real rather
    than a switch that toggles nothing. */
+/* --- Style: Nordic Slate (Light) ------------------------------------------ */
+[data-ui-style="slate"] {
+  --lg-canvas: #f1f5f9;
+  --lg-surface: #ffffff;
+  --lg-sunken: #e2e8f0;
+  --lg-line: #cbd5e1;
+  --lg-line-strong: #94a3b8;
+  --lg-ink: #0f172a;
+  --lg-ink-2: #334155;
+  --lg-ink-3: #64748b;
+  --lg-accent: #2563eb;
+  --lg-accent-hover: #1d4ed8;
+  --lg-accent-soft: #eff6ff;
+  --lg-solid: #1e3a8a;
+  --lg-solid-hover: #172554;
+}
+
+/* --- Style: Minimalist Mono (Light) --------------------------------------- */
+[data-ui-style="minimal"] {
+  --lg-canvas: #fafafa;
+  --lg-surface: #ffffff;
+  --lg-sunken: #f4f4f5;
+  --lg-line: #e4e4e7;
+  --lg-line-strong: #d4d4d8;
+  --lg-ink: #18181b;
+  --lg-ink-2: #52525b;
+  --lg-ink-3: #71717a;
+  --lg-ink-4: #a1a1aa;
+  --lg-accent: #18181b;
+  --lg-accent-hover: #27272a;
+  --lg-accent-soft: #f4f4f5;
+  --lg-solid: #18181b;
+  --lg-solid-hover: #27272a;
+}
+
+/* --- Style: Classic Editorial (Light) ------------------------------------- */
+[data-ui-style="editorial"] {
+  --lg-canvas: #fdfcfb;
+  --lg-surface: #ffffff;
+  --lg-sunken: #f7f5f2;
+  --lg-line: #e8e5df;
+  --lg-line-strong: #d5d0c7;
+  --lg-ink: #1a1a1a;
+  --lg-ink-2: #4b5563;
+  --lg-ink-3: #6b7280;
+  --lg-ink-4: #9ca3af;
+  --lg-accent: #c9a24b;
+  --lg-accent-hover: #b08c3b;
+  --lg-accent-soft: #fcf8ee;
+  --lg-solid: #1a1a1a;
+  --lg-solid-hover: #333333;
+  --lg-font-serif: "Fraunces", Georgia, serif;
+  --lg-font-mono: "IBM Plex Mono", monospace;
+}
+
+/* ============================================================================
+   DARK MODE SYSTEM — Rich Obsidian & Luminous High-Legibility Slate
+   ========================================================================== */
+.dark,
+[data-theme="dark"] {
+  /* --- Default Dark: Modern Clean ----------------------------------------- */
+  --lg-canvas: #090d14;
+  --lg-surface: #111722;
+  --lg-sunken: #161e2c;
+
+  --lg-line: #1c2738;
+  --lg-line-strong: #2a3a52;
+
+  --lg-ink: #f8fafc;
+  --lg-ink-2: #cbd5e1;
+  --lg-ink-3: #94a3b8;
+  --lg-ink-4: #64748b;
+
+  --lg-accent: #14b8a6;
+  --lg-accent-hover: #2dd4bf;
+  --lg-accent-soft: rgba(20, 184, 166, 0.15);
+
+  --lg-pos: #22c55e;
+  --lg-pos-soft: rgba(34, 197, 94, 0.14);
+  --lg-neg: #f87171;
+  --lg-neg-soft: rgba(239, 68, 68, 0.14);
+  --lg-warn: #fbbf24;
+  --lg-warn-soft: rgba(245, 158, 11, 0.14);
+
+  --lg-solid: #f8fafc;
+  --lg-solid-hover: #e2e8f0;
+  --lg-on-solid: #090d14;
+
+  /* Elevation: Dark mode deep ambient glow and edge illumination */
+  --lg-e1: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --lg-e2: 0 4px 12px -2px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --lg-e3: 0 12px 28px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --lg-e4: 0 24px 56px -8px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* --- Style: Nordic Slate (Dark) ------------------------------------------- */
+.dark[data-ui-style="slate"],
+[data-theme="dark"][data-ui-style="slate"] {
+  --lg-canvas: #090d18;
+  --lg-surface: #0f172a;
+  --lg-sunken: #1e293b;
+  --lg-line: #1e293b;
+  --lg-line-strong: #334155;
+  --lg-ink: #f8fafc;
+  --lg-ink-2: #cbd5e1;
+  --lg-ink-3: #94a3b8;
+  --lg-accent: #3b82f6;
+  --lg-accent-hover: #60a5fa;
+  --lg-accent-soft: rgba(59, 130, 246, 0.15);
+  --lg-solid: #60a5fa;
+  --lg-solid-hover: #93c5fd;
+  --lg-on-solid: #0f172a;
+}
+
+/* --- Style: Minimalist Mono (Dark) ---------------------------------------- */
+.dark[data-ui-style="minimal"],
+[data-theme="dark"][data-ui-style="minimal"] {
+  --lg-canvas: #09090b;
+  --lg-surface: #141417;
+  --lg-sunken: #1f1f23;
+  --lg-line: #27272a;
+  --lg-line-strong: #3f3f46;
+  --lg-ink: #fafafa;
+  --lg-ink-2: #e4e4e7;
+  --lg-ink-3: #a1a1aa;
+  --lg-ink-4: #71717a;
+  --lg-accent: #fafafa;
+  --lg-accent-hover: #e4e4e7;
+  --lg-accent-soft: rgba(255, 255, 255, 0.1);
+  --lg-solid: #fafafa;
+  --lg-solid-hover: #e4e4e7;
+  --lg-on-solid: #09090b;
+}
+
+/* --- Style: Classic Editorial (Dark) -------------------------------------- */
+.dark[data-ui-style="editorial"],
+[data-theme="dark"][data-ui-style="editorial"] {
+  --lg-canvas: #0d0f12;
+  --lg-surface: #15181e;
+  --lg-sunken: #1c2028;
+  --lg-line: #262b36;
+  --lg-line-strong: #383f4e;
+  --lg-ink: #f9fafb;
+  --lg-ink-2: #e5e7eb;
+  --lg-ink-3: #9ca3af;
+  --lg-ink-4: #6b7280;
+  --lg-accent: #e5b95c;
+  --lg-accent-hover: #f3cf7a;
+  --lg-accent-soft: rgba(229, 185, 92, 0.15);
+  --lg-solid: #e5b95c;
+  --lg-solid-hover: #f3cf7a;
+  --lg-on-solid: #0d0f12;
+}
+
+/* Expose tokens directly to Tailwind utilities */
 @theme inline {
   --color-canvas: var(--lg-canvas);
   --color-surface: var(--lg-surface);
@@ -117,18 +308,23 @@
      Type scale — six roles. If a size is not on this list it does not exist.
      The old interface put 879 of ~1,120 text declarations at 12px or below,
      which is why nothing led the eye. 15px is the body floor here.
+     Typography Scale
      ========================================================================== */
 
   .t-hero {
     font-size: clamp(2.375rem, 6vw, 3.625rem); /* 38 → 58px */
+    font-size: clamp(2.25rem, 5vw, 3.25rem);
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.03em;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
     color: var(--lg-ink);
   }
 
   .t-title {
     font-size: 1.25rem; /* 20px */
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: -0.015em;
@@ -137,6 +333,7 @@
 
   .t-card {
     font-size: 0.96875rem; /* 15.5px */
+    font-size: 0.9375rem;
     font-weight: 700;
     line-height: 1.25;
     letter-spacing: -0.01em;
@@ -145,6 +342,7 @@
 
   .t-body {
     font-size: 0.9375rem; /* 15px */
+    font-size: 0.9375rem;
     font-weight: 500;
     line-height: 1.45;
     color: var(--lg-ink-2);
@@ -152,6 +350,7 @@
 
   .t-meta {
     font-size: 0.8125rem; /* 13px */
+    font-size: 0.8125rem;
     font-weight: 500;
     line-height: 1.4;
     color: var(--lg-ink-3);
@@ -159,6 +358,7 @@
 
   .t-eyebrow {
     font-size: 0.6875rem; /* 11px */
+    font-size: 0.6875rem;
     font-weight: 700;
     line-height: 1.2;
     letter-spacing: 0.085em;
@@ -175,13 +375,19 @@
 
   /* ============================================================================
      Primitives
+     Structural Containers & Cards with Depth
      ========================================================================== */
 
   /* A card. Hairline + surface tone. No shadow, no gradient, no lift on hover. */
   .lg-card {
     background: var(--lg-surface);
+    background-color: var(--lg-surface);
     border: 1px solid var(--lg-line);
     border-radius: 16px;
+    box-shadow: var(--lg-e1);
+    transition: background-color var(--lg-base) var(--lg-ease-enter),
+                border-color var(--lg-base) var(--lg-ease-enter),
+                box-shadow var(--lg-base) var(--lg-ease-enter);
   }
 
   /* Small status/provenance badge (Paystack, Recurring, Vault ...). */
@@ -193,19 +399,37 @@
     border: 1px solid var(--lg-line);
     border-radius: 6px;
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
     color: var(--lg-ink-3);
     font-size: 0.625rem; /* 10px — a badge is a label, not content */
+    font-size: 0.625rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     white-space: nowrap;
     flex: none;
+    transition: background-color var(--lg-fast) ease, color var(--lg-fast) ease;
   }
 
   .lg-tag-pos {
     background: var(--lg-pos-soft);
+    background-color: var(--lg-pos-soft);
     border-color: transparent;
     color: var(--lg-pos);
+  }
+
+  .lg-tag-neg {
+    background: var(--lg-neg-soft);
+    background-color: var(--lg-neg-soft);
+    border-color: transparent;
+    color: var(--lg-neg);
+  }
+
+  .lg-tag-warn {
+    background: var(--lg-warn-soft);
+    background-color: var(--lg-warn-soft);
+    border-color: transparent;
+    color: var(--lg-warn);
   }
 
   /* Progress track. One rule, so every bar in the product is the same bar. */
@@ -272,6 +496,8 @@
 
   /* ==========================================================================
      Buttons — four intents, one geometry
+  /* ============================================================================
+     Buttons
      ========================================================================== */
 
   .lg-btn {
@@ -294,6 +520,11 @@
       background-color 180ms ease,
       border-color 180ms ease,
       color 180ms ease;
+    transition: background-color var(--lg-fast) ease,
+                border-color var(--lg-fast) ease,
+                color var(--lg-fast) ease,
+                box-shadow var(--lg-fast) ease,
+                transform var(--lg-fast) ease;
   }
 
   .lg-btn:disabled {
@@ -314,52 +545,67 @@
 
   .lg-btn-solid {
     background: var(--lg-solid);
+    background-color: var(--lg-solid);
     color: var(--lg-on-solid);
+    box-shadow: var(--lg-e1);
   }
 
   .lg-btn-solid:hover:not(:disabled) {
     background: var(--lg-solid-hover);
+    background-color: var(--lg-solid-hover);
+    box-shadow: var(--lg-e2);
   }
 
   .lg-btn-quiet {
     background: var(--lg-surface);
     border-color: var(--lg-line-strong);
+    background-color: var(--lg-surface);
+    border-color: var(--lg-line);
     color: var(--lg-ink);
   }
 
   .lg-btn-quiet:hover:not(:disabled) {
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
+    border-color: var(--lg-line-strong);
   }
 
   .lg-btn-ghost {
     background: transparent;
+    background-color: transparent;
     color: var(--lg-ink-2);
   }
 
   .lg-btn-ghost:hover:not(:disabled) {
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
     color: var(--lg-ink);
   }
 
   .lg-btn-accent {
     background: var(--lg-accent);
     color: #fff;
+    background-color: var(--lg-accent);
+    color: #ffffff;
   }
 
   .lg-btn-accent:hover:not(:disabled) {
     background: var(--lg-accent-hover);
+    background-color: var(--lg-accent-hover);
   }
 
   /* Destructive actions are outlined, not filled: a red slab invites the very
      click it should slow down. */
   .lg-btn-danger {
     background: var(--lg-neg-soft);
+    background-color: var(--lg-neg-soft);
     border-color: transparent;
     color: var(--lg-neg);
   }
 
   .lg-btn-danger:hover:not(:disabled) {
     background: #fbdad6;
+    background-color: rgba(239, 68, 68, 0.22);
   }
 
   .lg-btn-sm {
@@ -383,20 +629,26 @@
     border: 1px solid transparent;
     border-radius: 12px;
     background: transparent;
+    background-color: transparent;
     color: var(--lg-ink-3);
     cursor: pointer;
     transition:
       background-color 180ms ease,
       color 180ms ease;
+    transition: background-color var(--lg-fast) ease,
+                color var(--lg-fast) ease;
   }
 
   .lg-iconbtn:hover {
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
     color: var(--lg-ink);
   }
 
   /* ==========================================================================
      Form controls
+  /* ============================================================================
+     Form Controls
      ========================================================================== */
 
   .lg-label {
@@ -414,6 +666,8 @@
     padding: 10px 14px;
     background: var(--lg-surface);
     border: 1px solid var(--lg-line-strong);
+    background-color: var(--lg-surface);
+    border: 1px solid var(--lg-line);
     border-radius: 12px;
     color: var(--lg-ink);
     font-family: inherit;
@@ -424,6 +678,9 @@
     transition:
       border-color 180ms ease,
       box-shadow 180ms ease;
+    transition: border-color var(--lg-fast) ease,
+                box-shadow var(--lg-fast) ease,
+                background-color var(--lg-base) ease;
   }
 
   .lg-input::placeholder {
@@ -438,6 +695,7 @@
 
   .lg-input:disabled {
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
     color: var(--lg-ink-4);
   }
 
@@ -460,6 +718,7 @@
   .lg-select {
     appearance: none;
     background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
     padding-right: 38px;
@@ -467,6 +726,8 @@
 
   /* ==========================================================================
      List row — the workhorse of every banking app: label, meta, value, chevron
+  /* ============================================================================
+     Rows & Tiles
      ========================================================================== */
 
   .lg-row {
@@ -477,14 +738,17 @@
     min-height: 60px;
     padding: 12px 16px;
     background: transparent;
+    background-color: transparent;
     border: 0;
     text-align: left;
     cursor: pointer;
     transition: background-color 180ms ease;
+    transition: background-color var(--lg-fast) ease;
   }
 
   .lg-row:hover {
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
   }
 
   .lg-row + .lg-row {
@@ -503,6 +767,7 @@
     border: 1px solid var(--lg-line);
     border-radius: 10px;
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
     color: var(--lg-ink-3);
   }
 
@@ -519,6 +784,7 @@
     min-height: 84px;
     padding: 12px 8px;
     background: var(--lg-surface);
+    background-color: var(--lg-surface);
     border: 1px solid var(--lg-line);
     border-radius: 14px;
     color: var(--lg-ink);
@@ -530,11 +796,17 @@
     transition:
       background-color 180ms ease,
       border-color 180ms ease;
+    box-shadow: var(--lg-e1);
+    transition: background-color var(--lg-fast) ease,
+                border-color var(--lg-fast) ease,
+                box-shadow var(--lg-fast) ease;
   }
 
   .lg-tile:hover {
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
     border-color: var(--lg-line-strong);
+    box-shadow: var(--lg-e2);
   }
 
   .lg-tile svg {
@@ -543,6 +815,8 @@
 
   /* ==========================================================================
      Segmented control — switching views inside a screen, not between screens
+  /* ============================================================================
+     Segmented Controls
      ========================================================================== */
 
   .lg-seg {
@@ -551,6 +825,7 @@
     gap: 2px;
     padding: 3px;
     background: var(--lg-sunken);
+    background-color: var(--lg-sunken);
     border: 1px solid var(--lg-line);
     border-radius: 12px;
     max-width: 100%;
@@ -570,6 +845,7 @@
     border: 0;
     border-radius: 9px;
     background: transparent;
+    background-color: transparent;
     color: var(--lg-ink-3);
     font-family: inherit;
     font-size: 0.875rem;
@@ -579,16 +855,22 @@
     transition:
       background-color 180ms ease,
       color 180ms ease;
+    transition: background-color var(--lg-fast) ease,
+                color var(--lg-fast) ease;
   }
 
   .lg-seg button[aria-selected="true"] {
     background: var(--lg-surface);
+    background-color: var(--lg-surface);
     border: 1px solid var(--lg-line);
     color: var(--lg-ink);
+    box-shadow: var(--lg-e1);
   }
 
   /* ==========================================================================
      Overlays — one scrim, one panel. Centred dialog on desktop, sheet on phone.
+  /* ============================================================================
+     Popovers & Overlays
      ========================================================================== */
 
   .lg-scrim {
@@ -711,6 +993,7 @@
   /* Menus and popovers get the same treatment, scaled from their own corner. */
   .lg-pop {
     background: var(--lg-surface);
+    background-color: var(--lg-surface);
     border: 1px solid var(--lg-line);
     border-radius: 16px;
     box-shadow: var(--lg-e3);
@@ -741,6 +1024,7 @@
 
   .lg-row:active {
     background: var(--lg-line);
+    background-color: var(--lg-line);
   }
 
   .lg-btn,
