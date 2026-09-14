@@ -19,11 +19,14 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './preview.css';
 import { Overview } from '../../src/pages/Overview';
+import { TransactionsPage } from '../../src/pages/TransactionsPage';
+import { BudgetsPage } from '../../src/pages/BudgetsPage';
+import { DebtsPage } from '../../src/pages/DebtsPage';
 import { Navbar } from '../../src/components/Navbar';
 import { APP_VERSION } from '../../src/version';
 import { Providers, ledgerEmpty, ledgerFull, noop } from './fixtures';
 
-type ScreenId = 'overview';
+type ScreenId = 'overview' | 'transactions' | 'budgets' | 'debts';
 
 const SCREENS: Record<ScreenId, { label: string; render: () => React.ReactNode }> = {
   overview: {
@@ -39,6 +42,25 @@ const SCREENS: Record<ScreenId, { label: string; render: () => React.ReactNode }
       />
     ),
   },
+  transactions: {
+    label: 'Transactions',
+    render: () => (
+      <TransactionsPage
+        onOpenNewTx={noop}
+        onEditTx={noop}
+        onOpenCsvImport={noop}
+        onNavigateToHistory={noop}
+      />
+    ),
+  },
+  budgets: {
+    label: 'Budgets',
+    render: () => <BudgetsPage onOpenNewBudget={noop} onEditBudget={noop} />,
+  },
+  debts: {
+    label: 'Debts',
+    render: () => <DebtsPage onOpenNewDebt={noop} onEditDebt={noop} onRecordPayment={noop} />,
+  },
 };
 
 const DEVICES = [
@@ -48,9 +70,9 @@ const DEVICES = [
 ];
 
 /** The real shell: header, tab bar, page frame. Same classes App.tsx uses. */
-const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const Shell: React.FC<{ tab: string; children: React.ReactNode }> = ({ tab, children }) => (
   <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans">
-    <Navbar activeTab="overview" onTabChange={noop} onOpenNewTx={noop} onOpenLiveVoice={noop} onOpenAuditLogs={noop} />
+    <Navbar activeTab={tab} onTabChange={noop} onOpenNewTx={noop} onOpenLiveVoice={noop} onOpenAuditLogs={noop} />
     <main className="lg-page lg-page-bottom flex-1 py-5 sm:py-7">{children}</main>
     <footer className="border-t border-line">
       <div className="lg-page py-5 text-center sm:text-left">
@@ -75,7 +97,7 @@ const root = createRoot(document.getElementById('root')!);
 if (screen && SCREENS[screen]) {
   root.render(
     <Providers ledger={state === 'empty' ? ledgerEmpty : ledgerFull}>
-      <Shell>{SCREENS[screen].render()}</Shell>
+      <Shell tab={screen}>{SCREENS[screen].render()}</Shell>
     </Providers>
   );
 } else {

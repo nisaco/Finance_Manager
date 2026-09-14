@@ -92,21 +92,19 @@ export const VaultList: React.FC<VaultListProps> = ({
                   </button>
                 </div>
 
-                <div className="lg-track mt-3" role="img" aria-label={`${g.name}: ${pct}% funded`}>
-                  <span
-                    style={{
-                      width: `${pct}%`,
-                      background: pct >= 100 ? 'var(--lg-pos)' : 'var(--lg-accent)',
-                    }}
-                  />
-                </div>
-
-                <div className="mt-2.5 flex items-baseline justify-between gap-3">
-                  <span className="num text-[0.9375rem] font-bold text-ink">
+                {/* Saved, target and share as one sentence of figures. The bar
+                    that used to sit here restated the percentage in a second
+                    form without making it any clearer. */}
+                <div className="mt-2.5 flex items-baseline justify-between gap-3 flex-wrap">
+                  <span className="num text-[0.9375rem] font-bold text-ink whitespace-nowrap">
                     {symbol} {formatAmount(g.current)}
+                    <span className="t-meta font-medium"> of {formatAmount(target)}</span>
                   </span>
-                  <span className="num t-meta">
-                    of {formatAmount(target)} · {pct}%
+                  <span
+                    className="num text-[0.8125rem] font-bold shrink-0"
+                    style={{ color: pct >= 100 ? 'var(--lg-pos)' : 'var(--lg-ink-4)' }}
+                  >
+                    {pct >= 100 ? 'Funded' : `${pct}% funded`}
                   </span>
                 </div>
               </li>

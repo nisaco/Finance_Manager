@@ -62,7 +62,6 @@ export const BalanceHero: React.FC<BalanceHeroProps> = ({
   const savingsRate = summary?.savingsRate ?? 0;
   const savedInGoals = summary?.totalSavedInGoals ?? 0;
 
-  const rateClamped = Math.max(0, Math.min(100, Math.round(savingsRate)));
   /** One decimal, and only when there is one — "29.2%" reads as measured, "29.0%" as noise. */
   const rateLabel = `${Number(savingsRate.toFixed(1))}%`;
 
@@ -181,24 +180,27 @@ export const BalanceHero: React.FC<BalanceHeroProps> = ({
             tone="ink"
           />
 
-          <div className="pt-4 mt-1">
-            <div className="flex items-baseline justify-between gap-4">
-              <span className="t-body">Savings rate</span>
-              <span className="num t-title">{rateLabel}</span>
-            </div>
-            <div
-              className="lg-track mt-2.5"
-              role="img"
-              aria-label={`Savings rate ${rateClamped} percent`}
-            >
-              <span
-                style={{
-                  width: `${rateClamped}%`,
-                  background: rateClamped > 0 ? 'var(--lg-pos)' : 'var(--lg-line-strong)',
-                }}
+          {/* Stated, not charted. A rate is one number; a bar for it adds a
+              shape to read without adding anything to know. */}
+          <div className="flex items-center justify-between gap-4 py-3">
+            <span className="t-body inline-flex items-center gap-2.5">
+              <i
+                aria-hidden="true"
+                className="w-[7px] h-[7px] rounded-full shrink-0"
+                style={{ background: 'var(--lg-ink-4)' }}
               />
-            </div>
+              Savings rate
+            </span>
+            <span className="num text-[1.0625rem] font-bold shrink-0">
+              {hidden ? '••••' : rateLabel}
+            </span>
           </div>
+
+          <p className="t-meta pt-1">
+            {savingsRate > 0
+              ? `You kept ${rateLabel} of what came in this month.`
+              : 'Nothing kept back this month yet.'}
+          </p>
         </div>
       </div>
     </section>

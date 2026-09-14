@@ -122,9 +122,41 @@ const goals = [
 ] as unknown as Goal[];
 
 const debts = [
-  { id: 'd1', profileId: 'p1' },
-  { id: 'd2', profileId: 'p1' },
-  { id: 'd3', profileId: 'p1' },
+  {
+    id: 'd1',
+    profileId: 'p1',
+    direction: 'owed_to_me',
+    person: 'Kwabena Mensah',
+    amount: 2400,
+    paid: 400,
+    currency: 'GHS',
+    dueDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 5).toISOString(),
+    note: 'Split the equipment purchase',
+    createdAt: iso(2),
+  },
+  {
+    id: 'd2',
+    profileId: 'p1',
+    direction: 'owed_to_me',
+    person: 'Adinkra Labs',
+    amount: 1550,
+    paid: 400,
+    currency: 'GHS',
+    note: 'Second invoice, net 30',
+    createdAt: iso(4),
+  },
+  {
+    id: 'd3',
+    profileId: 'p1',
+    direction: 'i_owe',
+    person: 'Ama Serwaa',
+    amount: 1875,
+    paid: 0,
+    currency: 'GHS',
+    dueDate: iso(2),
+    note: 'Covered the rent shortfall',
+    createdAt: iso(1),
+  },
 ] as unknown as Debt[];
 
 export const ledgerFull = {

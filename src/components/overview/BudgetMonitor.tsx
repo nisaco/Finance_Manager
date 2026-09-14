@@ -11,16 +11,15 @@ interface BudgetMonitorProps {
 }
 
 /**
- * Budget monitor. Identical inputs to before — b.spent, b.limit, b.percentage
- * straight from the server. Only the presentation of over/near/under changed,
- * and the state is now stated in words as well as colour so it survives a
- * colour-blind reader and a black-and-white print.
+ * Budget monitor.
+ *
+ * Inputs are unchanged — b.spent, b.limit, b.percentage straight from the
+ * server. What changed is that the row leads with the number you actually act
+ * on: what is left. A bar makes you estimate a remainder the app already knows,
+ * so the remainder is printed instead. State is carried in words as well as
+ * colour, so it survives a colour-blind reader and a monochrome print.
  */
-export const BudgetMonitor: React.FC<BudgetMonitorProps> = ({
-  budgets,
-  onManage,
-  onCreate,
-}) => {
+export const BudgetMonitor: React.FC<BudgetMonitorProps> = ({ budgets, onManage, onCreate }) => {
   const shown = budgets.slice(0, 4);
 
   return (
@@ -32,9 +31,10 @@ export const BudgetMonitor: React.FC<BudgetMonitorProps> = ({
           : undefined
       }
       action={budgets.length > 0 ? { label: 'Manage', onClick: onManage } : undefined}
+      bodyClassName="p-0"
     >
       {budgets.length === 0 ? (
-        <div className="py-6 text-center">
+        <div className="py-6 px-5 text-center">
           <p className="t-body text-ink">No budgets set</p>
           <p className="t-meta mt-1.5">A budget is what turns spending into a limit.</p>
           <button
@@ -46,56 +46,59 @@ export const BudgetMonitor: React.FC<BudgetMonitorProps> = ({
           </button>
         </div>
       ) : (
-        <ul className="space-y-4">
-          {shown.map((b) => {
+        <ul>
+          {shown.map((b, i) => {
             const spent = b.spent ?? 0;
             const pct = b.percentage ?? 0;
             const isOver = pct >= 100;
             const isNear = pct >= 80 && !isOver;
-            const over = Math.max(0, spent - b.limit);
-
-            const barColor = isOver
-              ? 'var(--lg-neg)'
-              : isNear
-              ? 'var(--lg-warn)'
-              : 'var(--lg-ink)';
+            const remaining = b.limit - spent;
 
             return (
-              <li key={b.id}>
+              <li
+                key={b.id}
+                className={`px-4 sm:px-5 py-3.5 ${i > 0 ? 'border-t border-line' : ''}`}
+              >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="t-body text-ink font-semibold truncate">{b.category}</span>
-                  <span className="num t-meta shrink-0">
+                  <span className="t-body text-ink font-semibold truncate min-w-0">
+                    {b.category}
+                  </span>
+                  <span className="num t-meta shrink-0 whitespace-nowrap">
                     <span className="text-ink font-bold">{formatAmount(spent)}</span>
-                    <span className="text-ink-4"> / {formatAmount(b.limit)}</span>
+                    <span className="text-ink-4"> of {formatAmount(b.limit)}</span>
                   </span>
                 </div>
 
-                <div className="mt-2 flex items-center gap-2.5">
+                <div className="mt-1.5 flex items-center justify-between gap-3">
+                  {isOver ? (
+                    <span className="inline-flex items-center gap-1.5 text-[0.8125rem] font-semibold text-neg min-w-0">
+                      <AlertTriangle className="w-3.5 h-3.5 stroke-[1.8] shrink-0" />
+                      <span className="num">{formatAmount(Math.abs(remaining))}</span> over
+                    </span>
+                  ) : (
+                    <span
+                      className={`text-[0.8125rem] font-semibold min-w-0 ${
+                        isNear ? 'text-warn' : 'text-ink-3'
+                      }`}
+                    >
+                      <span className="num">{formatAmount(remaining)}</span> left
+                      {isNear ? ' · close to the limit' : ''}
+                    </span>
+                  )}
+
                   <span
-                    className="lg-track flex-1"
-                    role="img"
-                    aria-label={`${b.category}: ${pct}% of budget used`}
-                  >
-                    <span style={{ width: `${Math.min(pct, 100)}%`, background: barColor }} />
-                  </span>
-                  <span
-                    className="num text-[0.8125rem] font-bold shrink-0 w-[42px] text-right"
-                    style={{ color: barColor }}
+                    className="num text-[0.8125rem] font-bold shrink-0"
+                    style={{
+                      color: isOver
+                        ? 'var(--lg-neg)'
+                        : isNear
+                          ? 'var(--lg-warn)'
+                          : 'var(--lg-ink-4)',
+                    }}
                   >
                     {pct}%
                   </span>
                 </div>
-
-                {isOver ? (
-                  <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-neg-soft px-2.5 py-1.5 text-[0.8125rem] font-semibold text-neg">
-                    <AlertTriangle className="w-3.5 h-3.5 stroke-[1.8] shrink-0" />
-                    <span className="num">{formatAmount(over)}</span> over budget
-                  </p>
-                ) : isNear ? (
-                  <p className="mt-2 text-[0.8125rem] font-semibold text-warn">
-                    Close to the limit
-                  </p>
-                ) : null}
               </li>
             );
           })}
