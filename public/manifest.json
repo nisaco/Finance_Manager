@@ -1,0 +1,51 @@
+{
+  "name": "Ledger — Financial Operating System",
+  "short_name": "Ledger",
+  "description": "Multi-Entity financial operating system with savings vaults, multi-profile tracking, debts, and automated Paystack receipts.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14",
+  "icons": [
+    {
+      "src": "/ledger-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/ledger-icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "48x48 72x72 96x96 144x144",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["finance", "productivity", "business"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/",
+      "description": "Open Ledger Dashboard"
+    },
+    {
+      "name": "Savings Vaults",
+      "url": "/#goals",
+      "description": "Inspect savings vaults and targets"
+    },
+    {
+      "name": "Budgets",
+      "url": "/#budgets",
+      "description": "Review category spending limits"
+    }
+  ]
+}

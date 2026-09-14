@@ -20,12 +20,14 @@ import {
   Mic,
   Crown,
   Menu,
+  Download,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { NavigationSidebar } from './NavigationSidebar';
 import { LedgerLogo } from './LedgerLogo';
+import { InstallPwaModal, usePwaInstall } from './Modals/InstallPwaModal';
 
 interface NavbarProps {
   activeTab?: string;
@@ -68,6 +70,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { resolvedTheme, toggleTheme } = useTheme();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const { isInstalled } = usePwaInstall();
 
   const isAdmin =
     user?.role === 'admin' ||
@@ -323,6 +327,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               )}
 
+              {!isInstalled && (
+                <button
+                  onClick={() => setShowInstallModal(true)}
+                  title="Install Ledger App"
+                  aria-label="Install Ledger App"
+                  className="lg-btn lg-btn-quiet lg-btn-sm"
+                >
+                  <Download className="w-4 h-4 text-amber-500" strokeWidth={1.8} aria-hidden="true" />
+                  <span className="hidden lg:inline">Install</span>
+                </button>
+              )}
+
               <button
                 onClick={onOpenNewTx}
                 aria-label="Record an entry"
@@ -386,6 +402,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         logout={logout}
         onOpenLiveVoice={onOpenLiveVoice}
         onOpenAuditLogs={onOpenAuditLogs}
+        onOpenInstallModal={() => setShowInstallModal(true)}
+      />
+
+      {/* Install PWA Modal */}
+      <InstallPwaModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
       />
     </>
   );

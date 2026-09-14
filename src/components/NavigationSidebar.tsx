@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Mic, History, Sun, Moon, LogOut, ChevronRight, LucideIcon } from 'lucide-react';
+import { X, Mic, History, Sun, Moon, LogOut, ChevronRight, LucideIcon, Download } from 'lucide-react';
 import { Profile, User } from '../types';
 import { LedgerLogo } from './LedgerLogo';
 
@@ -22,6 +22,7 @@ interface NavigationSidebarProps {
   logout: () => void;
   onOpenLiveVoice?: () => void;
   onOpenAuditLogs?: () => void;
+  onOpenInstallModal?: () => void;
 }
 
 /**
@@ -50,6 +51,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   logout,
   onOpenLiveVoice,
   onOpenAuditLogs,
+  onOpenInstallModal,
 }) => {
   // Lock background scroll when the drawer is open so only the drawer scrolls.
   useEffect(() => {
@@ -213,6 +215,30 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   <span className="flex-1 min-w-0">
                     <span className="t-body text-ink block">Audit log</span>
                     <span className="t-meta block">Every fund movement, in order</span>
+                  </span>
+                  <ChevronRight
+                    className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+                </button>
+              )}
+
+              {onOpenInstallModal && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenInstallModal();
+                  }}
+                  className="lg-row"
+                  style={delay()}
+                >
+                  <span className="lg-row-icon text-amber-500" aria-hidden="true">
+                    <Download className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="t-body text-ink block">Install Ledger</span>
+                    <span className="t-meta block">Add to Home Screen or Desktop</span>
                   </span>
                   <ChevronRight
                     className="w-[18px] h-[18px] text-ink-4 shrink-0"

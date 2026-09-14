@@ -24,12 +24,14 @@ import {
   Crown,
   RotateCcw,
   Sliders,
+  Smartphone,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { TermsModal } from '../components/TermsModal';
 import { PrivacyModal } from '../components/PrivacyModal';
+import { InstallPwaModal, usePwaInstall } from '../components/Modals/InstallPwaModal';
 import { api } from '../api/client';
 import { formatCurrency } from '../design/tokens';
 
@@ -48,8 +50,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+  const [showInstallModal, setShowInstallModal] = useState(false);
   const [isResettingBalance, setIsResettingBalance] = useState(false);
   const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+  const { isInstalled } = usePwaInstall();
 
   const {
     profiles,
@@ -815,6 +819,37 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </div>
           </div>
         </div>
+
+        {/* App Installation & PWA */}
+        <div className="lg-card p-4 sm:p-5 space-y-3.5">
+          <div className="flex items-center space-x-2 border-b border-line pb-3">
+            <Smartphone className="w-4 h-4 text-accent" strokeWidth={1.8} />
+            <h2 className="text-sm font-bold text-ink">App Installation &amp; Offline</h2>
+          </div>
+
+          <div className="p-3 bg-sunken rounded-xl border border-line flex items-center justify-between gap-3 text-xs">
+            <div>
+              <span className="font-bold text-ink block">
+                {isInstalled ? 'App Installed' : 'Install to Device'}
+              </span>
+              <span className="text-[11px] text-ink-3">
+                {isInstalled 
+                  ? 'Ledger is running as an installed standalone application.' 
+                  : 'Install Ledger directly to your home screen or desktop for rapid offline access.'}
+              </span>
+            </div>
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={() => setShowInstallModal(true)}
+                className="lg-btn lg-btn-solid text-xs shrink-0"
+              >
+                <Download className="w-3 h-3 text-amber-400" strokeWidth={1.8} />
+                <span>Install App</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <TermsModal
@@ -826,6 +861,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         isOpen={showPrivacyModal}
         onClose={() => setShowPrivacyModal(false)}
         isAccepted={true}
+      />
+      <InstallPwaModal
+        isOpen={showInstallModal}
+        onClose={() => setShowInstallModal(false)}
       />
 
       {/* Reset Balance Confirmation Modal */}
