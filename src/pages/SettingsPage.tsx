@@ -4,7 +4,6 @@ import {
   Shield,
   Users,
   Coins,
-  CreditCard,
   Download,
   Upload,
   CheckCircle2,
@@ -17,7 +16,6 @@ import {
   Palette,
   Lock,
   Unlock,
-  ShieldCheck,
   Edit3,
   UserPlus,
   Mail,
@@ -67,7 +65,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     fetchProfiles,
   } = useLedger();
   const { theme, setTheme, uiDensity, setUiDensity } = useTheme();
+
   const isOwner = user?.email?.toLowerCase() === 'jnkpappoe@gmail.com';
+  const isAdmin = user?.role === 'admin' || isOwner;
 
   // Exchange rate local states
   const rates = activeProfile?.exchangeRates;
@@ -130,6 +130,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   const handleSaveRates = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      notify('Only platform administrators can modify exchange rates', 'error');
+      return;
+    }
     if (!activeProfile) return;
     setIsSavingRates(true);
     try {
@@ -140,7 +144,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
         NGN: parseFloat(ngnRate),
         GHS: 1.0,
       });
-      notify('Exchange rates updated');
+      notify('Exchange rates updated successfully');
       await refreshData();
     } catch (err: any) {
       notify(err.message || 'Failed to update rates', 'error');
@@ -249,7 +253,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   <h2 className="text-sm font-bold text-ink font-display">
                     @{user.username}
                   </h2>
-                  <span className={`lg-tag text-[9px] ${user.role === 'admin' ? 'lg-tag-accent' : ''}`}>
+                  <span className={`lg-tag text-[9px] ${isAdmin ? 'lg-tag-accent' : ''}`}>
                     {user.role === 'admin' ? 'Super Admin' : 'Member'}
                   </span>
                 </div>
@@ -321,7 +325,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
       )}
 
       {/* Admin Operations Banner (Strictly for owner with admin role) */}
-      {isOwner && user?.role === 'admin' && onOpenAdminModal && (
+      {isAdmin && onOpenAdminModal && (
         <div className="lg-card p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-accent/40 bg-accent-soft">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 rounded-xl bg-accent text-white flex items-center justify-center shrink-0">
@@ -333,7 +337,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <span className="lg-tag lg-tag-accent text-[9px]">Owner</span>
               </div>
               <p className="text-xs text-ink-3">
-                Vault payouts, 2% standard fees &amp; user management.
+                Vault payouts, 2% standard fees, platform exchange rates &amp; user management.
               </p>
             </div>
           </div>
@@ -675,13 +679,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
       {/* Exchange Rates & Backup Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Forex Rates */}
+        {/* Forex Rates (Admin-only editable; view-only for standard users) */}
         <div className="lg-card p-4 sm:p-5 space-y-3.5">
           <div className="flex items-center justify-between border-b border-line pb-3">
             <div className="flex items-center space-x-2">
               <Coins className="w-4 h-4 text-accent" strokeWidth={1.8} />
               <h2 className="text-sm font-bold text-ink">Exchange Rates (vs GHS)</h2>
             </div>
+            {isAdmin ? (
+              <span className="lg-tag lg-tag-accent text-[9px] font-semibold">
+                Admin Control
+              </span>
+            ) : (
+              <span className="lg-tag text-[9px] font-semibold flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" />
+                Admin Managed
+              </span>
+            )}
           </div>
 
           <form onSubmit={handleSaveRates} className="space-y-3 text-xs">
@@ -693,9 +707,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <input
                   type="number"
                   step="0.01"
+                  disabled={!isAdmin}
                   value={usdRate}
                   onChange={(e) => setUsdRate(e.target.value)}
-                  className="lg-input text-xs font-mono-num num"
+                  className={`lg-input text-xs font-mono-num num ${!isAdmin ? 'opacity-85 cursor-not-allowed bg-sunken' : ''}`}
                 />
               </div>
               <div>
@@ -705,9 +720,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <input
                   type="number"
                   step="0.01"
+                  disabled={!isAdmin}
                   value={eurRate}
                   onChange={(e) => setEurRate(e.target.value)}
-                  className="lg-input text-xs font-mono-num num"
+                  className={`lg-input text-xs font-mono-num num ${!isAdmin ? 'opacity-85 cursor-not-allowed bg-sunken' : ''}`}
                 />
               </div>
               <div>
@@ -717,9 +733,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <input
                   type="number"
                   step="0.01"
+                  disabled={!isAdmin}
                   value={gbpRate}
                   onChange={(e) => setGbpRate(e.target.value)}
-                  className="lg-input text-xs font-mono-num num"
+                  className={`lg-input text-xs font-mono-num num ${!isAdmin ? 'opacity-85 cursor-not-allowed bg-sunken' : ''}`}
                 />
               </div>
               <div>
@@ -729,21 +746,28 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                 <input
                   type="number"
                   step="0.0001"
+                  disabled={!isAdmin}
                   value={ngnRate}
                   onChange={(e) => setNgnRate(e.target.value)}
-                  className="lg-input text-xs font-mono-num num"
+                  className={`lg-input text-xs font-mono-num num ${!isAdmin ? 'opacity-85 cursor-not-allowed bg-sunken' : ''}`}
                 />
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSavingRates}
-              className="lg-btn lg-btn-quiet text-xs font-semibold"
-            >
-              <RefreshCw className={`w-3 h-3 ${isSavingRates ? 'animate-spin' : ''}`} strokeWidth={1.8} />
-              <span>Update Conversion Rates</span>
-            </button>
+            {isAdmin ? (
+              <button
+                type="submit"
+                disabled={isSavingRates}
+                className="lg-btn lg-btn-quiet text-xs font-semibold"
+              >
+                <RefreshCw className={`w-3 h-3 ${isSavingRates ? 'animate-spin' : ''}`} strokeWidth={1.8} />
+                <span>Update Conversion Rates</span>
+              </button>
+            ) : (
+              <p className="text-[11px] text-ink-3 italic pt-0.5">
+                Conversion rates are set globally by the platform administrator.
+              </p>
+            )}
           </form>
         </div>
 

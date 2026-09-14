@@ -19,13 +19,6 @@ interface DebtsPageProps {
   onRecordPayment: (debt: Debt) => void;
 }
 
-/**
- * Debts.
- *
- * Direction, totals, filtering and api.deleteDebt are unchanged. The settled
- * bar is gone: what matters about a debt is the amount still outstanding and
- * the date it is due, both of which are now stated outright.
- */
 export const DebtsPage: React.FC<DebtsPageProps> = ({
   onOpenNewDebt,
   onEditDebt,
@@ -225,7 +218,7 @@ export const DebtsPage: React.FC<DebtsPageProps> = ({
                   )}
                 </div>
 
-                {/* Supporting figures — the bar's percentage now stated as text */}
+                {/* Supporting figures */}
                 <dl className="mt-4 pt-3.5 border-t border-line space-y-2 text-[0.8125rem]">
                   <div className="flex items-baseline justify-between gap-3">
                     <dt className="text-ink-3">Original amount</dt>
