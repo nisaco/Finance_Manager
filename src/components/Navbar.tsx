@@ -402,7 +402,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         logout={logout}
         onOpenLiveVoice={onOpenLiveVoice}
         onOpenAuditLogs={onOpenAuditLogs}
-        onOpenInstallModal={() => setShowInstallModal(true)}
+        onOpenInstallModal={!isInstalled ? () => setShowInstallModal(true) : undefined}
       />
 
       {/* Install PWA Modal */}

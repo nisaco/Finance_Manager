@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Share, PlusSquare, Smartphone, Monitor, CheckCircle2, X, Sparkles } from 'lucide-react';
+import { Download, Share, PlusSquare, Smartphone, Monitor, CheckCircle2, X } from 'lucide-react';
+
+const PWA_INSTALLED_KEY = 'ledger_pwa_installed';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -8,7 +10,18 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function usePwaInstall() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        if (localStorage.getItem(PWA_INSTALLED_KEY) === 'true') return true;
+        const isStandalone =
+          window.matchMedia('(display-mode: standalone)').matches ||
+          (window.navigator as any).standalone === true;
+        return isStandalone;
+      }
+    } catch {}
+    return false;
+  });
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
@@ -19,6 +32,9 @@ export function usePwaInstall() {
 
     if (isStandalone) {
       setIsInstalled(true);
+      try {
+        localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+      } catch {}
     }
 
     // Check for iOS Safari
@@ -34,6 +50,9 @@ export function usePwaInstall() {
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setDeferredPrompt(null);
+      try {
+        localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+      } catch {}
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -45,28 +64,44 @@ export function usePwaInstall() {
     };
   }, []);
 
+  const markAsInstalled = () => {
+    setIsInstalled(true);
+    try {
+      localStorage.setItem(PWA_INSTALLED_KEY, 'true');
+    } catch {}
+  };
+
   const triggerInstall = async () => {
-    if (!deferredPrompt) return false;
+    if (!deferredPrompt) {
+      markAsInstalled();
+      return true;
+    }
     try {
       await deferredPrompt.prompt();
       const choiceResult = await deferredPrompt.userChoice;
       if (choiceResult.outcome === 'accepted') {
-        setIsInstalled(true);
+        markAsInstalled();
         setDeferredPrompt(null);
+        return true;
+      } else {
+        // Even if dismissed or cancelled, mark user intent so it stops nagging
+        markAsInstalled();
         return true;
       }
     } catch (err) {
       console.error('PWA install prompt error:', err);
+      markAsInstalled();
     }
     return false;
   };
 
   return {
-    canInstall: !!deferredPrompt || isIOS,
+    canInstall: !isInstalled && (!!deferredPrompt || isIOS),
     isInstalled,
     isIOS,
     hasNativePrompt: !!deferredPrompt,
     triggerInstall,
+    markAsInstalled,
   };
 }
 
@@ -76,7 +111,7 @@ interface InstallPwaModalProps {
 }
 
 export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClose }) => {
-  const { hasNativePrompt, isIOS, isInstalled, triggerInstall } = usePwaInstall();
+  const { hasNativePrompt, isIOS, isInstalled, triggerInstall, markAsInstalled } = usePwaInstall();
   const [isInstalling, setIsInstalling] = useState(false);
 
   if (!isOpen) return null;
@@ -84,12 +119,18 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
   const handleInstallClick = async () => {
     if (hasNativePrompt) {
       setIsInstalling(true);
-      const success = await triggerInstall();
+      await triggerInstall();
       setIsInstalling(false);
-      if (success) {
-        onClose();
-      }
+      onClose();
+    } else {
+      markAsInstalled();
+      onClose();
     }
+  };
+
+  const handleIosDone = () => {
+    markAsInstalled();
+    onClose();
   };
 
   return (
@@ -127,7 +168,7 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
           <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-3 my-4">
             <CheckCircle2 className="w-6 h-6 shrink-0" />
             <p className="text-sm font-medium">
-              Ledger is already installed on this device! You can open it from your Home Screen or Applications.
+              Ledger is installed on this device! You can launch it directly from your Home Screen or Applications.
             </p>
           </div>
         ) : isIOS && !hasNativePrompt ? (
@@ -158,7 +199,7 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
                 3
               </div>
               <div className="flex-1">
-                Tap <strong className="text-stone-900 dark:text-white">Add</strong> in top-right corner to launch Ledger natively anytime.
+                Tap <strong className="text-stone-900 dark:text-white">Add</strong> in the top-right corner.
               </div>
             </div>
           </div>
@@ -186,8 +227,18 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-white/5 transition-colors"
           >
-            Close
+            {isInstalled ? 'Close' : 'Not Now'}
           </button>
+
+          {!isInstalled && isIOS && !hasNativePrompt && (
+            <button
+              onClick={handleIosDone}
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-stone-950 flex items-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              I've Added It
+            </button>
+          )}
 
           {!isInstalled && hasNativePrompt && (
             <button
@@ -204,3 +255,4 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
     </div>
   );
 };
+
