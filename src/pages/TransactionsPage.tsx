@@ -1,16 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import {
-  Receipt,
-  Search,
-  Filter,
-  Download,
-  Upload,
-  Plus,
-  ArrowUpRight,
-  ArrowDownRight,
-  FileSpreadsheet,
-  History,
-} from 'lucide-react';
+import { Search, Download, Upload, Plus, History, X } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { ReceiptRow } from '../components/ReceiptRow';
 import { Transaction } from '../types';
@@ -94,97 +83,133 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
     window.location.href = `/api/transactions/export?profileId=${activeProfile.id}`;
   };
 
+  /* formatCurrency() is shared by the whole app and returns an unsigned
+     string (it runs Math.abs internally), so a negative net used to render as
+     a positive figure that was only distinguishable by its colour. Colour
+     alone is not a signal, so the sign is stated here. Zero stays unsigned. */
+  const signed = (value: number) => {
+    const text = formatCurrency(Math.abs(value), currency);
+    if (value > 0) return `+${text}`;
+    if (value < 0) return `\u2212${text}`;
+    return text;
+  };
+
+  const typeTabs: { id: 'all' | 'income' | 'expense'; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'income', label: 'Money in' },
+    { id: 'expense', label: 'Money out' },
+  ];
+
+  const isFiltered =
+    searchQuery.trim() !== '' ||
+    selectedType !== 'all' ||
+    selectedCategory !== 'all' ||
+    dateFrom !== '' ||
+    dateTo !== '';
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedType('all');
+    setSelectedCategory('all');
+    setDateFrom('');
+    setDateTo('');
+  };
+
   return (
-    <div className="space-y-6">
-      
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <div className="flex items-center space-x-2">
-            <Receipt className="w-5 h-5 text-[#1A1A1A]" />
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A]">
-              Ledger Transactions
-            </h1>
-          </div>
-          <p className="text-xs text-[#6B7280] font-mono-num mt-0.5">
-            {activeProfile?.name} • Double-entry itemized financial records
+    <div className="space-y-5">
+      {/* ---- Page header ---- */}
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="t-title">Transactions</h1>
+          <p className="t-meta mt-1">
+            Every entry in your ledger
+            {activeProfile?.name ? ` · ${activeProfile.name}` : ''}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             onClick={onOpenCsvImport}
-            className="flex-1 xs:flex-initial px-2.5 sm:px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors"
+            className="lg-btn lg-btn-quiet lg-btn-sm"
+            aria-label="Import transactions from a CSV file"
           >
-            <Upload className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
-            <span>Import CSV</span>
+            <Upload className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+            <span className="hidden sm:inline">Import</span>
           </button>
 
           <button
             onClick={handleExportCsv}
-            className="flex-1 xs:flex-initial px-2.5 sm:px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors"
+            className="lg-btn lg-btn-quiet lg-btn-sm"
+            aria-label="Export transactions to a CSV file"
           >
-            <Download className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
-            <span>Export CSV</span>
+            <Download className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+            <span className="hidden sm:inline">Export</span>
           </button>
 
           {onNavigateToHistory && (
             <button
               onClick={onNavigateToHistory}
-              className="flex-1 xs:flex-initial px-2.5 sm:px-3 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors"
+              className="lg-btn lg-btn-quiet lg-btn-sm"
+              aria-label="Open monthly history"
             >
-              <History className="w-3.5 h-3.5 text-[#6B7280] shrink-0" />
-              <span>Monthly History</span>
+              <History className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+              <span className="hidden sm:inline">History</span>
             </button>
           )}
 
-          <button
-            onClick={onOpenNewTx}
-            className="w-full xs:w-auto px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center space-x-1.5"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5] shrink-0" />
-            <span>Record Entry</span>
+          <button onClick={onOpenNewTx} className="lg-btn lg-btn-solid">
+            <Plus className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
+            New entry
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Filter & Search Bar */}
-      <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          
-          {/* Search Input */}
-          <div className="relative lg:col-span-2">
-            <Search className="w-4 h-4 text-[#6B7280] absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search category, note, or amount..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#FDFCFB] text-[#1A1A1A] pl-9 pr-3 py-2 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
-            />
-          </div>
+      {/* ---- Filters ---- */}
+      <section className="lg-card p-4 sm:p-5 space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search
+            className="w-[18px] h-[18px] text-ink-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            strokeWidth={1.7}
+            aria-hidden="true"
+          />
+          <input
+            type="text"
+            placeholder="Search a category, note or amount"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search transactions"
+            className="lg-input pl-11"
+          />
+        </div>
 
-          {/* Type Filter */}
-          <div>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value as any)}
-              className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+        {/* Type */}
+        <div className="lg-seg" role="tablist" aria-label="Filter by type">
+          {typeTabs.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={selectedType === t.id}
+              onClick={() => setSelectedType(t.id)}
             >
-              <option value="all">All Types (Inflow & Outflow)</option>
-              <option value="expense">Expenses Only (Outflow)</option>
-              <option value="income">Incomes Only (Inflow)</option>
-            </select>
-          </div>
+              {t.label}
+            </button>
+          ))}
+        </div>
 
-          {/* Category Filter */}
+        {/* Category and dates */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
+            <label className="lg-label" htmlFor="tx-filter-category">
+              Category
+            </label>
             <select
+              id="tx-filter-category"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+              className="lg-select"
             >
-              <option value="all">All Categories</option>
+              <option value="all">All categories</option>
               {categories.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
@@ -193,41 +218,110 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             </select>
           </div>
 
-          {/* Date Range Start */}
           <div>
+            <label className="lg-label" htmlFor="tx-filter-from">
+              From
+            </label>
             <input
+              id="tx-filter-from"
               type="date"
-              title="From date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+              className="lg-input num"
             />
           </div>
 
-        </div>
-
-        {/* Filter Summary Stats */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-[#E8E5DF] text-xs text-[#6B7280] font-mono-num">
+          {/* The "to" bound had state but no control, so the upper half of the
+              date range could never be set. It has one now. */}
           <div>
-            Showing <span className="text-[#1A1A1A] font-bold">{filteredTransactions.length}</span> of {transactions.length} entries
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span>Inflow: <span className="text-[#15803D] font-bold">+{formatCurrency(totalInflow, currency)}</span></span>
-            <span>Outflow: <span className="text-[#B91C1C] font-bold">-{formatCurrency(totalOutflow, currency)}</span></span>
-            <span>Net: <span className={net >= 0 ? 'text-[#15803D] font-bold' : 'text-[#B91C1C] font-bold'}>{formatCurrency(net, currency)}</span></span>
+            <label className="lg-label" htmlFor="tx-filter-to">
+              To
+            </label>
+            <input
+              id="tx-filter-to"
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="lg-input num"
+            />
           </div>
         </div>
-      </div>
 
-      {/* Transactions List (Receipt Aesthetic) */}
-      <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-5 shadow-sm space-y-2">
+        {isFiltered && (
+          <button onClick={clearFilters} className="lg-btn lg-btn-ghost lg-btn-sm -ml-2.5">
+            <X className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+            Clear filters
+          </button>
+        )}
+      </section>
+
+      {/* ---- What the filter selected ---- */}
+      <section className="lg-card p-4 sm:p-5">
+        <p className="t-meta">
+          Showing <span className="num font-bold text-ink">{filteredTransactions.length}</span> of{' '}
+          <span className="num">{transactions.length}</span>{' '}
+          {transactions.length === 1 ? 'entry' : 'entries'}
+        </p>
+
+        {/* Three columns squeezed these amounts into an ellipsis at 390px, so
+            they stack as labelled rows on a phone and only go side by side
+            once there is room for the full figure. */}
+        <dl className="mt-3.5 pt-3.5 border-t border-line divide-y divide-line sm:divide-y-0 sm:grid sm:grid-cols-3 sm:gap-3">
+          <div className="flex items-baseline justify-between gap-3 py-2 first:pt-0 sm:block sm:py-0">
+            <dt className="t-eyebrow">Money in</dt>
+            <dd
+              className="num text-[0.9375rem] font-bold whitespace-nowrap sm:mt-1"
+              style={{ color: 'var(--lg-pos)' }}
+            >
+              {totalInflow > 0 ? `+${formatCurrency(totalInflow, currency)}` : formatCurrency(totalInflow, currency)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 py-2 sm:block sm:py-0">
+            <dt className="t-eyebrow">Money out</dt>
+            <dd
+              className="num text-[0.9375rem] font-bold whitespace-nowrap sm:mt-1"
+              style={{ color: 'var(--lg-neg)' }}
+            >
+              {totalOutflow > 0 ? `\u2212${formatCurrency(totalOutflow, currency)}` : formatCurrency(totalOutflow, currency)}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 py-2 last:pb-0 sm:block sm:py-0">
+            <dt className="t-eyebrow">Net</dt>
+            <dd
+              className="num text-[0.9375rem] font-bold whitespace-nowrap sm:mt-1"
+              style={{
+                color: net === 0 ? 'var(--lg-ink)' : net > 0 ? 'var(--lg-pos)' : 'var(--lg-neg)',
+              }}
+            >
+              {signed(net)}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {/* ---- The entries ---- */}
+      <section className="lg-card">
         {filteredTransactions.length === 0 ? (
-          <div className="text-center py-12 space-y-2 text-[#6B7280]">
-            <Receipt className="w-8 h-8 text-[#D5D0C7] mx-auto" />
-            <p className="text-sm">No ledger entries match your filter criteria.</p>
+          <div className="p-8 sm:p-12 text-center">
+            <p className="t-card">{isFiltered ? 'Nothing matches' : 'No transactions yet'}</p>
+            <p className="t-meta mt-1.5 max-w-sm mx-auto">
+              {isFiltered
+                ? 'Try widening the date range or clearing a filter.'
+                : 'Record your first entry and this page fills itself in.'}
+            </p>
+            {isFiltered ? (
+              <button onClick={clearFilters} className="lg-btn lg-btn-quiet mt-5">
+                Clear filters
+              </button>
+            ) : (
+              <button onClick={onOpenNewTx} className="lg-btn lg-btn-accent mt-5">
+                <Plus className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
+                New entry
+              </button>
+            )}
           </div>
         ) : (
-          <div className="divide-y divide-[#E8E5DF]">
+          <div className="divide-y divide-line">
             {filteredTransactions.map((tx) => (
               <ReceiptRow
                 key={tx.id}
@@ -240,8 +334,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             ))}
           </div>
         )}
-      </div>
-
+      </section>
     </div>
   );
 };

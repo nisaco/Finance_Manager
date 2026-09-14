@@ -1,0 +1,797 @@
+/* ============================================================================
+   Ledger — Design Foundation (light)
+   ----------------------------------------------------------------------------
+   The single source of truth for surface, ink, accent and semantic colour.
+   Components consume these through Tailwind utilities (bg-surface, text-ink-3,
+   border-line, ...) so no component needs to know a hex value again.
+
+   Adding a value here is a design decision. Writing a hex literal inside a
+   component is a bug.
+
+   Purely presentational. Nothing in this file touches state, data or routing.
+   ========================================================================== */
+
+:root {
+  /* --- Surfaces: three tones carry the whole interface --------------------- */
+  --lg-canvas: #f4f5f7; /* page behind everything */
+  --lg-surface: #ffffff; /* cards, panels, sheets */
+  --lg-sunken: #fafafb; /* inset rows, wells, table stripes */
+
+  /* --- Hairlines: depth comes from these, never from shadows -------------- */
+  --lg-line: #e7e9ee;
+  --lg-line-strong: #d6dae1;
+
+  /* --- Ink: four steps, each with a job ---------------------------------- */
+  --lg-ink: #0c111d; /* primary values and headings */
+  --lg-ink-2: #344054; /* labels, body copy */
+  --lg-ink-3: #667085; /* metadata, secondary */
+  --lg-ink-4: #98a2b3; /* eyebrows, disabled, placeholders */
+
+  /* --- Accent: interaction only. Never decoration. ----------------------- */
+  --lg-accent: #0f5257;
+  --lg-accent-hover: #0b3e42;
+  --lg-accent-soft: #eaf1f1;
+
+  /* --- Semantic: money and status only ----------------------------------- */
+  --lg-pos: #067a55;
+  --lg-pos-soft: #e6f4f0;
+  --lg-neg: #b42318;
+  --lg-neg-soft: #fdecea;
+  --lg-warn: #b54708;
+  --lg-warn-soft: #fef3e8;
+
+  /* --- Solid action colour (primary buttons) ----------------------------- */
+  --lg-solid: #101828;
+  --lg-solid-hover: #1d2939;
+  --lg-on-solid: #ffffff;
+
+  /* --- Layout: one place decides page gutters and thumb-reach -------------- */
+  --lg-tap: 44px; /* minimum touch target; anything smaller is a miss on a phone */
+  --lg-safe-b: env(safe-area-inset-bottom, 0px);
+
+  /* --- Elevation: depth for things that float above the page --------------
+     Two layers each: a tight contact shadow plus a wide soft one. That is what
+     makes a panel read as lifted rather than as a grey blur behind a box.
+     Cards stay flat and use hairlines; only overlays and drawers get these. --- */
+  --lg-e1: 0 1px 2px rgb(12 17 29 / 6%), 0 1px 3px rgb(12 17 29 / 4%);
+  --lg-e2: 0 4px 8px -2px rgb(12 17 29 / 8%), 0 12px 24px -6px rgb(12 17 29 / 10%);
+  --lg-e3: 0 8px 16px -4px rgb(12 17 29 / 10%), 0 24px 48px -12px rgb(12 17 29 / 18%);
+  --lg-e4: 0 16px 32px -8px rgb(12 17 29 / 14%), 0 40px 80px -16px rgb(12 17 29 / 28%);
+
+  /* --- Motion: two curves, three durations, used everywhere ---------------
+     `exit` is symmetrical; `enter` decelerates hard so a panel arrives like it
+     has mass instead of sliding at a constant speed. --- */
+  --lg-ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
+  --lg-ease-exit: cubic-bezier(0.4, 0, 0.6, 1);
+  --lg-fast: 160ms;
+  --lg-base: 240ms;
+  --lg-slow: 340ms;
+
+  /* --- Type ------------------------------------------------------------- */
+  --lg-font: "Satoshi", "Plus Jakarta Sans", "Inter", system-ui, -apple-system,
+    sans-serif;
+}
+
+/* Expose the foundation to Tailwind so utilities generate from it.
+   The var() indirection is deliberate: re-point the :root values and every
+   surface in the product follows, which is what makes theming real rather
+   than a switch that toggles nothing. */
+@theme inline {
+  --color-canvas: var(--lg-canvas);
+  --color-surface: var(--lg-surface);
+  --color-sunken: var(--lg-sunken);
+
+  --color-line: var(--lg-line);
+  --color-line-strong: var(--lg-line-strong);
+
+  --color-ink: var(--lg-ink);
+  --color-ink-2: var(--lg-ink-2);
+  --color-ink-3: var(--lg-ink-3);
+  --color-ink-4: var(--lg-ink-4);
+
+  --color-accent: var(--lg-accent);
+  --color-accent-hover: var(--lg-accent-hover);
+  --color-accent-soft: var(--lg-accent-soft);
+
+  --color-pos: var(--lg-pos);
+  --color-pos-soft: var(--lg-pos-soft);
+  --color-neg: var(--lg-neg);
+  --color-neg-soft: var(--lg-neg-soft);
+  --color-warn: var(--lg-warn);
+  --color-warn-soft: var(--lg-warn-soft);
+
+  --font-sans: var(--lg-font);
+
+  --color-solid: var(--lg-solid);
+  --color-solid-hover: var(--lg-solid-hover);
+  --color-on-solid: var(--lg-on-solid);
+}
+
+/* Everything below sits in the `components` layer on purpose.
+   Tailwind's `utilities` layer is ordered after it, so a utility on the element
+   always wins over the semantic class — `class="t-body text-ink"` really does
+   produce ink, and an unlayered rule here would silently swallow it. */
+
+@layer components {
+  /* ============================================================================
+     Type scale — six roles. If a size is not on this list it does not exist.
+     The old interface put 879 of ~1,120 text declarations at 12px or below,
+     which is why nothing led the eye. 15px is the body floor here.
+     ========================================================================== */
+
+  .t-hero {
+    font-size: clamp(2.375rem, 6vw, 3.625rem); /* 38 → 58px */
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--lg-ink);
+  }
+
+  .t-title {
+    font-size: 1.25rem; /* 20px */
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+    color: var(--lg-ink);
+  }
+
+  .t-card {
+    font-size: 0.96875rem; /* 15.5px */
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--lg-ink);
+  }
+
+  .t-body {
+    font-size: 0.9375rem; /* 15px */
+    font-weight: 500;
+    line-height: 1.45;
+    color: var(--lg-ink-2);
+  }
+
+  .t-meta {
+    font-size: 0.8125rem; /* 13px */
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--lg-ink-3);
+  }
+
+  .t-eyebrow {
+    font-size: 0.6875rem; /* 11px */
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.085em;
+    text-transform: uppercase;
+    color: var(--lg-ink-4);
+  }
+
+  /* Every figure in the product is tabular, so decimals stay in a column and
+     digits do not shift width as values update. */
+  .num {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+
+  /* ============================================================================
+     Primitives
+     ========================================================================== */
+
+  /* A card. Hairline + surface tone. No shadow, no gradient, no lift on hover. */
+  .lg-card {
+    background: var(--lg-surface);
+    border: 1px solid var(--lg-line);
+    border-radius: 16px;
+  }
+
+  /* Small status/provenance badge (Paystack, Recurring, Vault ...). */
+  .lg-tag {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid var(--lg-line);
+    border-radius: 6px;
+    background: var(--lg-sunken);
+    color: var(--lg-ink-3);
+    font-size: 0.625rem; /* 10px — a badge is a label, not content */
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .lg-tag-pos {
+    background: var(--lg-pos-soft);
+    border-color: transparent;
+    color: var(--lg-pos);
+  }
+
+  /* Progress track. One rule, so every bar in the product is the same bar. */
+  .lg-track {
+    display: block; /* an inline span ignores height — the bar disappears */
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--lg-line);
+    overflow: hidden;
+  }
+
+  .lg-track > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--lg-ink);
+    transition: width 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+
+  /* Motion appears only where it carries information, and never against the
+     user's stated preference. */
+  @media (prefers-reduced-motion: reduce) {
+    .lg-track > span {
+      transition: none;
+    }
+  }
+
+  /* ==========================================================================
+     Page frame
+     ========================================================================== */
+
+  /* Every screen sits in this. Gutters grow with the viewport; the measure is
+     capped so a 27" monitor does not stretch a table to 2000px. */
+  .lg-page {
+    width: 100%;
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 16px;
+  }
+
+  @media (min-width: 640px) {
+    .lg-page {
+      padding-inline: 24px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .lg-page {
+      padding-inline: 32px;
+    }
+  }
+
+  /* Clears the iOS home indicator so the last card is never half under it. */
+  .lg-page-bottom {
+    padding-bottom: calc(var(--lg-safe-b) + 24px);
+  }
+
+  @media (min-width: 768px) {
+    .lg-page-bottom {
+      padding-bottom: 32px;
+    }
+  }
+
+  /* ==========================================================================
+     Buttons — four intents, one geometry
+     ========================================================================== */
+
+  .lg-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: var(--lg-tap);
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .lg-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  /* One visible focus style for every interactive element in the product. */
+  .lg-btn:focus-visible,
+  .lg-input:focus-visible,
+  .lg-row:focus-visible,
+  .lg-tile:focus-visible,
+  .lg-seg button:focus-visible,
+  .lg-iconbtn:focus-visible {
+    outline: 2px solid var(--lg-accent);
+    outline-offset: 2px;
+  }
+
+  .lg-btn-solid {
+    background: var(--lg-solid);
+    color: var(--lg-on-solid);
+  }
+
+  .lg-btn-solid:hover:not(:disabled) {
+    background: var(--lg-solid-hover);
+  }
+
+  .lg-btn-quiet {
+    background: var(--lg-surface);
+    border-color: var(--lg-line-strong);
+    color: var(--lg-ink);
+  }
+
+  .lg-btn-quiet:hover:not(:disabled) {
+    background: var(--lg-sunken);
+  }
+
+  .lg-btn-ghost {
+    background: transparent;
+    color: var(--lg-ink-2);
+  }
+
+  .lg-btn-ghost:hover:not(:disabled) {
+    background: var(--lg-sunken);
+    color: var(--lg-ink);
+  }
+
+  .lg-btn-accent {
+    background: var(--lg-accent);
+    color: #fff;
+  }
+
+  .lg-btn-accent:hover:not(:disabled) {
+    background: var(--lg-accent-hover);
+  }
+
+  /* Destructive actions are outlined, not filled: a red slab invites the very
+     click it should slow down. */
+  .lg-btn-danger {
+    background: var(--lg-neg-soft);
+    border-color: transparent;
+    color: var(--lg-neg);
+  }
+
+  .lg-btn-danger:hover:not(:disabled) {
+    background: #fbdad6;
+  }
+
+  .lg-btn-sm {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 0.875rem;
+    border-radius: 10px;
+  }
+
+  .lg-btn-block {
+    width: 100%;
+  }
+
+  /* Square icon-only control. Keeps the 44px target the icon itself lacks. */
+  .lg-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--lg-tap);
+    height: var(--lg-tap);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--lg-ink-3);
+    cursor: pointer;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .lg-iconbtn:hover {
+    background: var(--lg-sunken);
+    color: var(--lg-ink);
+  }
+
+  /* ==========================================================================
+     Form controls
+     ========================================================================== */
+
+  .lg-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--lg-ink-2);
+    margin-bottom: 6px;
+  }
+
+  .lg-input {
+    display: block;
+    width: 100%;
+    min-height: var(--lg-tap);
+    padding: 10px 14px;
+    background: var(--lg-surface);
+    border: 1px solid var(--lg-line-strong);
+    border-radius: 12px;
+    color: var(--lg-ink);
+    font-family: inherit;
+    /* 16px is not a style choice: iOS Safari zooms the page on focus below it. */
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease;
+  }
+
+  .lg-input::placeholder {
+    color: var(--lg-ink-4);
+  }
+
+  .lg-input:focus {
+    outline: none;
+    border-color: var(--lg-accent);
+    box-shadow: 0 0 0 3px var(--lg-accent-soft);
+  }
+
+  .lg-input:disabled {
+    background: var(--lg-sunken);
+    color: var(--lg-ink-4);
+  }
+
+  .lg-input[aria-invalid="true"] {
+    border-color: var(--lg-neg);
+  }
+
+  .lg-hint {
+    margin-top: 6px;
+    font-size: 0.8125rem;
+    color: var(--lg-ink-3);
+  }
+
+  .lg-hint-error {
+    color: var(--lg-neg);
+    font-weight: 600;
+  }
+
+  /* Native select keeps its own arrow; we only match the frame. */
+  .lg-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 38px;
+  }
+
+  /* ==========================================================================
+     List row — the workhorse of every banking app: label, meta, value, chevron
+     ========================================================================== */
+
+  .lg-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 60px;
+    padding: 12px 16px;
+    background: transparent;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 180ms ease;
+  }
+
+  .lg-row:hover {
+    background: var(--lg-sunken);
+  }
+
+  .lg-row + .lg-row {
+    border-top: 1px solid var(--lg-line);
+  }
+
+  /* Leading glyph holder. Never a filled shape — a tinted square reads as a
+     button and competes with the amount. */
+  .lg-row-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--lg-line);
+    border-radius: 10px;
+    background: var(--lg-sunken);
+    color: var(--lg-ink-3);
+  }
+
+  /* ==========================================================================
+     Action tile — the icon grid every mobile money app opens with
+     ========================================================================== */
+
+  .lg-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 84px;
+    padding: 12px 8px;
+    background: var(--lg-surface);
+    border: 1px solid var(--lg-line);
+    border-radius: 14px;
+    color: var(--lg-ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      background-color 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .lg-tile:hover {
+    background: var(--lg-sunken);
+    border-color: var(--lg-line-strong);
+  }
+
+  .lg-tile svg {
+    color: var(--lg-accent);
+  }
+
+  /* ==========================================================================
+     Segmented control — switching views inside a screen, not between screens
+     ========================================================================== */
+
+  .lg-seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    background: var(--lg-sunken);
+    border: 1px solid var(--lg-line);
+    border-radius: 12px;
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .lg-seg::-webkit-scrollbar {
+    display: none;
+  }
+
+  .lg-seg button {
+    flex: none;
+    /* 40px + the container's 3px padding clears the 44px tap target. */
+    min-height: 40px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--lg-ink-3);
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+
+  .lg-seg button[aria-selected="true"] {
+    background: var(--lg-surface);
+    border: 1px solid var(--lg-line);
+    color: var(--lg-ink);
+  }
+
+  /* ==========================================================================
+     Overlays — one scrim, one panel. Centred dialog on desktop, sheet on phone.
+     ========================================================================== */
+
+  .lg-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgb(12 17 29 / 45%);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  @media (min-width: 640px) {
+    .lg-scrim {
+      align-items: center;
+      padding: 24px;
+    }
+  }
+
+  .lg-sheet {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    background: var(--lg-surface);
+    /* Rounded at the top only: on a phone it rises from the bottom edge. */
+    border-radius: 20px 20px 0 0;
+    padding-bottom: var(--lg-safe-b);
+  }
+
+  @media (min-width: 640px) {
+    .lg-sheet {
+      max-width: 520px;
+      max-height: calc(100dvh - 48px);
+      border: 1px solid var(--lg-line);
+      border-radius: 18px;
+      padding-bottom: 0;
+    }
+  }
+
+  /* A grab handle tells a thumb this panel can be dragged away. Phones only. */
+  .lg-sheet-grip {
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 10px auto 2px;
+    border-radius: 999px;
+    background: var(--lg-line-strong);
+  }
+
+  @media (min-width: 640px) {
+    .lg-sheet-grip {
+      display: none;
+    }
+  }
+
+  /* ==========================================================================
+     Drawer — slide-over navigation. Same behaviour as before, with weight.
+     ========================================================================== */
+
+  .lg-drawer-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgb(12 17 29 / 40%);
+    /* A light blur separates the drawer from the page without hiding where you
+       were, which is what keeps a slide-over from feeling like a page change. */
+    backdrop-filter: blur(3px);
+    animation: lg-fade-in var(--lg-base) var(--lg-ease-exit) both;
+  }
+
+  .lg-drawer {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-height: 100dvh;
+    background: var(--lg-surface);
+    border-right: 1px solid var(--lg-line);
+    box-shadow: var(--lg-e4);
+    /* Transform-only animation, so it runs on the compositor and stays smooth
+       on a mid-range Android rather than repainting the whole panel each frame. */
+    animation: lg-slide-in-left var(--lg-slow) var(--lg-ease-enter) both;
+    will-change: transform;
+  }
+
+  /* Rows and headers inside a drawer stagger in behind it. Cheap, and it makes
+     the panel feel assembled rather than pasted. */
+  .lg-stagger > * {
+    animation: lg-rise var(--lg-base) var(--lg-ease-enter) both;
+    animation-delay: calc(var(--i, 0) * 22ms + 80ms);
+  }
+
+  @keyframes lg-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes lg-slide-in-left {
+    from {
+      transform: translate3d(-100%, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes lg-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 6px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  /* Menus and popovers get the same treatment, scaled from their own corner. */
+  .lg-pop {
+    background: var(--lg-surface);
+    border: 1px solid var(--lg-line);
+    border-radius: 16px;
+    box-shadow: var(--lg-e3);
+    transform-origin: top var(--lg-pop-origin, left);
+    animation: lg-pop-in var(--lg-fast) var(--lg-ease-enter) both;
+  }
+
+  @keyframes lg-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97) translate3d(0, -4px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translate3d(0, 0, 0);
+    }
+  }
+
+  /* Press feedback. A control that yields under the finger is the cheapest
+     signal that the tap registered — it matters most on slow connections,
+     where nothing else has happened yet. */
+  .lg-btn:active:not(:disabled),
+  .lg-tile:active,
+  .lg-iconbtn:active,
+  .lg-seg button:active {
+    transform: scale(0.975);
+  }
+
+  .lg-row:active {
+    background: var(--lg-line);
+  }
+
+  .lg-btn,
+  .lg-tile,
+  .lg-iconbtn {
+    transition:
+      background-color var(--lg-fast) var(--lg-ease-exit),
+      border-color var(--lg-fast) var(--lg-ease-exit),
+      color var(--lg-fast) var(--lg-ease-exit),
+      box-shadow var(--lg-fast) var(--lg-ease-exit),
+      transform var(--lg-fast) var(--lg-ease-exit);
+  }
+
+  /* The one honest use of elevation on a button: the primary action lifts a
+     little on hover, so the eye finds it without a colour change. */
+  .lg-btn-solid {
+    box-shadow: var(--lg-e1);
+  }
+
+  .lg-btn-solid:hover:not(:disabled) {
+    box-shadow: var(--lg-e2);
+  }
+
+  /* Motion is a courtesy, not a requirement. Anyone who has asked their system
+     to stop animating gets the interface with no movement at all. */
+  @media (prefers-reduced-motion: reduce) {
+    .lg-drawer,
+    .lg-drawer-scrim,
+    .lg-pop,
+    .lg-stagger > * {
+      animation: none;
+    }
+
+    .lg-btn:active:not(:disabled),
+    .lg-tile:active,
+    .lg-iconbtn:active,
+    .lg-seg button:active {
+      transform: none;
+    }
+  }
+
+  /* Screen-reader-only text, for icon-only controls that still need a name. */
+  .lg-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+}

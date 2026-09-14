@@ -1,13 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  X,
-  Mic,
-  History,
-  Sun,
-  Moon,
-  LogOut,
-  LucideIcon,
-} from 'lucide-react';
+import { X, Mic, History, Sun, Moon, LogOut, ChevronRight, LucideIcon } from 'lucide-react';
 import { Profile, User } from '../types';
 import { LedgerLogo } from './LedgerLogo';
 
@@ -32,6 +24,19 @@ interface NavigationSidebarProps {
   onOpenAuditLogs?: () => void;
 }
 
+/**
+ * Slide-over navigation drawer for phones.
+ *
+ * Behaviour is unchanged: opened by the header menu button, slides in from the
+ * left, closes on backdrop click, Escape, or picking a section, and locks
+ * background scroll while open.
+ *
+ * What changed is the feel. The panel animates on transform alone so it runs on
+ * the compositor and stays smooth on a mid-range Android; it carries real
+ * layered elevation so it reads as sitting above the page; and its rows arrive
+ * a beat behind it rather than appearing all at once. All of it is disabled
+ * outright for anyone whose system asks for reduced motion.
+ */
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   isOpen,
   onClose,
@@ -46,7 +51,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onOpenLiveVoice,
   onOpenAuditLogs,
 }) => {
-  // Lock background scroll when sidebar is open so ONLY the sidebar can scroll
+  // Lock background scroll when the drawer is open so only the drawer scrolls.
   useEffect(() => {
     if (isOpen) {
       const prevOverflow = document.body.style.overflow;
@@ -72,52 +77,48 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 md:hidden flex" role="dialog" aria-modal="true" aria-label="Navigation Menu">
-      {/* 1. Backdrop: Blurs the rest of the screen as requested */}
-      <div
-        className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300 animate-in fade-in"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+  /** Row index drives the stagger delay. */
+  let step = 0;
+  const delay = () => ({ ['--i' as string]: String(step++) }) as React.CSSProperties;
 
-      {/* 2. Sidebar Drawer: Completely OPAQUE, ZERO transparency, ZERO glass effect */}
-      <aside
-        className="relative w-72 sm:w-80 max-w-[85vw] h-[100dvh] max-h-[100dvh] bg-white dark:bg-[#11141C] border-r border-[#E5E7EB] dark:border-[#222733] shadow-[0_25px_60px_rgba(0,0,0,0.4)] flex flex-col justify-between z-10 animate-in slide-in-from-left duration-300 ease-out overscroll-contain touch-pan-y overflow-hidden"
-      >
-        {/* Top Header: 100% Solid Opaque Background */}
-        <div className="p-4 border-b border-[#E5E7EB] dark:border-[#222733] flex items-center justify-between shrink-0 bg-[#F9FAFB] dark:bg-[#161A24]">
-          <div
+  return (
+    <div
+      className="fixed inset-0 z-50 md:hidden flex"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Navigation menu"
+    >
+      <div className="lg-drawer-scrim" onClick={onClose} aria-hidden="true" />
+
+      <aside className="lg-drawer w-[19rem] max-w-[85vw] z-10 overscroll-contain touch-pan-y">
+        {/* ---- Identity ---- */}
+        <div className="flex items-center justify-between gap-3 px-4 h-16 border-b border-line shrink-0">
+          <button
             onClick={() => {
               onClose();
               onTabChange('overview');
             }}
-            className="flex items-center space-x-2.5 cursor-pointer group"
+            className="flex items-center gap-2.5 min-w-0 text-left"
           >
-            <LedgerLogo size={32} />
-            <div>
-              <div className="font-display font-bold text-sm tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6]">
-                Ledger
-              </div>
-              <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
-                {user ? `@${user.username}` : 'Financial OS'} • {activeProfile?.name || 'Active'}
-              </div>
-            </div>
-          </div>
+            <LedgerLogo size={30} />
+            <span className="min-w-0">
+              <span className="t-card block">Ledger</span>
+              <span className="t-meta block truncate">
+                {user ? `@${user.username}` : 'Signed out'}
+                {activeProfile ? ` · ${activeProfile.name}` : ''}
+              </span>
+            </span>
+          </button>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-[#6B7280] dark:text-[#9CA3AF] hover:bg-black/5 dark:hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-            aria-label="Close menu"
-          >
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="lg-iconbtn shrink-0" aria-label="Close menu">
+            <X className="w-5 h-5" strokeWidth={1.7} />
           </button>
         </div>
 
-        {/* Middle Nav Items: Strictly scrolls inside sidebar */}
-        <div className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-1 touch-pan-y bg-white dark:bg-[#11141C]">
-          <div className="text-[10px] font-mono-num font-bold uppercase tracking-wider text-[#9CA3AF] dark:text-[#6B7280] px-3 py-1">
-            Navigation
+        {/* ---- Sections ---- */}
+        <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y lg-stagger">
+          <div className="px-4 pt-4 pb-1" style={delay()}>
+            <span className="t-eyebrow">Go to</span>
           </div>
 
           {navItems.map((item) => {
@@ -130,77 +131,118 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   onTabChange(item.id);
                   onClose();
                 }}
-                className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-[0.98] cursor-pointer ${
-                  isActive
-                    ? 'bg-[#1A1A1A] text-white dark:bg-[#F3F4F6] dark:text-[#111317] shadow-xs'
-                    : 'text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                }`}
+                className="lg-row"
+                style={delay()}
+                aria-current={isActive ? 'page' : undefined}
               >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{item.label}</span>
+                <span
+                  className="lg-row-icon"
+                  aria-hidden="true"
+                  style={
+                    isActive
+                      ? {
+                          background: 'var(--lg-accent-soft)',
+                          borderColor: 'transparent',
+                          color: 'var(--lg-accent)',
+                        }
+                      : undefined
+                  }
+                >
+                  <Icon className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className={`block truncate ${isActive ? 't-card' : 't-body text-ink'}`}>
+                    {item.label}
+                  </span>
+                  {isActive && <span className="t-meta block">You are here</span>}
+                </span>
+                <ChevronRight
+                  className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                  strokeWidth={1.7}
+                  aria-hidden="true"
+                />
               </button>
             );
           })}
 
-          <div className="pt-3 border-t border-[#E5E7EB] dark:border-[#222733] space-y-1">
-            <div className="text-[10px] font-mono-num font-bold uppercase tracking-wider text-[#9CA3AF] dark:text-[#6B7280] px-3 py-1">
-              Actions &amp; Logs
-            </div>
-            {onOpenLiveVoice && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenLiveVoice();
-                }}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/60 transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <div className="flex items-center space-x-2.5">
-                  <Mic className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Live Voice Fima</span>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              </button>
-            )}
-            {onOpenAuditLogs && (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenAuditLogs();
-                }}
-                className="w-full flex items-center space-x-3 px-3 py-2 rounded-xl text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] hover:bg-black/5 dark:hover:bg-white/10 hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] transition-all active:scale-[0.98] cursor-pointer"
-              >
-                <History className="w-4 h-4" />
-                <span>Audit Log</span>
-              </button>
-            )}
-          </div>
+          {(onOpenLiveVoice || onOpenAuditLogs) && (
+            <>
+              <div className="px-4 pt-5 pb-1 mt-2 border-t border-line" style={delay()}>
+                <span className="t-eyebrow">Tools</span>
+              </div>
+
+              {onOpenLiveVoice && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenLiveVoice();
+                  }}
+                  className="lg-row"
+                  style={delay()}
+                >
+                  <span className="lg-row-icon" aria-hidden="true">
+                    <Mic className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="t-body text-ink block">Live Voice Fima</span>
+                    <span className="t-meta block">Talk through your finances</span>
+                  </span>
+                  <ChevronRight
+                    className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+                </button>
+              )}
+
+              {onOpenAuditLogs && (
+                <button
+                  onClick={() => {
+                    onClose();
+                    onOpenAuditLogs();
+                  }}
+                  className="lg-row"
+                  style={delay()}
+                >
+                  <span className="lg-row-icon" aria-hidden="true">
+                    <History className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="t-body text-ink block">Audit log</span>
+                    <span className="t-meta block">Every fund movement, in order</span>
+                  </span>
+                  <ChevronRight
+                    className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                    strokeWidth={1.7}
+                    aria-hidden="true"
+                  />
+                </button>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Bottom Drawer User Footer: 100% Solid Opaque Background */}
-        <div className="p-3.5 border-t border-[#E5E7EB] dark:border-[#222733] bg-[#F9FAFB] dark:bg-[#161A24] space-y-2.5 shrink-0 overscroll-contain">
-          <div className="flex items-center justify-between px-1">
-            <div className="text-xs min-w-0 pr-2">
-              <span className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] block truncate">
-                {user?.username || 'User'}
-              </span>
-              <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] truncate block">
-                {user?.email}
-              </span>
+        {/* ---- Account ---- */}
+        <div className="border-t border-line p-4 bg-sunken shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="t-card truncate">{user?.username || 'User'}</div>
+              <div className="t-meta truncate">{user?.email}</div>
             </div>
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-[#E5E7EB] dark:border-[#2D323F] bg-white dark:bg-[#22252E] text-[#4B5563] dark:text-[#9CA3AF] text-xs font-medium shrink-0 cursor-pointer"
+              className="lg-btn lg-btn-quiet lg-btn-sm shrink-0"
             >
               {resolvedTheme === 'dark' ? (
                 <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Light</span>
+                  <Sun className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+                  Light
                 </>
               ) : (
                 <>
-                  <Moon className="w-3.5 h-3.5 text-[#4B5563]" />
-                  <span>Dark</span>
+                  <Moon className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+                  Dark
                 </>
               )}
             </button>
@@ -212,10 +254,10 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                 onClose();
                 logout();
               }}
-              className="w-full flex items-center justify-center space-x-1.5 px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 font-semibold text-xs hover:bg-red-100 transition-colors cursor-pointer"
+              className="lg-btn lg-btn-danger lg-btn-block mt-4"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
+              <LogOut className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+              Sign out
             </button>
           )}
         </div>

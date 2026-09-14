@@ -29,6 +29,7 @@ import { LiveVoiceModal } from './components/Modals/LiveVoiceModal';
 import { AdminGodModeModal } from './components/Modals/AdminGodModeModal';
 import { TermsModal } from './components/TermsModal';
 import { PrivacyModal } from './components/PrivacyModal';
+import { APP_VERSION } from './version';
 import { SplashLoader } from './components/SplashLoader';
 import { SecuringWorkspaceLoader } from './components/SecuringWorkspaceLoader';
 import { OverviewSkeleton, TableSkeleton, CardsGridSkeleton } from './components/SkeletonLoader';
@@ -190,7 +191,7 @@ const MainShell: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0F1115] text-[#1A1A1A] dark:text-[#F3F4F6] flex flex-col font-sans selection:bg-[#1A1A1A] dark:selection:bg-[#F3F4F6] selection:text-[#FDFCFB] dark:selection:text-[#111317] transition-colors">
+    <div className="min-h-screen bg-canvas dark:bg-[#0F1115] text-ink dark:text-[#F3F4F6] flex flex-col font-sans selection:bg-[#1A1A1A] dark:selection:bg-[#F3F4F6] selection:text-[#FDFCFB] dark:selection:text-[#111317] transition-colors">
       
       {/* Top Fixed Header & Navigation */}
       <Navbar
@@ -202,7 +203,9 @@ const MainShell: React.FC = () => {
       />
 
       {/* Main Page Content Area with Fluid Transitions and Skeletons */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* lg-page carries the gutters and the measure cap; lg-page-bottom keeps the
+          last card clear of the iOS home indicator. */}
+      <main className="lg-page lg-page-bottom flex-1 py-5 sm:py-7">
         <div key={activeTab} className="animate-in fade-in-50 duration-200 ease-out">
           {activeTab === 'overview' && (
             isLedgerLoading ? (
@@ -408,25 +411,24 @@ const MainShell: React.FC = () => {
         isAccepted={true}
       />
 
-      {/* Footer info banner with legal links */}
-      <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] py-4 px-6 text-center text-[11px] text-[#6B7280] dark:text-[#9CA3AF] font-mono-num transition-colors flex flex-col sm:flex-row items-center justify-between gap-2 max-w-7xl mx-auto w-full">
-        <div>
-          Ledger • Personal &amp; Business Financial Management
-        </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowTermsModal(true)}
-            className="hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline transition-colors"
-          >
-            Terms &amp; Conditions
-          </button>
-          <span>•</span>
-          <button
-            onClick={() => setShowPrivacyModal(true)}
-            className="hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline transition-colors"
-          >
-            Privacy Policy
-          </button>
+      {/* Footer: what this is, which build you are on, and the legal links. */}
+      <footer className="border-t border-line">
+        <div className="lg-page py-5 flex flex-col sm:flex-row items-center justify-between gap-x-4 gap-y-2 text-center sm:text-left">
+          <span className="t-meta">
+            Ledger · Personal and business financial management
+            <span className="hidden sm:inline" aria-hidden="true"> · </span>
+            <span className="block sm:inline">
+              Version <span className="num">{APP_VERSION}</span>
+            </span>
+          </span>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowTermsModal(true)} className="lg-btn lg-btn-ghost lg-btn-sm">
+              Terms and conditions
+            </button>
+            <button onClick={() => setShowPrivacyModal(true)} className="lg-btn lg-btn-ghost lg-btn-sm">
+              Privacy policy
+            </button>
+          </div>
         </div>
       </footer>
 

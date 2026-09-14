@@ -82,3 +82,45 @@ export function formatDate(dateString: string): string {
     year: 'numeric',
   });
 }
+
+/* ---------------------------------------------------------------------------
+   Additive helpers for the redesigned surfaces.
+   formatCurrency() above is left exactly as it was — every existing caller
+   keeps its current output. These split the same value into its parts so a
+   hero figure can weight the symbol, the integer and the decimals
+   differently instead of rendering one flat string.
+   ------------------------------------------------------------------------ */
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  GHS: 'GH₵',
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  NGN: '₦',
+};
+
+export function currencySymbol(currency = 'GHS'): string {
+  return CURRENCY_SYMBOLS[currency] || currency;
+}
+
+/** Absolute value, grouped, always two decimals. No symbol, no sign. */
+export function formatAmount(amount: number): string {
+  return Math.abs(Number.isFinite(amount) ? amount : 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Splits a figure into integer and decimal parts for typographic emphasis. */
+export function splitAmount(amount: number): { whole: string; fraction: string } {
+  const [whole, fraction = '00'] = formatAmount(amount).split('.');
+  return { whole, fraction };
+}
+
+/** "13 Sep" — compact enough to sit in a metadata line. */
+export function formatDayMonth(dateString: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return dateString;
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+}
