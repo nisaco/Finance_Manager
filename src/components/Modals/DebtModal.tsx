@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Layers, ArrowDownLeft, ArrowUpRight, DollarSign } from 'lucide-react';
+import { X, Layers, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { Debt } from '../../types';
 import { useLedger } from '../../context/LedgerContext';
 import { api } from '../../api/client';
@@ -108,13 +108,12 @@ export const DebtModal: React.FC<DebtModalProps> = ({
   const remaining = initialData ? Math.max(0, initialData.amount - (initialData.paid || 0)) : 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
-      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
-        
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#E8E5DF] shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-ink/60 backdrop-blur-xs">
+      <div className="lg-card w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150 p-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
           <div className="flex items-center space-x-2">
-            <Layers className="w-5 h-5 text-[#1A1A1A]" />
-            <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A]">
+            <Layers className="w-5 h-5 text-ink" />
+            <h2 className="font-display text-base font-bold text-ink">
               {isPaymentMode
                 ? 'Record Debt Payment'
                 : initialData
@@ -122,36 +121,40 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                 : 'Track Debt / Credit'}
             </h2>
           </div>
-          <button onClick={onClose} className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken transition-colors"
+            aria-label="Close modal"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
-          
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
           {isPaymentMode ? (
             <div className="space-y-4">
-              <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF] space-y-1 text-xs">
-                <div className="flex justify-between text-[#6B7280]">
-                  <span>Person / Entity:</span>
-                  <span className="font-bold text-[#1A1A1A]">{initialData.person}</span>
+              <div className="p-3.5 bg-sunken rounded-xl border border-line space-y-1.5 text-xs">
+                <div className="flex justify-between text-ink-muted">
+                  <span>Counterparty / Entity:</span>
+                  <span className="font-bold text-ink">{initialData.person}</span>
                 </div>
-                <div className="flex justify-between text-[#6B7280]">
-                  <span>Type:</span>
-                  <span className={initialData.direction === 'i_owe' ? 'text-[#DC2626] font-bold' : 'text-[#15803D] font-bold'}>
+                <div className="flex justify-between text-ink-muted">
+                  <span>Category:</span>
+                  <span className={initialData.direction === 'i_owe' ? 'text-neg font-bold' : 'text-pos font-bold'}>
                     {initialData.direction === 'i_owe' ? 'I Owe (Payable)' : 'Owed to Me (Receivable)'}
                   </span>
                 </div>
-                <div className="flex justify-between text-[#6B7280] pt-1 border-t border-[#E8E5DF] font-mono-num">
+                <div className="flex justify-between text-ink-muted pt-1.5 border-t border-line font-mono-num num">
                   <span>Remaining Balance:</span>
-                  <span className="font-bold text-[#1A1A1A]">
+                  <span className="font-bold text-ink">
                     {formatCurrency(remaining, initialData.currency)}
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   Payment Installment ({initialData.currency})
                 </label>
                 <input
@@ -162,7 +165,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                   placeholder={remaining.toString()}
                   value={paymentAmount}
                   onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 text-base font-mono-num font-bold rounded-lg border border-[#E8E5DF] focus:outline-none focus:border-[#1A1A1A]"
+                  className="w-full lg-input text-base font-mono-num num font-bold"
                   autoFocus
                 />
               </div>
@@ -170,14 +173,12 @@ export const DebtModal: React.FC<DebtModalProps> = ({
           ) : (
             <>
               {/* Direction Toggle */}
-              <div className="grid grid-cols-2 gap-2 p-1 bg-[#F7F5F2] rounded-lg border border-[#E8E5DF]">
+              <div className="lg-seg">
                 <button
                   type="button"
                   onClick={() => setDirection('owed_to_me')}
-                  className={`flex items-center justify-center space-x-1.5 py-2 rounded text-xs font-bold transition-all ${
-                    direction === 'owed_to_me'
-                      ? 'bg-[#15803D] text-white shadow-sm'
-                      : 'text-[#6B7280] hover:text-[#1A1A1A]'
+                  className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${
+                    direction === 'owed_to_me' ? 'active text-pos' : ''
                   }`}
                 >
                   <ArrowUpRight className="w-3.5 h-3.5" />
@@ -187,10 +188,8 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setDirection('i_owe')}
-                  className={`flex items-center justify-center space-x-1.5 py-2 rounded text-xs font-bold transition-all ${
-                    direction === 'i_owe'
-                      ? 'bg-[#DC2626] text-white shadow-sm'
-                      : 'text-[#6B7280] hover:text-[#1A1A1A]'
+                  className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${
+                    direction === 'i_owe' ? 'active text-neg' : ''
                   }`}
                 >
                   <ArrowDownLeft className="w-3.5 h-3.5" />
@@ -200,7 +199,7 @@ export const DebtModal: React.FC<DebtModalProps> = ({
 
               {/* Person */}
               <div>
-                <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   Counterparty / Person Name
                 </label>
                 <input
@@ -209,14 +208,14 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                   placeholder="e.g. Kwame Mensah, Tech Supplier Ltd"
                   value={person}
                   onChange={(e) => setPerson(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+                  className="w-full lg-input text-xs"
                 />
               </div>
 
               {/* Total Amount & Currency */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                  <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                     Total Amount
                   </label>
                   <input
@@ -226,18 +225,18 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                     placeholder="3000.00"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs font-mono-num font-bold focus:outline-none focus:border-[#1A1A1A]"
+                    className="w-full lg-input text-xs font-mono-num num font-bold"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                  <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                     Currency
                   </label>
                   <select
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+                    className="w-full lg-select text-xs font-mono-num"
                   >
                     <option value="GHS">GHS (GH₵)</option>
                     <option value="USD">USD ($)</option>
@@ -250,20 +249,20 @@ export const DebtModal: React.FC<DebtModalProps> = ({
 
               {/* Due Date */}
               <div>
-                <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   Expected Repayment Due Date
                 </label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+                  className="w-full lg-input text-xs font-mono-num num"
                 />
               </div>
 
               {/* Note */}
               <div>
-                <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   Reason / Contract Notes
                 </label>
                 <input
@@ -271,24 +270,24 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                   placeholder="e.g. Milestone 2 project invoice balance"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+                  className="w-full lg-input text-xs"
                 />
               </div>
             </>
           )}
 
-          <div className="flex items-center justify-end space-x-3 pt-3 border-t border-[#E8E5DF]">
+          <div className="flex items-center justify-end space-x-2 pt-3 border-t border-line">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-md text-xs font-bold text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2]"
+              className="lg-btn-quiet text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-md text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              className="lg-btn-solid text-xs"
             >
               {isSubmitting
                 ? 'Processing...'
@@ -299,7 +298,6 @@ export const DebtModal: React.FC<DebtModalProps> = ({
                 : 'Track Debt'}
             </button>
           </div>
-
         </form>
       </div>
     </div>

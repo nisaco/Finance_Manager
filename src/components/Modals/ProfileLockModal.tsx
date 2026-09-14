@@ -85,16 +85,17 @@ export const ProfileLockModal: React.FC<ProfileLockModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/70 backdrop-blur-xs focus:outline-none"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs focus:outline-none animate-in fade-in duration-150"
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <div className="bg-white border border-[#E8E5DF] rounded-2xl w-full max-w-sm shadow-2xl p-5 sm:p-6 text-center animate-in zoom-in-95 duration-150 relative">
+      <div className="bg-surface border border-line rounded-2xl w-full max-w-sm shadow-2xl p-5 sm:p-6 text-center relative">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded-md transition-colors"
+          className="lg-iconbtn absolute top-4 right-4"
+          aria-label="Close"
         >
           <X className="w-4 h-4" />
         </button>
@@ -102,35 +103,35 @@ export const ProfileLockModal: React.FC<ProfileLockModalProps> = ({
         {/* Profile Avatar Icon */}
         <div
           className="w-12 h-12 rounded-xl text-white flex items-center justify-center mx-auto mb-3 shadow-sm"
-          style={{ backgroundColor: profile.color || '#1A1A1A' }}
+          style={{ backgroundColor: profile.color || 'var(--lg-ink)' }}
         >
           <Lock className="w-6 h-6 stroke-[2.2]" />
         </div>
 
-        <h2 className="font-display text-lg sm:text-xl font-bold text-[#1A1A1A]">
+        <h2 className="t-title">
           Unlock {profile.name}
         </h2>
-        <p className="text-xs text-[#6B7280] mt-1 font-mono-num">
+        <p className="t-meta num mt-1">
           Enter the security PIN to access this private profile
         </p>
 
         {/* PIN Indicators */}
-        <div className="flex justify-center space-x-3 my-5">
+        <div className="flex justify-center gap-3 my-5">
           {[0, 1, 2, 3].map((idx) => (
             <div
               key={idx}
               className={`w-3.5 h-3.5 rounded-full border transition-all ${
                 pin.length > idx
-                  ? 'bg-[#1A1A1A] border-[#1A1A1A] scale-110 shadow-xs'
-                  : 'bg-[#FDFCFB] border-[#D1D5DB]'
+                  ? 'bg-solid border-line-strong scale-110 shadow-xs'
+                  : 'bg-sunken border-line'
               }`}
             />
           ))}
         </div>
 
         {error && (
-          <div className="mb-4 p-2 bg-[#DC2626]/10 border border-[#DC2626]/30 rounded text-xs text-[#DC2626] font-bold flex items-center justify-center space-x-1.5 animate-shake">
-            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+          <div className="mb-4 p-2.5 bg-neg-soft border border-neg-soft rounded-xl text-xs text-neg font-medium flex items-center justify-center gap-1.5 animate-in fade-in">
+            <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -142,7 +143,7 @@ export const ProfileLockModal: React.FC<ProfileLockModalProps> = ({
               key={num}
               type="button"
               onClick={() => handleDigit(num.toString())}
-              className="h-11 rounded-xl bg-[#FDFCFB] hover:bg-[#F7F5F2] text-[#1A1A1A] text-lg font-mono-num font-bold border border-[#E8E5DF] transition-all active:scale-95 flex items-center justify-center shadow-xs"
+              className="h-11 rounded-xl bg-sunken hover:bg-surface text-ink text-lg num font-bold border border-line transition-all active:scale-95 flex items-center justify-center shadow-xs cursor-pointer"
             >
               {num}
             </button>
@@ -150,21 +151,22 @@ export const ProfileLockModal: React.FC<ProfileLockModalProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            className="h-11 rounded-xl bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#6B7280] text-xs font-mono-num font-bold border border-[#E8E5DF] flex items-center justify-center"
+            className="h-11 rounded-xl bg-sunken hover:bg-surface text-ink-3 text-xs num font-semibold border border-line flex items-center justify-center cursor-pointer"
           >
             Clear
           </button>
           <button
             type="button"
             onClick={() => handleDigit('0')}
-            className="h-11 rounded-xl bg-[#FDFCFB] hover:bg-[#F7F5F2] text-[#1A1A1A] text-lg font-mono-num font-bold border border-[#E8E5DF] transition-all active:scale-95 flex items-center justify-center shadow-xs"
+            className="h-11 rounded-xl bg-sunken hover:bg-surface text-ink text-lg num font-bold border border-line transition-all active:scale-95 flex items-center justify-center shadow-xs cursor-pointer"
           >
             0
           </button>
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-11 rounded-xl bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#6B7280] border border-[#E8E5DF] flex items-center justify-center"
+            className="h-11 rounded-xl bg-sunken hover:bg-surface text-ink-3 border border-line flex items-center justify-center cursor-pointer"
+            aria-label="Backspace"
           >
             <Delete className="w-4 h-4" />
           </button>
@@ -175,15 +177,15 @@ export const ProfileLockModal: React.FC<ProfileLockModalProps> = ({
           <button
             onClick={() => handleSubmit()}
             disabled={isSubmitting || pin.length < 4}
-            className="w-full py-2.5 bg-[#1A1A1A] hover:bg-[#333333] text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center space-x-1.5 disabled:opacity-40"
+            className="w-full py-2.5 lg-btn lg-btn-solid justify-center disabled:opacity-40"
           >
             <span>{isSubmitting ? 'Verifying...' : 'Unlock Profile'}</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-4 h-4 ml-1" />
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-1.5 text-xs text-[#6B7280] hover:text-[#1A1A1A] font-semibold transition-colors"
+            className="w-full py-1.5 text-xs text-ink-3 hover:text-ink font-semibold transition-colors cursor-pointer"
           >
             Cancel
           </button>

@@ -114,18 +114,18 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full max-w-md bg-[#FFFFFF] dark:bg-[#181D27] rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F] p-6 shadow-2xl space-y-4">
+      <div className="w-full max-w-md bg-surface rounded-2xl border border-line p-6 shadow-2xl space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
               <KeyRound className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+              <h3 className="t-card">
                 {step === 'request' ? 'Reset Account Password' : 'Enter Reset Code'}
               </h3>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+              <p className="t-meta num mt-0.5">
                 {step === 'request'
                   ? 'Identify your account to receive a security code'
                   : `Enter the 6-digit code for ${targetEmail}`}
@@ -135,7 +135,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] hover:bg-[#F3F4F6] dark:hover:bg-[#222836] transition-colors cursor-pointer"
+            className="lg-iconbtn"
+            aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
           </button>
@@ -143,7 +144,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
         {/* Error Alert */}
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/40 rounded-xl text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+          <div className="p-3 bg-neg-soft border border-neg-soft rounded-xl text-xs text-neg flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="flex-1 font-medium">{error}</span>
           </div>
@@ -151,7 +152,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
         {/* Success Alert */}
         {successMessage && (
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
+          <div className="p-3 bg-pos-soft border border-pos-soft rounded-xl text-xs text-pos flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
             <span className="flex-1 font-medium">{successMessage}</span>
           </div>
@@ -159,13 +160,13 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
         {/* Email Dispatch Notice */}
         {step === 'verify' && (
-          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
-            <MailCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <div className="p-3.5 bg-sunken border border-line rounded-xl text-xs flex items-start gap-2.5">
+            <MailCheck className="w-4 h-4 text-pos shrink-0 mt-0.5" />
             <div>
-              <div className="font-semibold text-[11px] text-emerald-800 dark:text-emerald-200">
+              <div className="font-semibold text-[11px] text-ink">
                 Check Your Email Inbox
               </div>
-              <div className="text-[11px] text-emerald-700/90 dark:text-emerald-300/80 mt-0.5">
+              <div className="t-meta num mt-0.5">
                 We sent a 6-digit verification code to <strong>{targetMaskedEmail || targetEmail}</strong>. Check your inbox and spam folder, then enter the code below.
               </div>
             </div>
@@ -176,37 +177,37 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         {step === 'request' && (
           <form onSubmit={handleRequestCode} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] mb-1">
-                Registered Email or Username <span className="text-[#DC2626]">*</span>
+              <label className="block t-eyebrow mb-1">
+                Registered Email or Username <span className="text-neg">*</span>
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
                   placeholder="e.g. alex@example.com or alex_mensah"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-line bg-sunken text-ink focus:outline-none focus:border-accent"
                 />
               </div>
-              <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-1">
+              <p className="t-meta mt-1">
                 Enter your account username or the email address you used during signup.
               </p>
             </div>
 
-            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-3 py-2 text-xs font-medium text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F3F4F6] dark:hover:bg-[#222836] rounded-xl transition-colors cursor-pointer"
+                className="lg-btn lg-btn-quiet lg-btn-sm"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isLoading || !identifier.trim()}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl shadow-sm transition-all cursor-pointer"
+                className="lg-btn lg-btn-solid lg-btn-sm disabled:opacity-50 flex items-center gap-1.5"
               >
                 {isLoading ? (
                   <>
@@ -228,8 +229,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         {step === 'verify' && (
           <form onSubmit={handleResetPassword} className="space-y-3.5">
             <div>
-              <label className="block text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] mb-1">
-                6-Digit Reset Code <span className="text-[#DC2626]">*</span>
+              <label className="block t-eyebrow mb-1">
+                6-Digit Reset Code <span className="text-neg">*</span>
               </label>
               <input
                 type="text"
@@ -238,13 +239,13 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 placeholder="123456"
                 value={resetCode}
                 onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
-                className="w-full py-2.5 px-3 text-center font-mono text-base tracking-widest font-bold rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full py-2.5 px-3 text-center num text-base tracking-widest font-bold rounded-xl border border-line bg-sunken text-ink focus:outline-none focus:border-accent"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] mb-1">
-                New Password <span className="text-[#DC2626]">*</span>
+              <label className="block t-eyebrow mb-1">
+                New Password <span className="text-neg">*</span>
               </label>
               <div className="relative">
                 <input
@@ -253,12 +254,12 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   placeholder="At least 6 characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-3 pr-9 py-2 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full pl-3 pr-9 py-2 text-xs rounded-xl border border-line bg-sunken text-ink focus:outline-none focus:border-accent"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] p-1"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink p-1 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -266,8 +267,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] mb-1">
-                Confirm New Password <span className="text-[#DC2626]">*</span>
+              <label className="block t-eyebrow mb-1">
+                Confirm New Password <span className="text-neg">*</span>
               </label>
               <div className="relative">
                 <input
@@ -276,19 +277,19 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   placeholder="Re-enter new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full pl-3 pr-9 py-2 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full pl-3 pr-9 py-2 text-xs rounded-xl border border-line bg-sunken text-ink focus:outline-none focus:border-accent"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] p-1"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink p-1 cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F]">
+            <div className="flex items-center justify-between pt-2 border-t border-line">
               <button
                 type="button"
                 onClick={() => {
@@ -296,14 +297,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                   setError(null);
                   setSuccessMessage(null);
                 }}
-                className="text-[11px] font-semibold text-[#6B7280] dark:text-[#9CA3AF] hover:underline cursor-pointer"
+                className="t-meta font-semibold hover:underline cursor-pointer"
               >
                 Back to step 1
               </button>
               <button
                 type="submit"
                 disabled={isLoading || resetCode.length < 6 || newPassword.length < 6}
-                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl shadow-sm transition-all cursor-pointer"
+                className="lg-btn lg-btn-solid lg-btn-sm disabled:opacity-50 flex items-center gap-1.5"
               >
                 {isLoading ? (
                   <>

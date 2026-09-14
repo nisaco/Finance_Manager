@@ -1,16 +1,10 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   PieChart as PieIcon,
   TrendingUp,
   BarChart3,
-  Calendar,
-  Layers,
-  ArrowUpRight,
-  ArrowDownRight,
-  Download,
   FileSpreadsheet,
   FileText,
-  Check,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -29,7 +23,7 @@ import {
 import { useLedger } from '../context/LedgerContext';
 import { api } from '../api/client';
 import { MonthlyTrend, CategoryBreakdown } from '../types';
-import { TOKENS, formatCurrency, getCategoryColor } from '../design/tokens';
+import { formatCurrency, getCategoryColor } from '../design/tokens';
 import { exportFinancialReportPdf, exportFinancialReportExcel } from '../utils/exportReports';
 
 export const ReportsPage: React.FC = () => {
@@ -68,10 +62,10 @@ export const ReportsPage: React.FC = () => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white border border-[#E8E5DF] p-3 rounded-lg shadow-xl text-xs font-mono-num space-y-1">
-          <p className="font-bold text-[#1A1A1A] border-b border-[#E8E5DF] pb-1">{label}</p>
+        <div className="bg-surface border border-line p-3 rounded-xl shadow-md text-xs num space-y-1">
+          <p className="font-bold text-ink border-b border-line pb-1">{label}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={`item-${index}`} style={{ color: entry.color }}>
+            <p key={`item-${index}`} style={{ color: entry.color }} className="font-semibold">
               {entry.name}: {formatCurrency(entry.value, currency)}
             </p>
           ))}
@@ -133,42 +127,43 @@ export const ReportsPage: React.FC = () => {
     }
   };
 
+  const netBalance = summary?.netBalance || 0;
+  const isPositiveNet = netBalance > 0;
+  const isNegativeNet = netBalance < 0;
+
   return (
     <div className="space-y-6">
-      
       {/* Header with Export Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <PieIcon className="w-5 h-5 text-[#1A1A1A] dark:text-white" />
-            <h1 className="font-display text-2xl font-bold text-[#1A1A1A] dark:text-white">
-              Financial Analytics & Reporting
-            </h1>
-          </div>
-          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mt-0.5">
-            {activeProfile?.name} • Automated cash flow breakdown, budgets health, and formal report export
+          <h1 className="t-title text-ink font-bold">Financial Analytics &amp; Reports</h1>
+          <p className="t-meta text-ink-3 mt-1">
+            {activeProfile?.name ? `${activeProfile.name} · ` : ''}
+            Cash flow breakdowns, category distribution trends, and official statement export
           </p>
         </div>
 
         {/* Export Buttons */}
-        <div className="flex items-center space-x-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={handleExportPdf}
             disabled={isExporting !== null}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-white dark:bg-[#1E2128] hover:bg-[#F7F5F2] dark:hover:bg-[#252830] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl text-xs font-semibold text-[#1A1A1A] dark:text-white transition-all shadow-xs disabled:opacity-50"
+            className="lg-btn lg-btn-quiet text-xs"
             title="Download formatted PDF financial statement"
           >
-            <FileText className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+            <FileText className="w-4 h-4 text-neg" strokeWidth={1.7} />
             <span>{isExporting === 'pdf' ? 'Generating PDF...' : 'Export PDF'}</span>
           </button>
 
           <button
+            type="button"
             onClick={handleExportExcel}
             disabled={isExporting !== null}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-700/60 rounded-xl text-xs font-semibold text-emerald-900 dark:text-emerald-200 transition-all shadow-xs disabled:opacity-50"
+            className="lg-btn lg-btn-solid text-xs"
             title="Download detailed Excel spreadsheet (.xlsx)"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <FileSpreadsheet className="w-4 h-4" strokeWidth={1.7} />
             <span>{isExporting === 'excel' ? 'Generating Excel...' : 'Export Excel (.xlsx)'}</span>
           </button>
         </div>
@@ -176,97 +171,95 @@ export const ReportsPage: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
-          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Total Inflow</span>
-          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#15803D] truncate">
-            {formatCurrency(summary?.totalIncome || 0, currency)}
+        <div className="lg-card p-4 space-y-1">
+          <span className="t-eyebrow text-ink-3 block truncate">Total Inflow</span>
+          <div className="text-base sm:text-lg md:text-xl num font-bold text-pos truncate">
+            +{formatCurrency(summary?.totalIncome || 0, currency)}
           </div>
         </div>
 
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
-          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Total Outflow</span>
-          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#DC2626] truncate">
-            {formatCurrency(summary?.totalExpense || 0, currency)}
+        <div className="lg-card p-4 space-y-1">
+          <span className="t-eyebrow text-ink-3 block truncate">Total Outflow</span>
+          <div className="text-base sm:text-lg md:text-xl num font-bold text-neg truncate">
+            -{formatCurrency(summary?.totalExpense || 0, currency)}
           </div>
         </div>
 
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
-          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Net Cash Flow</span>
-          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#1A1A1A] truncate">
-            {formatCurrency(summary?.netBalance || 0, currency)}
+        <div className="lg-card p-4 space-y-1">
+          <span className="t-eyebrow text-ink-3 block truncate">Net Cash Flow</span>
+          <div
+            className={`text-base sm:text-lg md:text-xl num font-bold truncate ${
+              isPositiveNet ? 'text-pos' : isNegativeNet ? 'text-neg' : 'text-ink'
+            }`}
+          >
+            {isPositiveNet ? '+' : isNegativeNet ? '−' : ''}
+            {formatCurrency(Math.abs(netBalance), currency)}
           </div>
         </div>
 
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-3 sm:p-4 shadow-sm space-y-1">
-          <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num uppercase font-bold truncate block">Savings Rate</span>
-          <div className="text-sm sm:text-base md:text-lg font-mono-num font-bold text-[#1A1A1A] truncate">
+        <div className="lg-card p-4 space-y-1">
+          <span className="t-eyebrow text-ink-3 block truncate">Savings Rate</span>
+          <div className="text-base sm:text-lg md:text-xl num font-bold text-ink truncate">
             {summary?.savingsRate || 0}%
           </div>
         </div>
       </div>
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
         {/* 6-Month Inflow vs Outflow Bar Chart */}
-        <div className="lg:col-span-7 bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8E5DF] pb-3">
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="w-4 h-4 text-[#1A1A1A] shrink-0" />
-              <h2 className="font-display text-sm sm:text-base font-bold text-[#1A1A1A]">
+        <div className="lg:col-span-7 lg-card p-4 sm:p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-ink" strokeWidth={1.7} />
+              <h2 className="t-card font-bold text-ink">
                 6-Month Income vs. Expense Trend
               </h2>
             </div>
-            <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num">
-              Monthly Inflow/Outflow ({currency})
+            <span className="text-xs text-ink-3 num">
+              Monthly Inflow / Outflow ({currency})
             </span>
           </div>
 
           <div className="h-64 sm:h-72 w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="label" stroke="#6B7280" fontSize={11} tickLine={false} />
-                <YAxis stroke="#6B7280" fontSize={11} tickLine={false} />
+                <XAxis dataKey="label" stroke="var(--lg-ink-3, #667085)" fontSize={11} tickLine={false} />
+                <YAxis stroke="var(--lg-ink-3, #667085)" fontSize={11} tickLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend
-                  wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }}
+                  wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
                   iconType="circle"
                 />
-                <Bar dataKey="income" name="Inflow" fill="#15803D" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Outflow" fill="#DC2626" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="income" name="Inflow" fill="var(--lg-pos, #067A55)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expense" name="Outflow" fill="var(--lg-neg, #B42318)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Category Breakdown Donut */}
-        <div className="lg:col-span-5 bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4 flex flex-col justify-between">
+        {/* Category Breakdown Donut & Ranked List */}
+        <div className="lg:col-span-5 lg-card p-4 sm:p-5 space-y-4 flex flex-col justify-between">
           <div>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8E5DF] pb-3">
-              <div className="flex items-center space-x-2">
-                <PieIcon className="w-4 h-4 text-[#1A1A1A] shrink-0" />
-                <h2 className="font-display text-sm sm:text-base font-bold text-[#1A1A1A]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+              <div className="flex items-center gap-2">
+                <PieIcon className="w-4 h-4 text-ink" strokeWidth={1.7} />
+                <h2 className="t-card font-bold text-ink">
                   Category Share
                 </h2>
               </div>
-              <div className="flex space-x-1 p-0.5 bg-[#F7F5F2] rounded border border-[#E8E5DF]">
+              <div className="lg-seg">
                 <button
+                  type="button"
                   onClick={() => setReportType('expense')}
-                  className={`px-2 py-1 rounded text-[10px] font-bold ${
-                    reportType === 'expense'
-                      ? 'bg-[#DC2626] text-white shadow-xs'
-                      : 'text-[#6B7280] hover:text-[#1A1A1A]'
-                  }`}
+                  className={`lg-seg-btn ${reportType === 'expense' ? 'active' : ''}`}
                 >
                   Expenses
                 </button>
                 <button
+                  type="button"
                   onClick={() => setReportType('income')}
-                  className={`px-2 py-1 rounded text-[10px] font-bold ${
-                    reportType === 'income'
-                      ? 'bg-[#15803D] text-white shadow-xs'
-                      : 'text-[#6B7280] hover:text-[#1A1A1A]'
-                  }`}
+                  className={`lg-seg-btn ${reportType === 'income' ? 'active' : ''}`}
                 >
                   Incomes
                 </button>
@@ -275,7 +268,7 @@ export const ReportsPage: React.FC = () => {
 
             <div className="h-48 sm:h-52 w-full pt-2">
               {breakdown.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-xs text-[#6B7280]">
+                <div className="h-full flex items-center justify-center text-xs text-ink-3">
                   No category records available for this period.
                 </div>
               ) : (
@@ -306,38 +299,42 @@ export const ReportsPage: React.FC = () => {
           </div>
 
           {/* Top Category List */}
-          <div className="space-y-2 pt-2 border-t border-[#E8E5DF] max-h-36 overflow-y-auto pr-1">
-            {breakdown.slice(0, 4).map((item) => (
-              <div key={item.category} className="flex justify-between items-center text-xs">
-                <div className="flex items-center space-x-2 truncate mr-2">
+          <div className="space-y-2 pt-3 border-t border-line max-h-40 overflow-y-auto pr-1 divide-y divide-line">
+            {breakdown.slice(0, 5).map((item) => (
+              <div key={item.category} className="flex justify-between items-center text-xs pt-2 first:pt-0">
+                <div className="flex items-center gap-2 truncate mr-2">
                   <span
-                    className="w-2 h-2 rounded-full shrink-0"
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
                     style={{ backgroundColor: getCategoryColor(item.category) }}
+                    aria-hidden="true"
                   />
-                  <span className="text-[#1A1A1A] font-medium truncate">{item.category}</span>
+                  <span className="text-ink font-semibold truncate">{item.category}</span>
                 </div>
-                <span className="font-mono-num text-[11px] text-[#6B7280] font-bold shrink-0">
-                  {formatCurrency(item.amount, currency)} ({item.percentage}%)
-                </span>
+                <div className="text-right shrink-0">
+                  <span className="num font-bold text-ink">
+                    {formatCurrency(item.amount, currency)}
+                  </span>
+                  <span className="num text-xs text-ink-3 ml-1.5 font-semibold">
+                    ({item.percentage}%)
+                  </span>
+                </div>
               </div>
             ))}
           </div>
-
         </div>
-
       </div>
 
       {/* Net Cumulative Curve Area Chart */}
-      <div className="bg-white border border-[#E8E5DF] rounded-xl p-4 sm:p-5 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
-          <div className="flex items-center space-x-2">
-            <TrendingUp className="w-4 h-4 text-[#1A1A1A]" />
-            <h2 className="font-display text-base font-bold text-[#1A1A1A]">
+      <div className="lg-card p-4 sm:p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-ink" strokeWidth={1.7} />
+            <h2 className="t-card font-bold text-ink">
               Monthly Net Savings Curve
             </h2>
           </div>
-          <span className="text-[11px] text-[#6B7280] font-mono-num">
-            Positive Cash Retention Trend
+          <span className="text-xs text-ink-3 num">
+            Cash Retention Trend
           </span>
         </div>
 
@@ -346,18 +343,18 @@ export const ReportsPage: React.FC = () => {
             <AreaChart data={trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="netGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#1A1A1A" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#1A1A1A" stopOpacity={0.0} />
+                  <stop offset="5%" stopColor="var(--lg-accent, #0F5257)" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="var(--lg-accent, #0F5257)" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="label" stroke="#6B7280" fontSize={11} tickLine={false} />
-              <YAxis stroke="#6B7280" fontSize={11} tickLine={false} />
+              <XAxis dataKey="label" stroke="var(--lg-ink-3, #667085)" fontSize={11} tickLine={false} />
+              <YAxis stroke="var(--lg-ink-3, #667085)" fontSize={11} tickLine={false} />
               <Tooltip content={<CustomTooltip />} />
               <Area
                 type="monotone"
                 dataKey="net"
                 name="Net Savings"
-                stroke="#1A1A1A"
+                stroke="var(--lg-accent, #0F5257)"
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#netGradient)"
@@ -366,7 +363,6 @@ export const ReportsPage: React.FC = () => {
           </ResponsiveContainer>
         </div>
       </div>
-
     </div>
   );
 };

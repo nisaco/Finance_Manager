@@ -8,7 +8,6 @@ import { AuthTransitionOverlay } from '../components/AuthTransitionOverlay';
 import { LedgerLogo } from '../components/LedgerLogo';
 import { api } from '../api/client';
 import {
-  Shield,
   Layers,
   ArrowRight,
   Lock,
@@ -27,7 +26,6 @@ import {
   EyeOff,
   KeyRound,
   RefreshCw,
-  Check,
   ArrowLeft,
   MailCheck,
 } from 'lucide-react';
@@ -118,7 +116,7 @@ export const LandingPage: React.FC = () => {
       .catch(() => {});
   }, []);
 
-  // Handle Google Credential Response from authentic Google Identity Services
+  // Handle Google Credential Response
   const handleCredentialResponse = useCallback(
     async (response: any) => {
       if (!response?.credential) return;
@@ -337,13 +335,11 @@ export const LandingPage: React.FC = () => {
         return;
       }
 
-      // Transition back to login with prefilled email and success notice
       setAuthMode('login');
       setLoginIdentifier(forgotTargetEmail || forgotIdentifier.trim());
       setLoginPassword('');
       setFormSuccess('Password updated successfully! Please sign in with your new password.');
       setFormError(null);
-      // Reset forgot state
       setForgotStep('request');
       setForgotCode('');
       setForgotNewPassword('');
@@ -359,7 +355,7 @@ export const LandingPage: React.FC = () => {
     setFormError(null);
 
     if (!agreedToTerms) {
-      setFormError('You cannot sign up without agreeing to the Terms & Conditions and Privacy Policy.');
+      setFormError('You must agree to the Terms & Conditions and Privacy Policy to proceed.');
       return;
     }
 
@@ -370,7 +366,7 @@ export const LandingPage: React.FC = () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim() || !emailRegex.test(email.trim())) {
-      setFormError('Please enter a valid email address for Paystack receipts and referencing.');
+      setFormError('Please enter a valid email address.');
       return;
     }
 
@@ -400,7 +396,6 @@ export const LandingPage: React.FC = () => {
         setIsSubmitting(false);
         setFormError(result.error || 'Failed to create account.');
       }
-      // If success, keep isSubmitting true until unmount so the smooth auth transition stays fluid
     } catch {
       setIsSubmitting(false);
       setFormError('Failed to create account. Please try again.');
@@ -435,7 +430,6 @@ export const LandingPage: React.FC = () => {
         setIsSubmitting(false);
         setFormError(result.error || 'Invalid credentials. Please verify and try again.');
       }
-      // If success, keep isSubmitting true until unmount so the smooth auth transition stays fluid
     } catch {
       setIsSubmitting(false);
       setFormError('Authentication failed. Please verify credentials and try again.');
@@ -443,17 +437,17 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0F1115] text-[#1A1A1A] dark:text-[#F3F4F6] flex flex-col font-sans transition-colors selection:bg-[#1A1A1A] dark:selection:bg-[#F3F4F6] selection:text-[#FDFCFB] dark:selection:text-[#111317]">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans transition-colors">
       {/* Top Bar */}
-      <header className="sticky top-0 z-40 w-full border-b border-[#E8E5DF] dark:border-[#2D323F] bg-[#FAF9F6]/90 dark:bg-[#111317]/90 backdrop-blur-md transition-colors">
+      <header className="sticky top-0 z-40 w-full border-b border-line bg-surface/90 backdrop-blur-md transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3 text-left">
             <LedgerLogo size={36} />
             <div>
-              <div className="text-base font-bold tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6]">
+              <div className="text-base font-bold tracking-tight text-ink">
                 Ledger
               </div>
-              <div className="text-[10px] uppercase font-mono tracking-widest text-[#6B7280] dark:text-[#9CA3AF]">
+              <div className="text-[10px] uppercase font-mono-num tracking-widest text-ink-muted">
                 Multi-User Financial Engine
               </div>
             </div>
@@ -461,8 +455,9 @@ export const LandingPage: React.FC = () => {
 
           <div className="flex items-center space-x-3">
             <button
+              type="button"
               onClick={toggleTheme}
-              className="p-2 rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] hover:bg-[#F0EEE6] dark:hover:bg-[#1E2330] text-[#6B7280] dark:text-[#9CA3AF] transition-colors"
+              className="lg-btn-quiet p-2 text-ink-muted hover:text-ink"
               title={theme === 'dark' ? 'Switch to Light mode' : 'Switch to Dark mode'}
               aria-label="Toggle Theme"
             >
@@ -470,11 +465,12 @@ export const LandingPage: React.FC = () => {
             </button>
 
             <button
+              type="button"
               onClick={() => {
                 setAuthMode(authMode === 'signup' ? 'login' : 'signup');
                 setFormError(null);
               }}
-              className="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] hover:bg-[#F0EEE6] dark:hover:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] transition-colors"
+              className="lg-btn-quiet text-xs font-semibold"
             >
               {authMode === 'signup' ? 'Sign In Instead' : 'Create Account'}
             </button>
@@ -484,67 +480,67 @@ export const LandingPage: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 flex flex-col lg:flex-row items-center justify-between gap-12">
-        {/* Left Side: Product Intro & Value Proposition */}
+        {/* Left Side: Product Intro */}
         <div className="flex-1 space-y-6 max-w-xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-[#EFECE6] dark:bg-[#1C2230] text-[#4B5563] dark:text-[#9CA3AF] border border-[#E0DCD3] dark:border-[#2D3548]">
-            <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
+          <div className="lg-pill lg-pill-accent text-xs">
+            <Sparkles className="w-3.5 h-3.5 mr-1" />
             Multi-User &amp; Multi-Profile Platform
           </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6] leading-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-tight">
             Financial precision, multi-profile control, and integrated Paystack receipts.
           </h1>
 
-          <p className="text-base text-[#4B5563] dark:text-[#9CA3AF] leading-relaxed">
-            Create an account to manage your finances across multiple distinct profiles: Personal, Business, Savings, and Family. Secure each profile with private PIN locks, track multi-currency balances, and link your email for verified Paystack transaction routing.
+          <p className="text-sm sm:text-base text-ink-muted leading-relaxed">
+            Create an account to manage your finances across multiple distinct profiles: Personal, Business, Savings, and Family. Secure each profile with private PIN locks, track multi-currency balances, and link your email for verified transaction routing.
           </p>
 
           {/* Pillars List */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
-            <div className="p-3.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#151921] space-y-1.5 shadow-sm">
-              <div className="w-7 h-7 rounded-lg bg-[#EBF5FF] dark:bg-[#1E293B] text-[#2563EB] flex items-center justify-center">
+            <div className="lg-card p-4 space-y-1.5">
+              <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
                 <Layers className="w-4 h-4" />
               </div>
-              <h3 className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+              <h3 className="text-xs font-bold text-ink">
                 Multi-User &amp; Profiles
               </h3>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-4">
+              <p className="text-[11px] text-ink-muted leading-snug">
                 Each registered user can spawn independent profiles with custom currencies and PIN protection.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#151921] space-y-1.5 shadow-sm">
-              <div className="w-7 h-7 rounded-lg bg-[#ECFDF5] dark:bg-[#064E3B]/30 text-[#10B981] flex items-center justify-center">
+            <div className="lg-card p-4 space-y-1.5">
+              <div className="w-8 h-8 rounded-lg bg-pos/15 text-pos flex items-center justify-center">
                 <Receipt className="w-4 h-4" />
               </div>
-              <h3 className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
-                Seamless Payments &amp; Receipts
+              <h3 className="text-xs font-bold text-ink">
+                Payments &amp; Receipts
               </h3>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-4">
+              <p className="text-[11px] text-ink-muted leading-snug">
                 Automated bank transfers and savings deposits with automatic email receipts and payment reconciliation.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#151921] space-y-1.5 shadow-sm">
-              <div className="w-7 h-7 rounded-lg bg-[#F5F3FF] dark:bg-[#312E81]/30 text-[#8B5CF6] flex items-center justify-center">
+            <div className="lg-card p-4 space-y-1.5">
+              <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
                 <Lock className="w-4 h-4" />
               </div>
-              <h3 className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+              <h3 className="text-xs font-bold text-ink">
                 Profile PIN Locking
               </h3>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-4">
+              <p className="text-[11px] text-ink-muted leading-snug">
                 Lock sensitive business or savings ledgers with bcrypt cryptographic verification.
               </p>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#151921] space-y-1.5 shadow-sm">
-              <div className="w-7 h-7 rounded-lg bg-[#FFFBEB] dark:bg-[#78350F]/20 text-[#D97706] flex items-center justify-center">
+            <div className="lg-card p-4 space-y-1.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 flex items-center justify-center">
                 <TrendingUp className="w-4 h-4" />
               </div>
-              <h3 className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+              <h3 className="text-xs font-bold text-ink">
                 Real-Time Analytics
               </h3>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-4">
+              <p className="text-[11px] text-ink-muted leading-snug">
                 Live net worth, budget category tracking, debt payoff schedules, and CSV data exports.
               </p>
             </div>
@@ -552,10 +548,10 @@ export const LandingPage: React.FC = () => {
         </div>
 
         {/* Right Side: Auth Form Card */}
-        <div className="w-full max-w-md bg-[#FFFFFF] dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl shadow-xl p-6 sm:p-8 transition-colors">
+        <div className="w-full max-w-md lg-card p-6 sm:p-8 space-y-5">
           {/* Mode Switcher Tabs */}
           {authMode === 'forgot_password' ? (
-            <div className="flex items-center justify-between p-1 bg-[#F5F4F0] dark:bg-[#1B202C] rounded-xl mb-5">
+            <div className="flex items-center justify-between p-1 bg-sunken rounded-xl">
               <button
                 type="button"
                 onClick={() => {
@@ -564,17 +560,17 @@ export const LandingPage: React.FC = () => {
                   setForgotSuccess(null);
                   setFormError(null);
                 }}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#4B5563] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-ink-muted hover:text-ink transition-colors"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 Back to Sign In
               </button>
-              <span className="px-3 py-1 text-[11px] font-bold text-[#1A1A1A] dark:text-[#F3F4F6] bg-[#FFFFFF] dark:bg-[#252C3D] rounded-lg shadow-sm">
+              <span className="px-3 py-1 text-[11px] font-bold text-ink bg-surface rounded-lg shadow-xs">
                 Password Recovery
               </span>
             </div>
           ) : (
-            <div className="flex p-1 bg-[#F5F4F0] dark:bg-[#1B202C] rounded-xl mb-5">
+            <div className="lg-seg">
               <button
                 type="button"
                 onClick={() => {
@@ -582,11 +578,7 @@ export const LandingPage: React.FC = () => {
                   setFormError(null);
                   setFormSuccess(null);
                 }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  authMode === 'login'
-                    ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
-                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                }`}
+                className={`lg-seg-btn ${authMode === 'login' ? 'active' : ''}`}
               >
                 Sign In
               </button>
@@ -597,11 +589,7 @@ export const LandingPage: React.FC = () => {
                   setFormError(null);
                   setFormSuccess(null);
                 }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                  authMode === 'signup'
-                    ? 'bg-[#FFFFFF] dark:bg-[#252C3D] text-[#1A1A1A] dark:text-[#F3F4F6] shadow-sm'
-                    : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-                }`}
+                className={`lg-seg-btn ${authMode === 'signup' ? 'active' : ''}`}
               >
                 Sign Up
               </button>
@@ -610,9 +598,9 @@ export const LandingPage: React.FC = () => {
 
           {/* Session Expired Notice */}
           {sessionExpiredMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-amber-900 dark:text-amber-200 text-xs flex items-start justify-between space-x-2 animate-in fade-in">
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 text-xs flex items-start justify-between space-x-2 animate-in fade-in">
               <div className="flex items-start space-x-2">
-                <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <Clock className="w-4 h-4 shrink-0 mt-0.5 text-amber-600" />
                 <div>
                   <span className="font-bold block">Session Expired</span>
                   <span>{sessionExpiredMessage}</span>
@@ -621,7 +609,8 @@ export const LandingPage: React.FC = () => {
               <button
                 type="button"
                 onClick={clearSessionExpiredMessage}
-                className="p-1 text-amber-700 dark:text-amber-300 hover:opacity-75"
+                className="p-1 text-amber-600 hover:opacity-75"
+                aria-label="Clear notice"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -629,10 +618,10 @@ export const LandingPage: React.FC = () => {
           )}
 
           {/* Form Header */}
-          <div className="mb-5">
-            <div className="flex items-center space-x-2 mb-2">
-              <LedgerLogo size={24} />
-              <span className="text-[10px] uppercase font-mono tracking-widest text-[#6B7280] dark:text-[#9CA3AF] font-bold">
+          <div>
+            <div className="flex items-center space-x-2 mb-1.5">
+              <LedgerLogo size={22} />
+              <span className="text-[10px] uppercase font-mono-num tracking-widest text-ink-muted font-bold">
                 {authMode === 'signup'
                   ? 'New Registration'
                   : authMode === 'forgot_password'
@@ -640,14 +629,14 @@ export const LandingPage: React.FC = () => {
                   : 'Account Access'}
               </span>
             </div>
-            <h2 className="text-xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+            <h2 className="text-xl font-bold text-ink">
               {authMode === 'signup'
                 ? 'Create your user account'
                 : authMode === 'forgot_password'
                 ? 'Reset your password'
                 : 'Welcome back to Ledger'}
             </h2>
-            <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] mt-1">
+            <p className="text-xs text-ink-muted mt-0.5">
               {authMode === 'signup'
                 ? 'Sign up to manage multiple profiles, budgets, and automated financial records.'
                 : authMode === 'forgot_password'
@@ -658,15 +647,15 @@ export const LandingPage: React.FC = () => {
 
           {/* Success Banner */}
           {formSuccess && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-start space-x-2 animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-3 rounded-xl bg-pos/10 border border-pos/30 text-pos text-xs flex items-start space-x-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-pos" />
               <div className="flex-1 font-medium">{formSuccess}</div>
             </div>
           )}
 
           {/* Error Banner */}
           {formError && (
-            <div className="mb-4 p-3 rounded-xl bg-[#FEF2F2] dark:bg-[#450A0A]/40 border border-[#FCA5A5] dark:border-[#7F1D1D] text-[#B91C1C] dark:text-[#FCA5A5] text-xs flex items-start space-x-2">
+            <div className="p-3 rounded-xl bg-neg/10 border border-neg/30 text-neg text-xs flex items-start space-x-2">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <div className="flex-1 font-medium">{formError}</div>
             </div>
@@ -676,49 +665,46 @@ export const LandingPage: React.FC = () => {
           {authMode === 'signup' ? (
             <form onSubmit={handleSignup} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                  Username <span className="text-[#DC2626]">*</span>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Username <span className="text-neg">*</span>
                 </label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <UserIcon className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="e.g. alex_ledger"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="lg-input pl-9 text-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                  Email Address (for Paystack referencing &amp; receipts) <span className="text-[#DC2626]">*</span>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Email Address (Receipts &amp; Referencing) <span className="text-neg">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    className="w-full pl-9 pr-3 py-2.5 text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="lg-input pl-9 text-xs"
                   />
                 </div>
-                <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-1">
-                  Paystack transfer receipts and webhook reconciliations will be routed here.
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                    Password <span className="text-[#DC2626]">*</span>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Password <span className="text-neg">*</span>
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       required
@@ -726,12 +712,12 @@ export const LandingPage: React.FC = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      className="lg-input pl-9 pr-10 text-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] focus:outline-none p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1"
                       title={showPassword ? 'Hide password' : 'View password'}
                       aria-label="Toggle password visibility"
                     >
@@ -741,11 +727,11 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                    Confirm Password <span className="text-[#DC2626]">*</span>
+                  <label className="block text-xs font-semibold text-ink mb-1">
+                    Confirm Password <span className="text-neg">*</span>
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                     <input
                       type={showConfirmPassword ? 'text' : 'password'}
                       required
@@ -753,12 +739,12 @@ export const LandingPage: React.FC = () => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                      className="lg-input pl-9 pr-10 text-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] focus:outline-none p-1"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1"
                       title={showConfirmPassword ? 'Hide password' : 'View password'}
                       aria-label="Toggle confirm password visibility"
                     >
@@ -768,19 +754,19 @@ export const LandingPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Mandatory Terms & Conditions + Privacy Policy Checkbox */}
-              <div className="p-3.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#181D27] space-y-2">
+              {/* Terms Agreement Checkbox */}
+              <div className="p-3.5 rounded-xl border border-line bg-sunken space-y-2">
                 <div className="flex items-start space-x-2.5">
                   <input
                     type="checkbox"
                     id="termsAgreementCheckbox"
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 text-[#1A1A1A] dark:text-[#F3F4F6] rounded border-[#D1D5DB] dark:border-[#374151] focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6] cursor-pointer"
+                    className="mt-0.5 w-4 h-4 rounded border-line text-ink focus:ring-accent cursor-pointer"
                   />
                   <label
                     htmlFor="termsAgreementCheckbox"
-                    className="text-xs leading-5 text-[#374151] dark:text-[#D1D5DB] cursor-pointer select-none"
+                    className="text-xs leading-5 text-ink cursor-pointer select-none"
                   >
                     I have read, understand, and agree to the{' '}
                     <button
@@ -789,7 +775,7 @@ export const LandingPage: React.FC = () => {
                         e.stopPropagation();
                         setShowTermsModal(true);
                       }}
-                      className="font-semibold underline text-[#2563EB] hover:text-[#1D4ED8]"
+                      className="font-semibold underline text-accent"
                     >
                       Terms and Conditions
                     </button>{' '}
@@ -800,7 +786,7 @@ export const LandingPage: React.FC = () => {
                         e.stopPropagation();
                         setShowPrivacyModal(true);
                       }}
-                      className="font-semibold underline text-[#2563EB] hover:text-[#1D4ED8]"
+                      className="font-semibold underline text-accent"
                     >
                       Privacy Policy
                     </button>
@@ -808,8 +794,8 @@ export const LandingPage: React.FC = () => {
                   </label>
                 </div>
                 {!agreedToTerms && (
-                  <div className="text-[11px] text-[#DC2626] dark:text-[#EF4444] font-medium pl-6.5">
-                    * Agreement is strictly mandatory to sign up and access the system.
+                  <div className="text-[11px] text-neg font-medium pl-6">
+                    * Agreement is required to access the platform.
                   </div>
                 )}
               </div>
@@ -817,18 +803,18 @@ export const LandingPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || !agreedToTerms}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-md transition-all cursor-pointer"
+                className="w-full lg-btn-solid text-xs py-3 flex items-center justify-center gap-2"
               >
-                {isSubmitting ? 'Creating User Account...' : 'Complete Sign Up & Enter'}
+                {isSubmitting ? 'Creating Account...' : 'Complete Sign Up & Enter'}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               {/* Social Login Separator */}
               <div className="relative my-3 flex items-center justify-center">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#E8E5DF] dark:border-[#2D323F]"></div>
+                  <div className="w-full border-t border-line"></div>
                 </div>
-                <span className="relative bg-[#FFFFFF] dark:bg-[#181D27] px-3 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-wider">
+                <span className="relative bg-surface px-3 text-[11px] font-medium text-ink-muted uppercase tracking-wider">
                   or continue with
                 </span>
               </div>
@@ -843,7 +829,7 @@ export const LandingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleTriggerGoogleAuth}
-                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
+                    className="w-full lg-btn-quiet text-xs py-2.5 flex items-center justify-center gap-2"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                       <path
@@ -871,49 +857,46 @@ export const LandingPage: React.FC = () => {
           ) : authMode === 'forgot_password' ? (
             /* FORGOT PASSWORD FORM */
             <div className="space-y-4">
-              {/* Forgot error banner */}
               {forgotError && (
-                <div className="p-3 rounded-xl bg-[#FEF2F2] dark:bg-[#450A0A]/40 border border-[#FCA5A5] dark:border-[#7F1D1D] text-[#B91C1C] dark:text-[#FCA5A5] text-xs flex items-start space-x-2">
+                <div className="p-3 rounded-xl bg-neg/10 border border-neg/30 text-neg text-xs flex items-start space-x-2">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <div className="flex-1 font-medium">{forgotError}</div>
                 </div>
               )}
 
-              {/* Forgot success banner */}
               {forgotSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-200 text-xs flex items-start space-x-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-3 rounded-xl bg-pos/10 border border-pos/30 text-pos text-xs flex items-start space-x-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-pos" />
                   <div className="flex-1 font-medium">{forgotSuccess}</div>
                 </div>
               )}
 
               {forgotStep === 'request' ? (
-                /* Step 1: Request Code */
                 <form onSubmit={handleRequestResetCode} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                      Registered Email or Username <span className="text-[#DC2626]">*</span>
+                    <label className="block text-xs font-semibold text-ink mb-1">
+                      Registered Email or Username <span className="text-neg">*</span>
                     </label>
                     <div className="relative">
-                      <Mail className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Mail className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         required
                         value={forgotIdentifier}
                         onChange={(e) => setForgotIdentifier(e.target.value)}
                         placeholder="Enter your email or username"
-                        className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                        className="lg-input pl-9 text-xs"
                       />
                     </div>
-                    <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mt-1.5">
-                      We will generate a 6-digit recovery code for your account so you can securely set a new password.
+                    <p className="text-[11px] text-ink-muted mt-1.5">
+                      We will generate a 6-digit recovery code for your account to securely reset your password.
                     </p>
                   </div>
 
                   <button
                     type="submit"
                     disabled={isForgotSubmitting || !forgotIdentifier.trim()}
-                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 shadow-md transition-all cursor-pointer"
+                    className="w-full lg-btn-solid text-xs py-3 flex items-center justify-center gap-2"
                   >
                     {isForgotSubmitting ? (
                       <>
@@ -929,27 +912,25 @@ export const LandingPage: React.FC = () => {
                   </button>
                 </form>
               ) : (
-                /* Step 2: Enter Code & New Password */
                 <form onSubmit={handlePerformResetPassword} className="space-y-4">
-                  {/* Email dispatch notice */}
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 flex items-start gap-2.5">
-                    <MailCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <div className="p-3 bg-pos/10 border border-pos/30 rounded-xl text-xs text-pos flex items-start gap-2.5">
+                    <MailCheck className="w-4 h-4 text-pos shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-semibold block text-[11px] text-emerald-800 dark:text-emerald-200">
+                      <span className="font-semibold block text-[11px]">
                         Check your email inbox
                       </span>
-                      <span className="text-[11px] text-emerald-700/90 dark:text-emerald-300/80 block mt-0.5">
-                        We sent a 6-digit verification code to <strong>{forgotTargetMaskedEmail || forgotTargetEmail}</strong>. Check your inbox and spam folder, then enter the code below.
+                      <span className="text-[11px] block mt-0.5 text-ink">
+                        We sent a 6-digit recovery code to <strong>{forgotTargetMaskedEmail || forgotTargetEmail}</strong>.
                       </span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                      6-Digit Recovery Code <span className="text-[#DC2626]">*</span>
+                    <label className="block text-xs font-semibold text-ink mb-1">
+                      6-Digit Recovery Code <span className="text-neg">*</span>
                     </label>
                     <div className="relative">
-                      <KeyRound className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <KeyRound className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
                         required
@@ -957,17 +938,17 @@ export const LandingPage: React.FC = () => {
                         value={forgotCode}
                         onChange={(e) => setForgotCode(e.target.value.replace(/\D/g, ''))}
                         placeholder="123456"
-                        className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs font-mono tracking-widest font-bold rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                        className="lg-input pl-9 text-xs font-mono-num num tracking-widest font-bold"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                      New Password <span className="text-[#DC2626]">*</span>
+                    <label className="block text-xs font-semibold text-ink mb-1">
+                      New Password <span className="text-neg">*</span>
                     </label>
                     <div className="relative">
-                      <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type={showForgotNewPassword ? 'text' : 'password'}
                         required
@@ -975,12 +956,12 @@ export const LandingPage: React.FC = () => {
                         value={forgotNewPassword}
                         onChange={(e) => setForgotNewPassword(e.target.value)}
                         placeholder="At least 6 characters"
-                        className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                        className="lg-input pl-9 pr-10 text-xs"
                       />
                       <button
                         type="button"
                         onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] p-1"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1"
                       >
                         {showForgotNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -988,11 +969,11 @@ export const LandingPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                      Confirm New Password <span className="text-[#DC2626]">*</span>
+                    <label className="block text-xs font-semibold text-ink mb-1">
+                      Confirm New Password <span className="text-neg">*</span>
                     </label>
                     <div className="relative">
-                      <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type={showForgotConfirmPassword ? 'text' : 'password'}
                         required
@@ -1000,12 +981,12 @@ export const LandingPage: React.FC = () => {
                         value={forgotConfirmPassword}
                         onChange={(e) => setForgotConfirmPassword(e.target.value)}
                         placeholder="Re-enter new password"
-                        className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                        className="lg-input pl-9 pr-10 text-xs"
                       />
                       <button
                         type="button"
                         onClick={() => setShowForgotConfirmPassword(!showForgotConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] p-1"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1"
                       >
                         {showForgotConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -1020,14 +1001,14 @@ export const LandingPage: React.FC = () => {
                         setForgotError(null);
                         setForgotSuccess(null);
                       }}
-                      className="text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:underline cursor-pointer"
+                      className="text-xs text-ink-muted hover:underline"
                     >
                       Request different code
                     </button>
                     <button
                       type="submit"
                       disabled={isForgotSubmitting || forgotCode.length !== 6 || forgotNewPassword.length < 6}
-                      className="px-5 py-2.5 text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                      className="lg-btn-solid text-xs py-2.5 px-4 flex items-center gap-1.5"
                     >
                       {isForgotSubmitting ? 'Updating...' : 'Set Password'}
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -1040,26 +1021,26 @@ export const LandingPage: React.FC = () => {
             /* LOGIN FORM */
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1.5">
-                  Username or Email <span className="text-[#DC2626]">*</span>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Username or Email <span className="text-neg">*</span>
                 </label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <UserIcon className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     required
                     value={loginIdentifier}
                     onChange={(e) => setLoginIdentifier(e.target.value)}
-                    placeholder="Enter your username or email"
-                    className="w-full pl-9 pr-3 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    placeholder="Enter username or email"
+                    className="lg-input pl-9 text-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF]">
-                    Password <span className="text-[#DC2626]">*</span>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-ink">
+                    Password <span className="text-neg">*</span>
                   </label>
                   <button
                     type="button"
@@ -1071,25 +1052,25 @@ export const LandingPage: React.FC = () => {
                       setForgotError(null);
                       setForgotSuccess(null);
                     }}
-                    className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                    className="text-[11px] font-semibold text-accent hover:underline"
                   >
                     Forgot password?
                   </button>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Lock className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full pl-9 pr-10 py-2.5 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="lg-input pl-9 pr-10 text-xs"
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#4B5563] dark:hover:text-[#D1D5DB] focus:outline-none p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink p-1"
                     title={showLoginPassword ? 'Hide password' : 'View password'}
                     aria-label="Toggle login password visibility"
                   >
@@ -1101,7 +1082,7 @@ export const LandingPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs font-bold text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 shadow-md transition-all mt-2 cursor-pointer"
+                className="w-full lg-btn-solid text-xs py-3 flex items-center justify-center gap-2 mt-2"
               >
                 {isSubmitting ? 'Signing in...' : 'Sign In to Ledger'}
                 <ArrowRight className="w-4 h-4" />
@@ -1110,9 +1091,9 @@ export const LandingPage: React.FC = () => {
               {/* Social Login Separator */}
               <div className="relative my-3 flex items-center justify-center">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[#E8E5DF] dark:border-[#2D323F]"></div>
+                  <div className="w-full border-t border-line"></div>
                 </div>
-                <span className="relative bg-[#FFFFFF] dark:bg-[#181D27] px-3 text-[11px] font-medium text-[#9CA3AF] uppercase tracking-wider">
+                <span className="relative bg-surface px-3 text-[11px] font-medium text-ink-muted uppercase tracking-wider">
                   or sign in with
                 </span>
               </div>
@@ -1127,7 +1108,7 @@ export const LandingPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleTriggerGoogleAuth}
-                    className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl text-xs font-semibold border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FFFFFF] dark:bg-[#1E2330] text-[#374151] dark:text-[#F3F4F6] hover:bg-[#F9FAFB] dark:hover:bg-[#282F3E] transition-all cursor-pointer shadow-sm"
+                    className="w-full lg-btn-quiet text-xs py-2.5 flex items-center justify-center gap-2"
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                       <path
@@ -1152,7 +1133,7 @@ export const LandingPage: React.FC = () => {
                 )}
               </div>
 
-              <div className="pt-3 border-t border-[#E8E5DF] dark:border-[#2D323F] flex flex-col items-center gap-2">
+              <div className="pt-3 border-t border-line flex flex-col items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -1160,7 +1141,7 @@ export const LandingPage: React.FC = () => {
                     setFormError(null);
                     setFormSuccess(null);
                   }}
-                  className="text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline cursor-pointer"
+                  className="text-xs text-ink-muted hover:text-ink underline"
                 >
                   Don&apos;t have an account yet? Sign up here
                 </button>
@@ -1171,7 +1152,7 @@ export const LandingPage: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-[#E8E5DF] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#111317] py-6 px-4 sm:px-6 lg:px-8 text-xs text-[#6B7280] dark:text-[#9CA3AF] transition-colors">
+      <footer className="border-t border-line bg-surface py-6 px-4 sm:px-6 lg:px-8 text-xs text-ink-muted transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2.5">
             <LedgerLogo size={22} />
@@ -1179,15 +1160,17 @@ export const LandingPage: React.FC = () => {
           </div>
           <div className="flex items-center space-x-5">
             <button
+              type="button"
               onClick={() => setShowTermsModal(true)}
-              className="hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline transition-colors"
+              className="hover:text-ink underline transition-colors"
             >
               Terms &amp; Conditions
             </button>
             <span>•</span>
             <button
+              type="button"
               onClick={() => setShowPrivacyModal(true)}
-              className="hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] underline transition-colors"
+              className="hover:text-ink underline transition-colors"
             >
               Privacy Policy
             </button>
@@ -1216,21 +1199,22 @@ export const LandingPage: React.FC = () => {
 
       {/* Google Sign-in & Custom Username Modal */}
       {showGoogleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-[#FFFFFF] dark:bg-[#181D27] rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F] shadow-2xl p-6 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md lg-card p-6 overflow-hidden">
             <button
+              type="button"
               onClick={() => {
                 setShowGoogleModal(false);
                 setGoogleError(null);
               }}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] hover:bg-[#F3F4F6] dark:hover:bg-[#1F2937] transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-ink-muted hover:text-ink"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#F3F4F6] dark:bg-[#1E2330] flex items-center justify-center shadow-inner">
+              <div className="w-10 h-10 rounded-xl bg-sunken border border-line flex items-center justify-center">
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
@@ -1251,17 +1235,17 @@ export const LandingPage: React.FC = () => {
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                <h3 className="text-base font-bold text-ink">
                   Continue with Google
                 </h3>
-                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                <p className="text-xs text-ink-muted">
                   Sign in or create your free Ledger account
                 </p>
               </div>
             </div>
 
             {googleError && (
-              <div className="mb-4 p-3 rounded-xl bg-[#FEF2F2] dark:bg-[#450A0A]/40 border border-[#FCA5A5] dark:border-[#7F1D1D] text-[#B91C1C] dark:text-[#FCA5A5] text-xs flex items-start space-x-2">
+              <div className="mb-4 p-3 rounded-xl bg-neg/10 border border-neg/30 text-neg text-xs flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="flex-1 font-medium">{googleError}</div>
               </div>
@@ -1269,49 +1253,49 @@ export const LandingPage: React.FC = () => {
 
             <form onSubmit={handleGoogleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">
-                  Google Account Email <span className="text-[#DC2626]">*</span>
+                <label className="block text-xs font-semibold text-ink mb-1">
+                  Google Account Email <span className="text-neg">*</span>
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     required
                     value={googleEmail}
                     onChange={(e) => setGoogleEmail(e.target.value)}
                     placeholder="user@gmail.com"
-                    className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="lg-input pl-9 text-xs"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF] mb-1">
+                <label className="block text-xs font-semibold text-ink mb-1">
                   Your Name (Optional)
                 </label>
                 <div className="relative">
-                  <UserIcon className="w-4 h-4 text-[#9CA3AF] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <UserIcon className="w-4 h-4 text-ink-muted absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={googleName}
                     onChange={(e) => setGoogleName(e.target.value)}
                     placeholder="e.g. Alex Pappoe"
-                    className="w-full pl-9 pr-3 py-2 text-base sm:text-xs rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="lg-input pl-9 text-xs"
                   />
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-medium text-[#4B5563] dark:text-[#9CA3AF]">
+                  <label className="block text-xs font-semibold text-ink">
                     Choose Custom Username
                   </label>
-                  <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
+                  <span className="text-[10px] text-ink-muted">
                     Can change anytime later
                   </span>
                 </div>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#9CA3AF]">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-ink-muted">
                     @
                   </span>
                   <input
@@ -1319,26 +1303,23 @@ export const LandingPage: React.FC = () => {
                     value={googleUsername}
                     onChange={(e) => setGoogleUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                     placeholder="my_username"
-                    className="w-full pl-8 pr-3 py-2 text-base sm:text-xs font-mono-num rounded-xl border border-[#D1D5DB] dark:border-[#2D323F] bg-[#FAF9F6] dark:bg-[#1E2330] text-[#1A1A1A] dark:text-[#F3F4F6] focus:outline-none focus:ring-2 focus:ring-[#1A1A1A] dark:focus:ring-[#F3F4F6]"
+                    className="lg-input pl-8 text-xs font-mono-num"
                   />
                 </div>
-                <p className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] mt-1">
-                  Unique handle used for multi-user collaboration and Paystack receipt tagging.
-                </p>
               </div>
 
               <div className="pt-2 flex items-center justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setShowGoogleModal(false)}
-                  className="px-4 py-2 text-xs font-medium text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6] transition-colors"
+                  className="lg-btn-quiet text-xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isGoogleProcessing || !googleEmail.trim()}
-                  className="px-5 py-2.5 text-xs font-bold rounded-xl text-[#FFFFFF] dark:text-[#111317] bg-[#1A1A1A] dark:bg-[#F3F4F6] hover:opacity-90 disabled:opacity-50 transition-all shadow-md cursor-pointer flex items-center gap-2"
+                  className="lg-btn-solid text-xs flex items-center gap-2"
                 >
                   {isGoogleProcessing ? 'Authenticating...' : 'Sign In with Google'}
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -1349,7 +1330,7 @@ export const LandingPage: React.FC = () => {
         </div>
       )}
 
-      {/* Animated iOS-Style Security Transition Loader */}
+      {/* Security Transition Loader */}
       {isSubmitting && (
         <AuthTransitionOverlay
           mode={authMode === 'login' ? 'login' : 'register'}

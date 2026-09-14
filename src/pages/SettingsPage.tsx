@@ -22,12 +22,11 @@ import {
   UserPlus,
   Mail,
   LogOut,
-  FileText,
   UserCheck,
   Crown,
   RotateCcw,
-  Calendar,
-  AlertTriangle,
+  Sliders,
+  ArrowRight,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -43,7 +42,11 @@ interface SettingsPageProps {
   onNavigateToHistory?: () => void;
 }
 
-export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onOpenAdminModal, onNavigateToHistory }) => {
+export const SettingsPage: React.FC<SettingsPageProps> = ({
+  onOpenAuditLogs,
+  onOpenAdminModal,
+  onNavigateToHistory,
+}) => {
   const { user, logout, setUserRole } = useAuth();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -64,7 +67,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
     openEditProfileModal,
     fetchProfiles,
   } = useLedger();
-  const { theme, resolvedTheme, setTheme, uiStyle, setUiStyle, uiDensity, setUiDensity } = useTheme();
+  const { theme, setTheme, uiStyle, setUiStyle, uiDensity, setUiDensity } = useTheme();
   const isOwner = user?.email?.toLowerCase() === 'jnkpappoe@gmail.com';
 
   // Exchange rate local states
@@ -214,164 +217,161 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2">
-            <Settings className="w-5 h-5 text-[#1A1A1A] dark:text-[#F3F4F6]" />
-            <h1 className="font-display text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+            <Settings className="w-5 h-5 text-ink" />
+            <h1 className="font-display text-xl sm:text-2xl font-bold text-ink">
               Settings &amp; Preferences
             </h1>
           </div>
-          <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mt-0.5">
+          <p className="text-xs text-ink-muted mt-0.5">
             Profiles, theme appearance, exchange rates, and data backup
           </p>
         </div>
 
         <button
+          type="button"
           onClick={onOpenAuditLogs}
-          className="px-3.5 py-2 bg-[#F7F5F2] dark:bg-[#22252E] hover:bg-[#E8E5DF] dark:hover:bg-[#2D323F] text-[#1A1A1A] dark:text-[#F3F4F6] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F] text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors w-full sm:w-auto"
+          className="lg-btn-quiet self-start sm:self-auto text-xs"
         >
-          <History className="w-4 h-4 text-[#6B7280] dark:text-[#9CA3AF]" />
+          <History className="w-4 h-4 text-ink-muted" />
           <span>System Audit Trail</span>
         </button>
       </div>
 
       {/* User Account & Paystack Referencing Card */}
       {user && (
-        <div className="bg-white dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl p-4 sm:p-5 shadow-sm space-y-3 transition-colors">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3 gap-2">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-lg bg-[#F5F4F0] dark:bg-[#1E2330] flex items-center justify-center text-[#1A1A1A] dark:text-[#F3F4F6]">
-                <UserCheck className="w-4 h-4 text-[#2563EB]" />
+        <div className="lg-card p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-line pb-4 gap-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
+                <UserCheck className="w-5 h-5 text-accent" />
               </div>
               <div>
-                <h2 className="font-display text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                <h2 className="font-display text-sm sm:text-base font-bold text-ink">
                   User Account &amp; Paystack Profile
                 </h2>
-                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                <p className="text-xs text-ink-muted">
                   Primary account holder credentials and receipt routing
                 </p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={() => logout()}
-              className="px-3 py-1.5 rounded-lg border border-[#FCA5A5] dark:border-[#7F1D1D] bg-[#FEF2F2] dark:bg-[#450A0A]/30 text-[#B91C1C] dark:text-[#FCA5A5] text-xs font-semibold flex items-center justify-center space-x-1.5 hover:bg-[#FEE2E2] transition-colors w-full sm:w-auto"
+              className="lg-btn-quiet text-neg hover:bg-neg/10 border-neg/30 self-start sm:self-auto text-xs"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <div className="p-3 bg-[#FDFCFB] dark:bg-[#1E2330] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F]">
-              <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3.5 bg-sunken rounded-xl border border-line">
+              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-muted block font-semibold">
                 Username
               </span>
-              <span className="text-sm font-bold text-[#1A1A1A] dark:text-[#F3F4F6] mt-0.5 block truncate">
+              <span className="text-sm font-bold text-ink mt-0.5 block truncate">
                 @{user.username}
               </span>
             </div>
 
-            <div className="p-3 bg-[#FDFCFB] dark:bg-[#1E2330] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F]">
+            <div className="p-3.5 bg-sunken rounded-xl border border-line">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block">
-                  Email (Paystack Receipts)
+                <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-muted block font-semibold">
+                  Email (Receipts)
                 </span>
-                <span className="text-[9px] font-bold text-[#10B981] bg-[#ECFDF5] dark:bg-[#064E3B]/30 px-1.5 py-0.5 rounded">
+                <span className="lg-pill lg-pill-pos text-[9px] py-0.5 px-1.5">
                   Linked
                 </span>
               </div>
-              <span className="text-sm font-bold text-[#1A1A1A] dark:text-[#F3F4F6] mt-0.5 block truncate flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-[#6B7280]" />
-                {user.email}
+              <span className="text-sm font-bold text-ink mt-0.5 block truncate flex items-center gap-1.5">
+                <Mail className="w-3.5 h-3.5 text-ink-muted shrink-0" />
+                <span className="truncate">{user.email}</span>
               </span>
             </div>
 
-            <div className="p-3 bg-[#FDFCFB] dark:bg-[#1E2330] rounded-lg border border-[#E8E5DF] dark:border-[#2D323F]">
-              <span className="text-[10px] font-mono-num uppercase tracking-wider text-[#6B7280] dark:text-[#9CA3AF] block">
+            <div className="p-3.5 bg-sunken rounded-xl border border-line">
+              <span className="text-[10px] font-mono-num uppercase tracking-wider text-ink-muted block font-semibold">
                 Terms &amp; Privacy Agreement
               </span>
-              <div className="flex items-center space-x-2 mt-1">
+              <div className="flex items-center space-x-2 mt-1.5">
                 <button
+                  type="button"
                   onClick={() => setShowTermsModal(true)}
-                  className="text-xs text-[#2563EB] hover:underline font-medium"
+                  className="text-xs text-accent hover:underline font-semibold"
                 >
                   Terms
                 </button>
-                <span className="text-[#9CA3AF]">•</span>
+                <span className="text-ink-muted">•</span>
                 <button
+                  type="button"
                   onClick={() => setShowPrivacyModal(true)}
-                  className="text-xs text-[#2563EB] hover:underline font-medium"
+                  className="text-xs text-accent hover:underline font-semibold"
                 >
                   Privacy
                 </button>
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-pos" />
               </div>
             </div>
           </div>
 
           {/* Account Role & Database Schema Access */}
-          <div className="pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center space-x-2.5">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+          <div className="pt-3 border-t border-line flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start sm:items-center space-x-3">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
                 user.role === 'admin'
-                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                  : 'bg-[#F3F4F6] dark:bg-[#252830] text-[#6B7280] dark:text-[#9CA3AF]'
+                  ? 'bg-accent/15 text-accent border border-accent/30'
+                  : 'bg-sunken text-ink-muted border border-line'
               }`}>
-                <Crown className="w-3.5 h-3.5" />
+                <Crown className="w-4 h-4" />
               </div>
               <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                <div className="flex items-center space-x-2 flex-wrap">
+                  <span className="text-xs font-bold text-ink">
                     Account Role:
                   </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                    user.role === 'admin'
-                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-                      : 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700'
-                  }`}>
+                  <span className={`lg-pill ${user.role === 'admin' ? 'lg-pill-accent' : 'lg-pill-dim'} text-[10px]`}>
                     {user.role === 'admin' ? 'Super Admin (Platform Owner)' : 'Standard User'}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+                <p className="text-[11px] text-ink-muted mt-0.5">
                   {isOwner
-                    ? 'Authorized platform administrator account (jnkpappoe@gmail.com). You have exclusive authority over platform payouts, user management, and system rules.'
+                    ? 'Authorized platform administrator (jnkpappoe@gmail.com). Exclusive authority over platform payouts, user oversight, and protocol fees.'
                     : 'Standard user account. Payout authorizations and system governance are managed by the platform administrator.'}
                 </p>
               </div>
             </div>
 
-            {/* Seamless Role Toggle - Strictly allowed ONLY for the verified platform owner */}
+            {/* Seamless Role Toggle for verified platform owner */}
             {isOwner && (
               <button
+                type="button"
                 onClick={async () => {
                   const targetRole = user.role === 'admin' ? 'user' : 'admin';
                   setIsSwitchingRole(true);
                   const res = await setUserRole(targetRole);
                   setIsSwitchingRole(false);
                   if (res.success) {
-                    notify(targetRole === 'admin' ? 'Seamlessly switched to Admin mode!' : 'Seamlessly switched to standard view.');
+                    notify(targetRole === 'admin' ? 'Switched to Admin mode' : 'Switched to standard user mode');
                   } else {
                     notify(res.error || 'Failed to update role', 'error');
                   }
                 }}
                 disabled={isSwitchingRole}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center justify-center space-x-1.5 transition-all shadow-xs shrink-0 ${
-                  user.role === 'admin'
-                    ? 'bg-[#F3F4F6] hover:bg-[#E5E7EB] dark:bg-[#22252E] dark:hover:bg-[#2D323F] text-[#4B5563] dark:text-[#9CA3AF] border border-[#E8E5DF] dark:border-[#2D323F]'
-                    : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-xs'
-                }`}
+                className="lg-btn-solid text-xs shrink-0 self-start sm:self-auto"
               >
                 <Crown className="w-3.5 h-3.5" />
                 <span>
                   {isSwitchingRole
                     ? 'Updating...'
                     : user.role === 'admin'
-                    ? 'Switch to User Mode'
-                    : 'Switch to Admin Mode'}
+                    ? 'Switch to User View'
+                    : 'Switch to Admin View'}
                 </span>
               </button>
             )}
@@ -381,97 +381,97 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
 
       {/* Admin Operations Section (Strictly visible only to verified owner) */}
       {isOwner && user?.role === 'admin' && onOpenAdminModal && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-transparent border border-amber-300 dark:border-amber-700/60 rounded-xl p-4 sm:p-5 shadow-sm space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200 dark:border-amber-800/60 pb-3">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-xs">
+        <div className="lg-card p-5 space-y-4 border-accent/40 bg-accent/5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-accent/20 pb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center shrink-0">
                 <Crown className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
-                  <h2 className="font-display text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                  <h2 className="font-display text-sm sm:text-base font-bold text-ink">
                     Admin Portal Console
                   </h2>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono-num font-bold bg-amber-500 text-white uppercase tracking-wider">
+                  <span className="lg-pill lg-pill-accent text-[9px]">
                     Owner Exclusive
                   </span>
                 </div>
-                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                  Exclusive administrative authority for Savings Vault payouts, protocol fees (2% standard &amp; 10% early penalty), user accounts, and AI quota limits.
+                <p className="text-xs text-ink-muted">
+                  Administrative authority for Savings Vault payouts, protocol fees (2% standard &amp; 10% early penalty), user accounts, and AI quota limits.
                 </p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={onOpenAdminModal}
-              className="px-4 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold text-xs shadow-sm flex items-center justify-center space-x-1.5 transition-all active:scale-95 shrink-0"
+              className="lg-btn-solid bg-accent text-white hover:bg-accent/90 text-xs shrink-0 self-start sm:self-auto"
             >
               <Crown className="w-4 h-4" />
               <span>Launch Admin Portal</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-            <div className="flex items-center space-x-2 p-2 rounded-lg bg-white/60 dark:bg-[#1E2330]/60 border border-amber-200/60 dark:border-amber-900/40">
-              <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-              <span>Approve / Reject Vault Withdrawals</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-ink">
+            <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
+              <ShieldCheck className="w-4 h-4 text-accent shrink-0" />
+              <span className="font-medium">Approve / Reject Vault Withdrawals</span>
             </div>
-            <div className="flex items-center space-x-2 p-2 rounded-lg bg-white/60 dark:bg-[#1E2330]/60 border border-amber-200/60 dark:border-amber-900/40">
-              <Coins className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>Track 2% Standard &amp; 10% Early Fees</span>
+            <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
+              <Coins className="w-4 h-4 text-pos shrink-0" />
+              <span className="font-medium">Track 2% Standard &amp; 10% Early Fees</span>
             </div>
-            <div className="flex items-center space-x-2 p-2 rounded-lg bg-white/60 dark:bg-[#1E2330]/60 border border-amber-200/60 dark:border-amber-900/40">
-              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-              <span>Full System &amp; Quota Oversight</span>
+            <div className="flex items-center space-x-2.5 p-3 rounded-xl bg-surface border border-line">
+              <Users className="w-4 h-4 text-ink shrink-0" />
+              <span className="font-medium">Full System &amp; Quota Oversight</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Interface Appearance & Style Options */}
-      <div className="bg-white dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl p-5 shadow-sm space-y-5 transition-colors">
-        <div className="flex items-center justify-between border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
+      {/* Interface Appearance & Layout Options */}
+      <div className="lg-card p-5 space-y-5">
+        <div className="flex items-center justify-between border-b border-line pb-3">
           <div className="flex items-center space-x-2">
-            <Palette className="w-4 h-4 text-[#1A1A1A] dark:text-white" />
-            <h2 className="font-display text-base font-bold text-[#1A1A1A] dark:text-white">
-              Interface Appearance &amp; Layout Options
+            <Palette className="w-4 h-4 text-ink" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
+              Interface Appearance &amp; Layout
             </h2>
           </div>
-          <span className="text-[11px] font-mono-num text-[#6B7280] dark:text-[#9CA3AF]">
-            Active Style: <strong className="text-[#1A1A1A] dark:text-white capitalize">{uiStyle}</strong>
+          <span className="text-xs font-mono-num text-ink-muted">
+            Active: <strong className="text-ink capitalize">{uiStyle}</strong>
           </span>
         </div>
 
         {/* 1. Interface Style Cards */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-[#1A1A1A] dark:text-white">
-            Choose Your Preferred Look &amp; Feel
+          <label className="block text-xs font-bold text-ink uppercase tracking-wider">
+            Choose Preferred Style
           </label>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            
-            {/* Modern Clean (Recommended) */}
+            {/* Modern Clean */}
             <button
               type="button"
               onClick={() => setUiStyle('modern')}
-              className={`p-3.5 rounded-xl border text-left transition-all relative ${
+              className={`p-4 rounded-xl border text-left transition-all relative ${
                 uiStyle === 'modern'
-                  ? 'border-[#0F172A] dark:border-white bg-[#F8FAFC] dark:bg-[#1E2738] ring-2 ring-[#0F172A] dark:ring-white shadow-sm'
-                  : 'border-[#E2E8F0] dark:border-[#232F42] hover:border-[#CBD5E1] bg-white dark:bg-[#141B26]'
+                  ? 'border-accent bg-accent/5 ring-1 ring-accent'
+                  : 'border-line bg-surface hover:border-ink/20'
               }`}
             >
               {uiStyle === 'modern' && (
-                <span className="absolute top-2.5 right-2.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#0F172A] text-white dark:bg-white dark:text-[#0F172A]">
+                <span className="absolute top-3 right-3 lg-pill lg-pill-accent text-[9px]">
                   Active
                 </span>
               )}
-              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-sm mb-2">
+              <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center font-bold text-sm mb-2.5">
                 Aa
               </div>
-              <div className="text-xs font-bold text-[#0F172A] dark:text-white">
+              <div className="text-xs font-bold text-ink">
                 Modern Clean
               </div>
-              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-1 leading-snug">
-                Simple, uncluttered sans-serif interface with clean slate cards and high legibility.
+              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
+                Fintech standard interface with uncluttered slate cards and clear contrast.
               </p>
             </button>
 
@@ -479,25 +479,25 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
             <button
               type="button"
               onClick={() => setUiStyle('minimal')}
-              className={`p-3.5 rounded-xl border text-left transition-all relative ${
+              className={`p-4 rounded-xl border text-left transition-all relative ${
                 uiStyle === 'minimal'
-                  ? 'border-black dark:border-white bg-[#F4F4F5] dark:bg-[#27272A] ring-2 ring-black dark:ring-white shadow-sm'
-                  : 'border-[#E4E4E7] dark:border-[#27272A] hover:border-[#D4D4D8] bg-white dark:bg-[#18181B]'
+                  ? 'border-ink bg-sunken ring-1 ring-ink'
+                  : 'border-line bg-surface hover:border-ink/20'
               }`}
             >
               {uiStyle === 'minimal' && (
-                <span className="absolute top-2.5 right-2.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-black text-white dark:bg-white dark:text-black">
+                <span className="absolute top-3 right-3 lg-pill lg-pill-dim text-[9px]">
                   Active
                 </span>
               )}
-              <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 flex items-center justify-center font-mono font-bold text-sm mb-2">
+              <div className="w-8 h-8 rounded-lg bg-sunken border border-line text-ink flex items-center justify-center font-mono font-bold text-sm mb-2.5">
                 #
               </div>
-              <div className="text-xs font-bold text-[#18181B] dark:text-white">
+              <div className="text-xs font-bold text-ink">
                 Minimalist Mono
               </div>
-              <p className="text-[11px] text-[#71717A] dark:text-[#A1A1AA] mt-1 leading-snug">
-                Ultra-minimal monochrome design with zero decorative clutter and crisp borders.
+              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
+                Ultra-crisp monochrome layout with zero decorative clutter.
               </p>
             </button>
 
@@ -505,196 +505,172 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
             <button
               type="button"
               onClick={() => setUiStyle('slate')}
-              className={`p-3.5 rounded-xl border text-left transition-all relative ${
+              className={`p-4 rounded-xl border text-left transition-all relative ${
                 uiStyle === 'slate'
-                  ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/40 ring-2 ring-indigo-600 dark:ring-indigo-400 shadow-sm'
-                  : 'border-[#CBD5E1] dark:border-[#314059] hover:border-[#94A3B8] bg-white dark:bg-[#141B26]'
+                  ? 'border-accent bg-accent/5 ring-1 ring-accent'
+                  : 'border-line bg-surface hover:border-ink/20'
               }`}
             >
               {uiStyle === 'slate' && (
-                <span className="absolute top-2.5 right-2.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-600 text-white">
+                <span className="absolute top-3 right-3 lg-pill lg-pill-accent text-[9px]">
                   Active
                 </span>
               )}
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 flex items-center justify-center font-bold text-sm mb-2">
+              <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center font-bold text-sm mb-2.5">
                 S
               </div>
-              <div className="text-xs font-bold text-[#0F172A] dark:text-white">
+              <div className="text-xs font-bold text-ink">
                 Nordic Slate
               </div>
-              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-1 leading-snug">
-                Executive fintech appearance with cool slate hues and indigo highlights.
+              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
+                Executive fintech appearance with cool slate hues and crisp accents.
               </p>
             </button>
 
-            {/* Classic Editorial (Legacy Option) */}
+            {/* Classic Editorial */}
             <button
               type="button"
               onClick={() => setUiStyle('editorial')}
-              className={`p-3.5 rounded-xl border text-left transition-all relative ${
+              className={`p-4 rounded-xl border text-left transition-all relative ${
                 uiStyle === 'editorial'
-                  ? 'border-[#1A1A1A] dark:border-[#F3F4F6] bg-[#F7F5F2] dark:bg-[#22252E] ring-2 ring-[#1A1A1A] dark:ring-[#F3F4F6] shadow-sm'
-                  : 'border-[#E8E5DF] dark:border-[#2D323F] hover:border-[#D5D0C7] bg-[#FDFCFB] dark:bg-[#181A20]'
+                  ? 'border-ink bg-sunken ring-1 ring-ink'
+                  : 'border-line bg-surface hover:border-ink/20'
               }`}
             >
               {uiStyle === 'editorial' && (
-                <span className="absolute top-2.5 right-2.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A]">
+                <span className="absolute top-3 right-3 lg-pill lg-pill-dim text-[9px]">
                   Active
                 </span>
               )}
-              <div className="w-8 h-8 rounded-lg bg-[#E8E5DF] dark:bg-[#2D323F] text-[#1A1A1A] dark:text-white flex items-center justify-center font-serif font-bold text-sm mb-2">
+              <div className="w-8 h-8 rounded-lg bg-sunken border border-line text-ink flex items-center justify-center font-serif font-bold text-sm mb-2.5">
                 §
               </div>
-              <div className="text-xs font-bold text-[#1A1A1A] dark:text-white">
+              <div className="text-xs font-bold text-ink">
                 Classic Editorial
               </div>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] mt-1 leading-snug">
-                Warm cream paper styling, serif typography, and receipt ticket perforations.
+              <p className="text-[11px] text-ink-muted mt-1 leading-snug">
+                Warm paper styling, refined serif headers, and ticket stub styling.
               </p>
             </button>
-
           </div>
         </div>
 
         {/* 2. Color Palette & Density Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E8E5DF] dark:border-[#2D323F]">
-          
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-line">
           {/* Theme Mode */}
           <div>
-            <label className="block text-xs font-bold text-[#1A1A1A] dark:text-white mb-2">
-              Color Mode
+            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2">
+              Color Theme
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="lg-seg">
               <button
                 type="button"
                 onClick={() => setTheme('light')}
-                className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${
-                  theme === 'light'
-                    ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] border-[#1A1A1A] shadow-xs'
-                    : 'bg-[#FDFCFB] dark:bg-[#1E2330] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-white'
-                }`}
+                className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${theme === 'light' ? 'active' : ''}`}
               >
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <Sun className="w-3.5 h-3.5" />
                 <span>Light</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setTheme('dark')}
-                className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${
-                  theme === 'dark'
-                    ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] border-[#1A1A1A] shadow-xs'
-                    : 'bg-[#FDFCFB] dark:bg-[#1E2330] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-white'
-                }`}
+                className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${theme === 'dark' ? 'active' : ''}`}
               >
-                <Moon className="w-3.5 h-3.5 text-amber-300" />
+                <Moon className="w-3.5 h-3.5" />
                 <span>Dark</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setTheme('system')}
-                className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${
-                  theme === 'system'
-                    ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] border-[#1A1A1A] shadow-xs'
-                    : 'bg-[#FDFCFB] dark:bg-[#1E2330] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-white'
-                }`}
+                className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${theme === 'system' ? 'active' : ''}`}
               >
                 <Monitor className="w-3.5 h-3.5" />
-                <span>Auto</span>
+                <span>System</span>
               </button>
             </div>
           </div>
 
           {/* Spacing & Density */}
           <div>
-            <label className="block text-xs font-bold text-[#1A1A1A] dark:text-white mb-2">
+            <label className="block text-xs font-bold text-ink uppercase tracking-wider mb-2">
               Layout Density
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="lg-seg">
               <button
                 type="button"
                 onClick={() => setUiDensity('standard')}
-                className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${
-                  uiDensity === 'standard'
-                    ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] border-[#1A1A1A] shadow-xs'
-                    : 'bg-[#FDFCFB] dark:bg-[#1E2330] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-white'
-                }`}
+                className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${uiDensity === 'standard' ? 'active' : ''}`}
               >
+                <Sliders className="w-3.5 h-3.5" />
                 <span>Comfortable</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setUiDensity('compact')}
-                className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center space-x-1.5 transition-all ${
-                  uiDensity === 'compact'
-                    ? 'bg-[#1A1A1A] text-white dark:bg-white dark:text-[#1A1A1A] border-[#1A1A1A] shadow-xs'
-                    : 'bg-[#FDFCFB] dark:bg-[#1E2330] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-white'
-                }`}
+                className={`lg-seg-btn flex items-center justify-center space-x-1.5 ${uiDensity === 'compact' ? 'active' : ''}`}
               >
+                <Sliders className="w-3.5 h-3.5" />
                 <span>Compact</span>
               </button>
             </div>
           </div>
-
         </div>
       </div>
 
       {/* Financial Cycle & Net Balance Reset Section */}
-      <div className="bg-white dark:bg-[#151921] border border-[#E8E5DF] dark:border-[#2D323F] rounded-xl p-5 shadow-sm space-y-5 transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
+      <div className="lg-card p-5 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-line pb-3">
           <div className="flex items-center space-x-2">
-            <RotateCcw className="w-4 h-4 text-[#1A1A1A] dark:text-white" />
-            <h2 className="font-display text-base font-bold text-[#1A1A1A] dark:text-white">
+            <RotateCcw className="w-4 h-4 text-ink" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Financial Cycles &amp; Balance Reset
             </h2>
           </div>
-          <span className="text-[11px] font-mono-num text-[#6B7280] dark:text-[#9CA3AF]">
-            Active Cycle: <strong className="text-[#1A1A1A] dark:text-white">{summary?.cycleMonth || 'Current Month'}</strong>
+          <span className="text-xs font-mono-num text-ink-muted">
+            Active Cycle: <strong className="text-ink">{summary?.cycleMonth || 'Current Month'}</strong>
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Active Balance Status Card */}
-          <div className="p-4 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FDFCFB] dark:bg-[#1A1D24] space-y-3">
+          <div className="p-4 rounded-xl border border-line bg-sunken space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#6B7280] dark:text-[#9CA3AF] uppercase tracking-wider">
-                Active Ledger Net Balance
+              <span className="text-xs font-semibold text-ink-muted uppercase tracking-wider">
+                Active Net Balance
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+              <span className="lg-pill lg-pill-pos text-[10px]">
                 {activeProfile?.autoMonthlyReset !== false ? 'Monthly Cycle' : 'All-Time'}
               </span>
             </div>
 
-            <div className="text-2xl font-bold font-mono-num text-[#1A1A1A] dark:text-[#F3F4F6]">
+            <div className="text-2xl font-bold font-mono-num num text-ink">
               {formatCurrency(summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
             </div>
 
-            <div className="pt-2 border-t border-[#E8E5DF]/60 dark:border-[#2D323F]/60 flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
+            <div className="pt-2 border-t border-line flex items-center justify-between text-xs text-ink-muted">
               <span>Cumulative All-Time Balance:</span>
-              <span className="font-mono-num font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+              <span className="font-mono-num num font-bold text-ink">
                 {formatCurrency(summary?.allTimeNetBalance ?? summary?.netBalance ?? 0, activeProfile?.displayCurrency || 'GHS')}
               </span>
             </div>
 
             {activeProfile?.balanceResetAt && (
-              <div className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF]">
-                Cycle manually restarted: {new Date(activeProfile.balanceResetAt).toLocaleDateString()}
+              <div className="text-[11px] text-ink-muted">
+                Cycle manually restarted: <span className="num font-semibold">{new Date(activeProfile.balanceResetAt).toLocaleDateString()}</span>
               </div>
             )}
           </div>
 
           {/* Reset Action & Controls */}
-          <div className="p-4 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-[#FDFCFB] dark:bg-[#1A1D24] flex flex-col justify-between space-y-4">
+          <div className="p-4 rounded-xl border border-line bg-sunken flex flex-col justify-between space-y-4">
             <div className="space-y-1.5">
-              <div className="text-xs font-bold text-[#1A1A1A] dark:text-white">
+              <div className="text-xs font-bold text-ink">
                 Start a Fresh Cycle / Reset Balance
               </div>
-              <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
-                Reset your active dashboard balance to 0.00 to start tracking a fresh period. All previous transactions are permanently stored in your <strong>Monthly History</strong> archive.
+              <p className="text-[11px] text-ink-muted leading-relaxed">
+                Reset your active dashboard balance to 0.00 to start tracking a fresh period. All previous transactions are permanently preserved in your <strong>Monthly History</strong> archive.
               </p>
-              <div className="text-[11px] text-[#22C55E] font-medium flex items-center space-x-1">
+              <div className="text-[11px] text-pos font-medium flex items-center space-x-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                 <span>Savings Vaults and debts are essential and never reset.</span>
               </div>
@@ -705,7 +681,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                 type="button"
                 onClick={() => setShowResetConfirmModal(true)}
                 disabled={isResettingBalance}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-[#1A1A1A] text-white hover:bg-[#333333] dark:bg-white dark:text-[#111317] dark:hover:bg-[#E5E7EB] transition-colors flex items-center space-x-1.5 shadow-sm"
+                className="lg-btn-solid text-xs"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>{isResettingBalance ? 'Resetting...' : 'Reset Net Balance to 0.00'}</span>
@@ -715,7 +691,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                 <button
                   type="button"
                   onClick={onNavigateToHistory}
-                  className="px-3 py-2 rounded-xl text-xs font-semibold border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#16181E] text-[#1A1A1A] dark:text-white hover:bg-[#F7F5F0] dark:hover:bg-[#20242E] transition-colors flex items-center space-x-1"
+                  className="lg-btn-quiet text-xs"
                 >
                   <History className="w-3.5 h-3.5" />
                   <span>Open Monthly History</span>
@@ -726,23 +702,23 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
         </div>
 
         {/* Monthly Rollover Switch */}
-        <div className="p-4 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#16181E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="p-4 rounded-xl border border-line bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
           <div className="space-y-0.5">
-            <div className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+            <div className="font-bold text-ink">
               Automatic Monthly Rollover
             </div>
-            <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-              Every 1st of the month, active balance resets to 0.00 for the new month, keeping completed months in Monthly History.
+            <p className="text-[11px] text-ink-muted">
+              Every 1st of the month, active balance resets to 0.00 for the new month, keeping completed months organized in Monthly History.
             </p>
           </div>
 
           <button
             type="button"
             onClick={handleToggleAutoMonthlyReset}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shrink-0 ${
               activeProfile?.autoMonthlyReset !== false
-                ? 'bg-[#1A1A1A] text-white border-[#1A1A1A] dark:bg-white dark:text-[#111317] dark:border-white'
-                : 'bg-white text-[#6B7280] border-[#E8E5DF] dark:bg-[#20242E] dark:text-[#9CA3AF] dark:border-[#2D323F]'
+                ? 'bg-ink text-canvas border-ink shadow-xs'
+                : 'bg-surface text-ink-muted border-line hover:text-ink'
             }`}
           >
             {activeProfile?.autoMonthlyReset !== false ? 'Enabled (Monthly Cycle)' : 'Disabled (All-Time)'}
@@ -751,26 +727,27 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 1. Multi-Profile Management (Personal, Family, Business) */}
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-[#E8E5DF] pb-3">
+        {/* 1. Multi-Profile Management */}
+        <div className="lg-card p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-line pb-3">
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-[#1A1A1A]" />
+              <Users className="w-4 h-4 text-ink" />
               <div>
-                <h2 className="font-display text-base font-bold text-[#1A1A1A]">
-                  Profiles & Entity Vaults
+                <h2 className="font-display text-sm sm:text-base font-bold text-ink">
+                  Profiles &amp; Entity Vaults
                 </h2>
-                <p className="text-[11px] text-[#6B7280]">
+                <p className="text-xs text-ink-muted">
                   Isolate finances across entities and protect them with security PIN locks.
                 </p>
               </div>
             </div>
             <button
+              type="button"
               onClick={openCreateProfileModal}
-              className="px-2.5 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] text-white text-xs font-semibold rounded-lg flex items-center space-x-1.5 shadow-sm transition-colors"
+              className="lg-btn-solid text-xs shrink-0"
             >
               <UserPlus className="w-3.5 h-3.5" />
-              <span>+ Create Profile</span>
+              <span>+ Add Profile</span>
             </button>
           </div>
 
@@ -783,24 +760,24 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
               return (
                 <div
                   key={p.id}
-                  className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+                  className={`p-3.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
                     isActive
-                      ? 'bg-[#F7F5F2] border-[#1A1A1A] shadow-xs'
-                      : 'bg-[#FDFCFB] border-[#E8E5DF] hover:border-[#D5D0C7]'
+                      ? 'bg-sunken border-ink/40 shadow-xs'
+                      : 'bg-surface border-line hover:border-ink/20'
                   }`}
                 >
                   <div className="flex items-center space-x-3 min-w-0">
                     <span
                       className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
-                      style={{ backgroundColor: p.color || '#1A1A1A' }}
+                      style={{ backgroundColor: p.color || 'var(--ink)' }}
                     />
                     <div className="min-w-0">
                       <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                        <span className="font-bold text-[#1A1A1A] truncate text-sm">{p.name}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-mono-num font-semibold bg-[#E8E5DF]/70 text-[#4B5563]">
+                        <span className="font-bold text-ink truncate text-sm">{p.name}</span>
+                        <span className="lg-pill lg-pill-dim text-[10px] uppercase font-mono-num font-semibold">
                           {p.type || 'personal'}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono-num font-bold bg-[#E8E5DF]/70 text-[#1A1A1A]">
+                        <span className="lg-pill lg-pill-dim text-[10px] font-mono-num font-bold">
                           {p.displayCurrency}
                         </span>
                       </div>
@@ -809,10 +786,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                       <div className="flex items-center space-x-1.5 mt-1">
                         {p.isLocked ? (
                           <span
-                            className={`inline-flex items-center space-x-1 text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                            className={`inline-flex items-center space-x-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                               isLockedForUser
-                                ? 'bg-amber-100/70 text-amber-900'
-                                : 'bg-emerald-100/70 text-emerald-900'
+                                ? 'bg-amber-500/15 text-amber-600 border border-amber-500/30'
+                                : 'bg-pos/15 text-pos border border-pos/30'
                             }`}
                           >
                             {isLockedForUser ? (
@@ -828,7 +805,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                             )}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center space-x-1 text-[10px] text-[#6B7280]">
+                          <span className="inline-flex items-center space-x-1 text-[10px] text-ink-muted">
                             <span>Open Access (No PIN)</span>
                           </span>
                         )}
@@ -840,8 +817,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                   <div className="flex items-center space-x-1.5 self-end sm:self-center shrink-0">
                     {p.isLocked && !isLockedForUser && (
                       <button
+                        type="button"
                         onClick={() => lockProfile(p.id)}
-                        className="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-lg text-[11px] font-semibold flex items-center space-x-1 transition-colors border border-amber-200"
+                        className="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 rounded-lg text-xs font-semibold flex items-center space-x-1 transition-colors border border-amber-500/30"
                         title="Re-lock this profile"
                       >
                         <Lock className="w-3 h-3" />
@@ -850,25 +828,27 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                     )}
 
                     {isActive ? (
-                      <span className="px-2.5 py-1 rounded-lg bg-[#1A1A1A] text-white text-[11px] font-mono-num font-bold">
+                      <span className="lg-pill lg-pill-accent text-xs font-mono-num font-bold">
                         Active Profile
                       </span>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => selectProfile(p.id)}
-                        className="px-2.5 py-1 bg-[#FFFFFF] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded-lg border border-[#E8E5DF] text-[11px] font-bold transition-colors"
+                        className="lg-btn-quiet text-xs"
                       >
                         Switch To
                       </button>
                     )}
 
                     <button
+                      type="button"
                       onClick={() => openEditProfileModal(p)}
-                      className="p-1.5 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#E8E5DF] rounded-lg transition-colors border border-transparent hover:border-[#E8E5DF]"
+                      className="p-2 text-ink-muted hover:text-ink hover:bg-sunken rounded-lg transition-colors border border-transparent hover:border-line"
                       title="Edit Profile & PIN Lock Settings"
                       aria-label="Edit Profile"
                     >
-                      <Edit3 className="w-3.5 h-3.5" />
+                      <Edit3 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -877,17 +857,17 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
           </div>
 
           {/* Quick Inline Creation Form */}
-          <form onSubmit={handleCreateProfile} className="pt-3 border-t border-[#E8E5DF] space-y-3">
+          <form onSubmit={handleCreateProfile} className="pt-3 border-t border-line space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#1A1A1A] block">
+              <span className="text-xs font-bold text-ink block">
                 Quick Add Profile
               </span>
               <button
                 type="button"
                 onClick={openCreateProfileModal}
-                className="text-xs text-[#6B7280] hover:text-[#1A1A1A] underline"
+                className="text-xs text-ink-muted hover:text-ink underline font-medium"
               >
-                Open Full Modal
+                Full Setup Modal
               </button>
             </div>
 
@@ -895,15 +875,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
               <input
                 type="text"
                 required
-                placeholder="Profile name (e.g. Consulting, Household)"
+                placeholder="Profile name (e.g. Consulting)"
                 value={newProfileName}
                 onChange={(e) => setNewProfileName(e.target.value)}
-                className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+                className="lg-input text-xs"
               />
               <select
                 value={newProfileType}
                 onChange={(e) => setNewProfileType(e.target.value as any)}
-                className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-2 py-1.5 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+                className="lg-select text-xs"
               >
                 <option value="personal">Personal</option>
                 <option value="family">Family Member</option>
@@ -912,7 +892,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
               <select
                 value={newProfileCurrency}
                 onChange={(e) => setNewProfileCurrency(e.target.value)}
-                className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-2 py-1.5 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+                className="lg-select text-xs"
               >
                 <option value="GHS">GHS (Ghana)</option>
                 <option value="USD">USD (Dollar)</option>
@@ -923,31 +903,31 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
             </div>
 
             {/* Optional Lock Toggle in Quick Add */}
-            <div className="p-2.5 rounded-lg bg-[#FDFCFB] border border-[#E8E5DF] space-y-2">
+            <div className="p-3 rounded-xl bg-sunken border border-line space-y-2">
               <label className="flex items-center justify-between cursor-pointer">
                 <div className="flex items-center space-x-2">
-                  <Lock className="w-3.5 h-3.5 text-[#6B7280]" />
-                  <span className="text-xs text-[#1A1A1A] font-medium">Lock this profile with a PIN</span>
+                  <Lock className="w-3.5 h-3.5 text-ink-muted" />
+                  <span className="text-xs text-ink font-semibold">Lock this profile with a PIN</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={newProfileLock}
                   onChange={(e) => setNewProfileLock(e.target.checked)}
-                  className="rounded border-[#E8E5DF] text-[#1A1A1A] focus:ring-[#1A1A1A]"
+                  className="rounded border-line text-ink focus:ring-accent"
                 />
               </label>
 
               {newProfileLock && (
-                <div className="pt-2 border-t border-[#E8E5DF] flex items-center space-x-2">
+                <div className="pt-2 border-t border-line flex flex-col sm:flex-row sm:items-center gap-2">
                   <input
                     type="password"
                     maxLength={6}
-                    placeholder="Enter 4-6 digit PIN"
+                    placeholder="4-6 digit PIN"
                     value={newProfilePin}
                     onChange={(e) => setNewProfilePin(e.target.value.replace(/\D/g, ''))}
-                    className="w-40 bg-[#FFFFFF] text-[#1A1A1A] px-2.5 py-1 rounded border border-[#E8E5DF] text-xs font-mono tracking-wider focus:outline-none focus:border-[#1A1A1A]"
+                    className="w-full sm:w-36 lg-input text-xs font-mono-num tracking-widest text-center"
                   />
-                  <span className="text-[10px] text-[#6B7280]">
+                  <span className="text-[11px] text-ink-muted">
                     Only authorized users with this PIN can access this profile.
                   </span>
                 </div>
@@ -957,7 +937,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
             <button
               type="submit"
               disabled={isCreatingProfile || !newProfileName.trim()}
-              className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] text-white rounded-lg text-xs font-bold flex items-center space-x-1.5 disabled:opacity-50 transition-colors shadow-xs"
+              className="lg-btn-solid text-xs w-full sm:w-auto"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>{isCreatingProfile ? 'Creating...' : 'Create Profile'}</span>
@@ -966,42 +946,42 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
         </div>
 
         {/* 2. Payment & Transfer Gateway */}
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center space-x-2 border-b border-[#E8E5DF] pb-3">
-            <CreditCard className="w-4 h-4 text-[#1A1A1A]" />
-            <h2 className="font-display text-base font-bold text-[#1A1A1A]">
+        <div className="lg-card p-5 space-y-4">
+          <div className="flex items-center space-x-2 border-b border-line pb-3">
+            <CreditCard className="w-4 h-4 text-ink" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Payment &amp; Transfer Gateway
             </h2>
           </div>
 
           <div className="space-y-3 text-xs">
-            <div className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF] space-y-2">
+            <div className="p-3.5 bg-sunken rounded-xl border border-line space-y-2.5">
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280]">Status:</span>
-                <span className="inline-flex items-center text-[#15803D] font-bold">
+                <span className="text-ink-muted font-medium">Gateway Status:</span>
+                <span className="inline-flex items-center text-pos font-bold">
                   <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
                   Active &amp; Connected
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-[#6B7280]">Supported Channels:</span>
-                <span className="text-[#1A1A1A] font-mono-num font-semibold">
-                  Bank Transfers, Mobile Money (MTN, Telecel, AirtelTigo)
+              <div className="flex justify-between items-center flex-wrap gap-1">
+                <span className="text-ink-muted font-medium">Supported Channels:</span>
+                <span className="text-ink font-semibold">
+                  Mobile Money (MTN, Telecel, AT), Cards &amp; Bank
                 </span>
               </div>
             </div>
 
-            <p className="text-[11px] text-[#6B7280] leading-relaxed">
-              Automated savings transfers and deposits are credited directly to your profile ledgers with instant email confirmation.
+            <p className="text-[11px] text-ink-muted leading-relaxed">
+              Automated savings transfers and deposits are credited directly to your profile ledgers with instant email confirmation and receipt reference tracking.
             </p>
           </div>
         </div>
 
         {/* 3. Live Forex Rates to GHS */}
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center space-x-2 border-b border-[#E8E5DF] pb-3">
-            <Coins className="w-4 h-4 text-[#1A1A1A]" />
-            <h2 className="font-display text-base font-bold text-[#1A1A1A]">
+        <div className="lg-card p-5 space-y-4">
+          <div className="flex items-center space-x-2 border-b border-line pb-3">
+            <Coins className="w-4 h-4 text-ink" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Exchange Rates (Pegged to GHS)
             </h2>
           </div>
@@ -1009,7 +989,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
           <form onSubmit={handleSaveRates} className="space-y-3 text-xs">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   1 USD = (GHS)
                 </label>
                 <input
@@ -1017,12 +997,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                   step="0.01"
                   value={usdRate}
                   onChange={(e) => setUsdRate(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+                  className="lg-input text-xs font-mono-num num"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   1 EUR = (GHS)
                 </label>
                 <input
@@ -1030,12 +1010,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                   step="0.01"
                   value={eurRate}
                   onChange={(e) => setEurRate(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+                  className="lg-input text-xs font-mono-num num"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   1 GBP = (GHS)
                 </label>
                 <input
@@ -1043,12 +1023,12 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                   step="0.01"
                   value={gbpRate}
                   onChange={(e) => setGbpRate(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+                  className="lg-input text-xs font-mono-num num"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+                <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                   1 NGN = (GHS)
                 </label>
                 <input
@@ -1056,7 +1036,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                   step="0.0001"
                   value={ngnRate}
                   onChange={(e) => setNgnRate(e.target.value)}
-                  className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-1.5 rounded-lg border border-[#E8E5DF] font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+                  className="lg-input text-xs font-mono-num num"
                 />
               </div>
             </div>
@@ -1064,7 +1044,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
             <button
               type="submit"
               disabled={isSavingRates}
-              className="px-4 py-2 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded border border-[#E8E5DF] text-xs font-bold flex items-center space-x-1.5 disabled:opacity-50"
+              className="lg-btn-quiet text-xs font-bold"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSavingRates ? 'animate-spin' : ''}`} />
               <span>Update Conversion Rates</span>
@@ -1073,26 +1053,27 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
         </div>
 
         {/* 4. Complete Data Backup & Restore */}
-        <div className="bg-white border border-[#E8E5DF] rounded-xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center space-x-2 border-b border-[#E8E5DF] pb-3">
-            <Shield className="w-4 h-4 text-[#1A1A1A]" />
-            <h2 className="font-display text-base font-bold text-[#1A1A1A]">
+        <div className="lg-card p-5 space-y-4">
+          <div className="flex items-center space-x-2 border-b border-line pb-3">
+            <Shield className="w-4 h-4 text-ink" />
+            <h2 className="font-display text-sm sm:text-base font-bold text-ink">
               Data Backup &amp; Recovery
             </h2>
           </div>
 
           <div className="space-y-4 text-xs">
             {/* Export */}
-            <div className="space-y-2 p-3 bg-[#FDFCFB] rounded-xl border border-[#E8E5DF]">
-              <span className="font-bold text-[#1A1A1A] block">
+            <div className="space-y-2 p-3.5 bg-sunken rounded-xl border border-line">
+              <span className="font-bold text-ink block">
                 Export Ledger Backup
               </span>
-              <p className="text-[#6B7280] text-[11px]">
+              <p className="text-ink-muted text-[11px] leading-relaxed">
                 Download a clean, structured JSON file of your financial data including profiles, transactions, debts, goals, and transfer logs.
               </p>
               <button
+                type="button"
                 onClick={handleDownloadBackup}
-                className="px-3.5 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded text-xs font-bold shadow-sm flex items-center space-x-1.5 active:scale-95"
+                className="lg-btn-solid text-xs"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download Ledger Backup (JSON)</span>
@@ -1100,21 +1081,22 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
             </div>
 
             {/* Restore */}
-            <div className="space-y-2 p-3 bg-[#FDFCFB] rounded-xl border border-[#E8E5DF]">
-              <span className="font-bold text-[#1A1A1A] block">
+            <div className="space-y-2 p-3.5 bg-sunken rounded-xl border border-line">
+              <span className="font-bold text-ink block">
                 Import / Restore Backup
               </span>
               <textarea
                 rows={2}
-                placeholder="Paste backup JSON content..."
+                placeholder="Paste backup JSON content here..."
                 value={restoreJson}
                 onChange={(e) => setRestoreJson(e.target.value)}
-                className="w-full bg-white text-[#1A1A1A] p-2 rounded border border-[#E8E5DF] text-[11px] font-mono-num focus:outline-none focus:border-[#1A1A1A]"
+                className="lg-input font-mono-num text-[11px] p-2 resize-y"
               />
               <button
+                type="button"
                 onClick={handleRestoreBackup}
                 disabled={isRestoring || !restoreJson.trim()}
-                className="px-3.5 py-1.5 bg-[#F7F5F2] hover:bg-[#E8E5DF] text-[#1A1A1A] rounded border border-[#E8E5DF] text-xs font-bold flex items-center space-x-1.5 disabled:opacity-50"
+                className="lg-btn-quiet text-xs font-bold"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span>Restore from Backup</span>
@@ -1137,34 +1119,34 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
 
       {/* Reset Balance Confirmation Modal */}
       {showResetConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-[#1A1D24] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/60 backdrop-blur-xs">
+          <div className="lg-card max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start space-x-3">
-              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 shrink-0 border border-amber-200 dark:border-amber-800">
+              <div className="p-2.5 rounded-xl bg-amber-500/15 text-amber-600 border border-amber-500/30 shrink-0">
                 <RotateCcw className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                <h3 className="text-base font-bold text-ink">
                   Reset Net Balance to 0.00?
                 </h3>
-                <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF] leading-relaxed">
+                <p className="text-xs text-ink-muted leading-relaxed">
                   This restarts your active dashboard ledger at <strong>0.00</strong> so you can track a clean, new financial cycle.
                 </p>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-[#F9F8F6] dark:bg-[#20242E] border border-[#E8E5DF] dark:border-[#2D323F] text-xs space-y-2 text-[#4B5563] dark:text-[#D1D5DB]">
+            <div className="p-3.5 rounded-xl bg-sunken border border-line text-xs space-y-2 text-ink">
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
-                <span><strong>Zero Data Loss:</strong> All past transactions are permanently saved in your <strong>Monthly History</strong>.</span>
+                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />
+                <span><strong>Zero Data Loss:</strong> Past transactions are permanently stored in <strong>Monthly History</strong>.</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
-                <span><strong>Savings Vaults Untouched:</strong> Your emergency funds and goal vaults never reset.</span>
+                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />
+                <span><strong>Savings Vaults Untouched:</strong> Target goals and locked vaults never reset.</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-[#22C55E] shrink-0" />
-                <span><strong>Debts Preserved:</strong> All money owed to or by you remains intact.</span>
+                <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />
+                <span><strong>Debts Preserved:</strong> All receivables and payables remain intact.</span>
               </div>
             </div>
 
@@ -1173,7 +1155,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                 type="button"
                 onClick={() => setShowResetConfirmModal(false)}
                 disabled={isResettingBalance}
-                className="px-4 py-2 rounded-xl text-xs font-semibold border border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] dark:text-[#9CA3AF] hover:bg-[#F7F5F0] dark:hover:bg-[#20242E] transition-colors"
+                className="lg-btn-quiet text-xs"
               >
                 Cancel
               </button>
@@ -1181,7 +1163,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onOpenAuditLogs, onO
                 type="button"
                 onClick={handleResetBalance}
                 disabled={isResettingBalance}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#1A1A1A] text-white hover:bg-[#333333] dark:bg-white dark:text-[#111317] dark:hover:bg-[#E5E7EB] transition-colors flex items-center space-x-1.5 shadow-sm"
+                className="lg-btn-solid text-xs"
               >
                 <RotateCcw className={`w-3.5 h-3.5 ${isResettingBalance ? 'animate-spin' : ''}`} />
                 <span>{isResettingBalance ? 'Resetting...' : 'Yes, Reset to 0.00'}</span>

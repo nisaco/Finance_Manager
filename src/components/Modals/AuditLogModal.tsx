@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, History, Shield, RefreshCw } from 'lucide-react';
+import { X, Shield, RefreshCw } from 'lucide-react';
 import { AuditLog } from '../../types';
 import { api } from '../../api/client';
-import { formatDate } from '../../design/tokens';
 
 interface AuditLogModalProps {
   isOpen: boolean;
@@ -34,66 +33,69 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
-      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="bg-surface border border-line rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#E8E5DF] shrink-0">
-          <div className="flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-[#1A1A1A] shrink-0" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0 bg-surface">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
+              <Shield className="w-5 h-5 stroke-[1.8]" />
+            </div>
             <div>
-              <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A]">
+              <h2 className="t-card">
                 System & Financial Audit Trail
               </h2>
-              <span className="text-[10px] sm:text-[11px] text-[#6B7280] font-mono-num line-clamp-1">
+              <span className="t-meta num block">
                 Append-only log of all money movements and mutations
               </span>
             </div>
           </div>
-          <div className="flex items-center space-x-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={loadLogs}
               title="Refresh logs"
-              className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] rounded"
+              className="lg-iconbtn"
+              aria-label="Refresh audit logs"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
-            <button onClick={onClose} className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
+            <button onClick={onClose} className="lg-iconbtn" aria-label="Close dialog">
               <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        <div className="p-3 sm:p-5 overflow-y-auto space-y-2.5 flex-1">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-2.5 flex-1">
           {logs.length === 0 ? (
-            <p className="text-xs text-[#6B7280] text-center py-8">
+            <p className="t-meta text-center py-12">
               No audit records registered yet.
             </p>
           ) : (
             logs.map((log) => (
               <div
                 key={log.id}
-                className="p-3 bg-[#FDFCFB] rounded-lg border border-[#E8E5DF] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs"
+                className="p-3.5 bg-sunken rounded-xl border border-line flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs"
               >
-                <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#1A1A1A]" />
-                    <span className="font-bold text-[#1A1A1A] font-mono-num truncate">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />
+                    <span className="font-bold text-ink num truncate">
                       {log.action}
                     </span>
                     {log.entity && (
-                      <span className="px-1.5 py-0.5 rounded bg-[#F7F5F2] text-[10px] text-[#6B7280] font-mono-num border border-[#E8E5DF]">
+                      <span className="px-2 py-0.5 rounded-md bg-surface text-[10px] text-ink-3 num border border-line">
                         {log.entity}
                       </span>
                     )}
                   </div>
                   {log.meta && (
-                    <p className="text-[11px] text-[#6B7280] font-mono-num truncate pl-3.5">
+                    <p className="text-[11px] text-ink-3 num truncate pl-3.5">
                       {JSON.stringify(log.meta)}
                     </p>
                   )}
                 </div>
-                <div className="shrink-0 text-right">
-                  <span className="text-[10px] font-mono-num text-[#6B7280]">
+                <div className="shrink-0 text-left sm:text-right">
+                  <span className="t-meta num block">
                     {new Date(log.createdAt).toLocaleString()}
                   </span>
                 </div>
@@ -102,10 +104,10 @@ export const AuditLogModal: React.FC<AuditLogModalProps> = ({ isOpen, onClose })
           )}
         </div>
 
-        <div className="p-3 bg-[#FDFCFB] border-t border-[#E8E5DF] text-right shrink-0">
+        <div className="p-4 bg-surface border-t border-line text-right shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] text-white text-xs font-bold rounded shadow-sm"
+            className="lg-btn lg-btn-solid lg-btn-sm"
           >
             Close Audit Viewer
           </button>

@@ -118,10 +118,15 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   return (
     <div className="space-y-5">
       {/* ---- Page header ---- */}
-      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="min-w-0">
-          <h1 className="t-title">Transactions</h1>
-          <p className="t-meta mt-1">
+          <div className="flex items-center gap-2">
+            <span className="lg-row-icon">
+              <History className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+            </span>
+            <h1 className="t-title">Transactions</h1>
+          </div>
+          <p className="t-meta mt-2">
             Every entry in your ledger
             {activeProfile?.name ? ` · ${activeProfile.name}` : ''}
           </p>
@@ -157,7 +162,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             </button>
           )}
 
-          <button onClick={onOpenNewTx} className="lg-btn lg-btn-solid">
+          <button onClick={onOpenNewTx} className="lg-btn lg-btn-accent">
             <Plus className="w-4 h-4" strokeWidth={2.2} aria-hidden="true" />
             New entry
           </button>
@@ -257,38 +262,40 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
 
       {/* ---- What the filter selected ---- */}
       <section className="lg-card p-4 sm:p-5">
-        <p className="t-meta">
-          Showing <span className="num font-bold text-ink">{filteredTransactions.length}</span> of{' '}
-          <span className="num">{transactions.length}</span>{' '}
-          {transactions.length === 1 ? 'entry' : 'entries'}
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="t-meta">
+            Showing <span className="num font-bold text-ink">{filteredTransactions.length}</span> of{' '}
+            <span className="num">{transactions.length}</span>{' '}
+            {transactions.length === 1 ? 'entry' : 'entries'}
+          </p>
+          <span className="lg-tag">
+            {selectedType === 'all' ? 'All entries' : selectedType === 'income' ? 'Income' : 'Expense'}
+          </span>
+        </div>
 
-        {/* Three columns squeezed these amounts into an ellipsis at 390px, so
-            they stack as labelled rows on a phone and only go side by side
-            once there is room for the full figure. */}
-        <dl className="mt-3.5 pt-3.5 border-t border-line divide-y divide-line sm:divide-y-0 sm:grid sm:grid-cols-3 sm:gap-3">
-          <div className="flex items-baseline justify-between gap-3 py-2 first:pt-0 sm:block sm:py-0">
+        <dl className="mt-4 grid gap-3 border-t border-line pt-4 sm:grid-cols-3">
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-sunken px-4 py-3 sm:block sm:py-3">
             <dt className="t-eyebrow">Money in</dt>
             <dd
-              className="num text-[0.9375rem] font-bold whitespace-nowrap sm:mt-1"
+              className="num t-card whitespace-nowrap sm:mt-1"
               style={{ color: 'var(--lg-pos)' }}
             >
               {totalInflow > 0 ? `+${formatCurrency(totalInflow, currency)}` : formatCurrency(totalInflow, currency)}
             </dd>
           </div>
-          <div className="flex items-baseline justify-between gap-3 py-2 sm:block sm:py-0">
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-sunken px-4 py-3 sm:block sm:py-3">
             <dt className="t-eyebrow">Money out</dt>
             <dd
-              className="num text-[0.9375rem] font-bold whitespace-nowrap sm:mt-1"
+              className="num t-card whitespace-nowrap sm:mt-1"
               style={{ color: 'var(--lg-neg)' }}
             >
               {totalOutflow > 0 ? `\u2212${formatCurrency(totalOutflow, currency)}` : formatCurrency(totalOutflow, currency)}
             </dd>
           </div>
-          <div className="flex items-baseline justify-between gap-3 py-2 last:pb-0 sm:block sm:py-0">
+          <div className="flex items-center justify-between gap-4 rounded-xl bg-sunken px-4 py-3 sm:block sm:py-3">
             <dt className="t-eyebrow">Net</dt>
             <dd
-              className="num text-[0.9375rem] font-bold whitespace-nowrap sm:mt-1"
+              className="num t-card whitespace-nowrap sm:mt-1"
               style={{
                 color: net === 0 ? 'var(--lg-ink)' : net > 0 ? 'var(--lg-pos)' : 'var(--lg-neg)',
               }}

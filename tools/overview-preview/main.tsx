@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Design preview harness.
  *
  * Renders real screens, inside the real app shell, against fixture data — no
@@ -22,11 +22,14 @@ import { Overview } from '../../src/pages/Overview';
 import { TransactionsPage } from '../../src/pages/TransactionsPage';
 import { BudgetsPage } from '../../src/pages/BudgetsPage';
 import { DebtsPage } from '../../src/pages/DebtsPage';
+import { GoalsPage } from '../../src/pages/GoalsPage';
+import { HistoryPage } from '../../src/pages/HistoryPage';
+import { ReportsPage } from '../../src/pages/ReportsPage';
 import { Navbar } from '../../src/components/Navbar';
 import { APP_VERSION } from '../../src/version';
 import { Providers, ledgerEmpty, ledgerFull, noop } from './fixtures';
 
-type ScreenId = 'overview' | 'transactions' | 'budgets' | 'debts';
+type ScreenId = 'overview' | 'transactions' | 'budgets' | 'debts' | 'goals' | 'history' | 'reports';
 
 const SCREENS: Record<ScreenId, { label: string; render: () => React.ReactNode }> = {
   overview: {
@@ -60,6 +63,18 @@ const SCREENS: Record<ScreenId, { label: string; render: () => React.ReactNode }
   debts: {
     label: 'Debts',
     render: () => <DebtsPage onOpenNewDebt={noop} onEditDebt={noop} onRecordPayment={noop} />,
+  },
+  goals: {
+    label: 'Goals',
+    render: () => <GoalsPage onOpenNewGoal={noop} onEditGoal={noop} onFundGoal={noop} />,
+  },
+  history: {
+    label: 'History',
+    render: () => <HistoryPage onEditTx={noop} onNavigateToSettings={noop} />,
+  },
+  reports: {
+    label: 'Reports',
+    render: () => <ReportsPage />,
   },
 };
 
@@ -101,44 +116,60 @@ if (screen && SCREENS[screen]) {
     </Providers>
   );
 } else {
-  /** Contact sheet. Every screen, every width, every state, on one page. */
-  const entries = (Object.keys(SCREENS) as ScreenId[]).flatMap((id) =>
-    (['full', 'empty'] as const).map((st) => ({ id, st }))
-  );
-
   root.render(
-    <div className="min-h-screen bg-canvas font-sans p-4 sm:p-8 space-y-10">
-      <header>
-        <p className="t-eyebrow">Ledger · design preview</p>
-        <h1 className="t-title mt-1">Screens at phone, tablet and desktop width</h1>
-        <p className="t-meta mt-1">
-          Each panel is a real viewport, so breakpoints, tap targets and the navigation
-          drawer behave exactly as they will on a device.
-        </p>
+    <div className="min-h-screen bg-canvas text-ink p-4 sm:p-8 space-y-8">
+      <header className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-2 border-b border-line pb-4">
+        <div>
+          <h1 className="t-title font-bold">Ledger · Design System Preview</h1>
+          <p className="t-meta text-ink-3 mt-0.5">
+            Real components rendered against fixed fixture data. Each viewport is an isolated iframe.
+          </p>
+        </div>
+        <div className="text-xs text-ink-3">
+          Version <span className="num">{APP_VERSION}</span>
+        </div>
       </header>
 
-      {entries.map(({ id, st }) => (
-        <section key={`${id}-${st}`} className="space-y-3">
-          <h2 className="t-card">
-            {SCREENS[id].label}
-            <span className="t-meta font-medium">
-              {' '}
-              · {st === 'empty' ? 'first run, nothing recorded' : 'populated'}
-            </span>
-          </h2>
-          <div className="flex flex-wrap gap-6 items-start">
+      {(Object.keys(SCREENS) as ScreenId[]).map((sid) => (
+        <section key={sid} className="max-w-7xl mx-auto space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="t-card font-bold">{SCREENS[sid].label}</h2>
+            <div className="flex items-center gap-3 text-xs">
+              <a
+                href={`?screen=${sid}&state=full`}
+                className="text-accent hover:underline font-semibold"
+              >
+                Populated ↗
+              </a>
+              <span className="text-line-strong">|</span>
+              <a
+                href={`?screen=${sid}&state=empty`}
+                className="text-ink-3 hover:underline"
+              >
+                Empty ↗
+              </a>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {DEVICES.map((d) => (
-              <figure key={d.id} className="m-0">
-                <figcaption className="t-eyebrow mb-2">{d.label}</figcaption>
-                <iframe
-                  title={`${id} ${st} ${d.id}`}
-                  src={`?screen=${id}&state=${st}`}
-                  width={d.w}
-                  height={d.h}
-                  className="bg-surface border border-line-strong rounded-xl"
-                  style={{ display: 'block' }}
-                />
-              </figure>
+              <div key={d.id} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs text-ink-3 px-1">
+                  <span>{d.label}</span>
+                  <span className="num">{d.w}×{d.h}</span>
+                </div>
+                <div
+                  className="bg-surface border border-line rounded-xl overflow-hidden shadow-xs"
+                  style={{ height: '700px' }}
+                >
+                  <iframe
+                    src={`?screen=${sid}&state=full`}
+                    title={`${SCREENS[sid].label} on ${d.label}`}
+                    style={{ width: `${d.w}px`, height: `${d.h}px`, transform: `scale(${Math.min(1, 400 / d.w)})`, transformOrigin: 'top left' }}
+                    className="border-0 pointer-events-auto"
+                  />
+                </div>
+              </div>
             ))}
           </div>
         </section>

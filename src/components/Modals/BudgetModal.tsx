@@ -78,31 +78,34 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1A1A1A]/40 backdrop-blur-xs">
-      <div className="bg-white border border-[#E8E5DF] rounded-xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150">
-        
-        <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 sm:py-4 border-b border-[#E8E5DF] shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-ink/60 backdrop-blur-xs">
+      <div className="lg-card w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-150 p-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
           <div className="flex items-center space-x-2">
-            <Scale className="w-5 h-5 text-[#1A1A1A]" />
-            <h2 className="font-display text-base sm:text-lg font-bold text-[#1A1A1A]">
+            <Scale className="w-5 h-5 text-ink" />
+            <h2 className="font-display text-base font-bold text-ink">
               {initialData ? 'Adjust Category Budget' : 'Set Monthly Budget'}
             </h2>
           </div>
-          <button onClick={onClose} className="p-1.5 sm:p-1 text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2] rounded">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken transition-colors"
+            aria-label="Close modal"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1">
-          
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+            <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
               Category
             </label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs font-medium focus:outline-none focus:border-[#1A1A1A]"
+              className="w-full lg-select text-xs"
             >
               {COMMON_EXPENSE_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
@@ -115,7 +118,7 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
 
           {category === 'custom' && (
             <div>
-              <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+              <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
                 Custom Category Name
               </label>
               <input
@@ -124,13 +127,13 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
                 placeholder="e.g. Travel & Exploration"
                 value={customCategory}
                 onChange={(e) => setCustomCategory(e.target.value)}
-                className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 rounded-lg border border-[#E8E5DF] text-xs focus:outline-none focus:border-[#1A1A1A]"
+                className="w-full lg-input text-xs"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-[11px] uppercase tracking-wider text-[#6B7280] font-mono-num mb-1 font-bold">
+            <label className="block text-[10px] uppercase tracking-wider text-ink-muted font-mono-num mb-1 font-bold">
               Monthly Spending Limit ({currency})
             </label>
             <input
@@ -140,28 +143,27 @@ export const BudgetModal: React.FC<BudgetModalProps> = ({
               placeholder="1500.00"
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
-              className="w-full bg-[#FDFCFB] text-[#1A1A1A] px-3 py-2 text-base font-mono-num font-bold rounded-lg border border-[#E8E5DF] focus:outline-none focus:border-[#1A1A1A]"
+              className="w-full lg-input text-base font-mono-num num font-bold"
               autoFocus
             />
           </div>
 
-          <div className="flex items-center justify-end space-x-3 pt-3 border-t border-[#E8E5DF]">
+          <div className="flex items-center justify-end space-x-2 pt-3 border-t border-line">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-md text-xs font-bold text-[#6B7280] hover:text-[#1A1A1A] hover:bg-[#F7F5F2]"
+              className="lg-btn-quiet text-xs"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-[#1A1A1A] hover:bg-[#333333] text-[#FFFFFF] rounded-md text-xs font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+              className="lg-btn-solid text-xs"
             >
               {isSubmitting ? 'Saving...' : 'Set Limit'}
             </button>
           </div>
-
         </form>
       </div>
     </div>

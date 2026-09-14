@@ -4,35 +4,24 @@ import {
   Send,
   Globe,
   Mic,
-  Trash2,
   ExternalLink,
   Search,
   AlertCircle,
   TrendingUp,
   Scale,
   PiggyBank,
-  Wallet,
   BrainCircuit,
-  ChevronRight,
   RefreshCw,
   Copy,
   Check,
   RotateCcw,
-  MessageSquare,
-  ShieldCheck,
-  Info,
+  Wallet,
   Volume2,
   VolumeX,
-  Layers,
-  ChevronDown,
-  ChevronUp,
-  Clock,
   X,
   ArrowRight,
   Paperclip,
   FileText,
-  Image as ImageIcon,
-  File,
   Pencil,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
@@ -74,7 +63,7 @@ const QUICK_PROMPTS = [
     category: 'Debt Strategy',
   },
   {
-    title: 'Real-Time FX & Economic Data',
+    title: 'Real-Time FX & Market Data',
     prompt: 'Use Google Search to find current USD to GHS, EUR to USD exchange rates, and recent interest rate or inflation trends.',
     icon: Globe,
     enableSearch: true,
@@ -97,26 +86,20 @@ const QUICK_PROMPTS = [
 export const AIAdvisorPage: React.FC = () => {
   const {
     activeProfile,
-    profiles,
     transactions,
     budgets,
     goals,
     debts,
     summary,
-    isLoading: isLedgerLoading,
   } = useLedger();
   const { user } = useAuth();
 
-  // Model selection per requirements:
-  // - gemini-3.1-flash-lite for tasks that should happen fast (Default)
-  // - gemini-3.5-flash for general tasks (and search grounding)
-  // - gemini-3.1-pro-preview for particularly complex tasks
   const [selectedModel, setSelectedModel] = useState<string>('gemini-3.1-flash-lite');
   const [enableSearch, setEnableSearch] = useState<boolean>(false);
   const [inputPrompt, setInputPrompt] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isLiveVoiceOpen, setIsLiveVoiceOpen] = useState<boolean>(false);
-  const [includeFinancialContext, setIncludeFinancialContext] = useState<boolean>(true);
+  const [includeFinancialContext] = useState<boolean>(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState<string>('');
@@ -132,11 +115,12 @@ export const AIAdvisorPage: React.FC = () => {
       );
     }
   }, [editingId]);
+
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [showLedgerSidebar, setShowLedgerSidebar] = useState<boolean>(false);
   const [quota, setQuota] = useState<AIMessageQuota | null>(null);
 
-  // Lock body scroll when ledger sidebar is active so scrolling only occurs inside the sidebar
+  // Lock body scroll when ledger sidebar is active
   useEffect(() => {
     if (showLedgerSidebar) {
       const prev = document.body.style.overflow;
@@ -190,19 +174,13 @@ export const AIAdvisorPage: React.FC = () => {
     debts
       .filter((d) => d.direction === 'i_owe')
       .reduce((acc, d) => acc + Math.max(0, d.amount - (d.paid || 0)), 0);
-  const totalOwedToMe =
-    summary?.totalOwedToMe ??
-    debts
-      .filter((d) => d.direction === 'owed_to_me')
-      .reduce((acc, d) => acc + Math.max(0, d.amount - (d.paid || 0)), 0);
 
   const storageKey = `fima_chat_${user?.id || 'anon'}_${activeProfile?.id || 'default'}`;
 
-  // Initial welcome message per requirement: "Hi I'm Fima....."
   const getInitialGreeting = (pName: string, pCurr: string): Message => ({
     id: 'fima-welcome',
     role: 'model',
-    content: `Hi I'm Fima, your dedicated Finance Manager AI assistant.\n\nI have real-time access to your **${pName}** ledger (${pCurr}). I can analyze your spending velocity, audit budgets, build debt payoff strategies, track savings milestones, or answer literally any question under the sun—from your finances to global markets, business models, or general curiosity.\n\nHow can I help you today?`,
+    content: `Hi, I'm Fima, your dedicated Finance Manager AI assistant.\n\nI have real-time access to your **${pName}** ledger (${pCurr}). I can audit your budget velocity, optimize debt payoffs, track goal trajectories, or assist with financial and economic research.\n\nHow can I help you today?`,
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     modelUsed: 'Fima Intelligence',
   });
@@ -225,7 +203,6 @@ export const AIAdvisorPage: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Helper to scroll smoothly to the user's last message/prompt
   const scrollToLastUserPrompt = (msgList: Message[] = messages, behavior: ScrollBehavior = 'smooth') => {
     const lastUser = [...msgList].reverse().find((m) => m.role === 'user');
     if (lastUser) {
@@ -246,8 +223,6 @@ export const AIAdvisorPage: React.FC = () => {
     return false;
   };
 
-  // When opening the text AI, scroll down to the user's last message/prompt (not the AI's last response)
-  const initialScrollDoneRef = useRef(false);
   useEffect(() => {
     const t1 = setTimeout(() => {
       scrollToLastUserPrompt(messages, 'auto');
@@ -255,11 +230,8 @@ export const AIAdvisorPage: React.FC = () => {
 
     const t2 = setTimeout(() => {
       const scrolled = scrollToLastUserPrompt(messages, 'smooth');
-      if (scrolled) {
-        initialScrollDoneRef.current = true;
-      } else if (messages.length <= 1) {
+      if (!scrolled && messages.length <= 1) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        initialScrollDoneRef.current = true;
       }
     }, 280);
 
@@ -269,12 +241,6 @@ export const AIAdvisorPage: React.FC = () => {
     };
   }, []);
 
-  // Optional manual scroll to bottom
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // Persist conversation thread per profile
   useEffect(() => {
     try {
       if (messages.length > 0) {
@@ -285,7 +251,6 @@ export const AIAdvisorPage: React.FC = () => {
     }
   }, [messages, storageKey]);
 
-  // If profile changes, re-hydrate from storage or reset to initial greeting
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -303,7 +268,6 @@ export const AIAdvisorPage: React.FC = () => {
     setMessages([getInitialGreeting(profileName, currency)]);
   }, [activeProfile?.id]);
 
-  // Build complete financial ledger context payload
   const buildProfileContext = () => {
     if (!includeFinancialContext) return undefined;
 
@@ -371,7 +335,7 @@ export const AIAdvisorPage: React.FC = () => {
       savingsRate,
       totalSavedInGoals,
       totalIOwe,
-      totalOwedToMe,
+      totalOwedToMe: summary?.totalOwedToMe ?? 0,
       budgetsSummary,
       goalsSummary,
       debtsSummary,
@@ -439,14 +403,12 @@ export const AIAdvisorPage: React.FC = () => {
     setAttachments([]);
     setIsLoading(true);
 
-    // Smoothly scroll down to this prompt so user sees what they asked
     setTimeout(() => {
       const el = document.getElementById(`message-${userMessage.id}`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 60);
 
     try {
-      // Build conversation payload with memory retention (last 20 messages)
       const apiMessages = newMessages
         .filter((m) => m.id !== 'fima-welcome')
         .slice(-20)
@@ -456,7 +418,6 @@ export const AIAdvisorPage: React.FC = () => {
           attachments: m.attachments,
         }));
 
-      // Search grounding requires gemini-3.5-flash per requirements
       const modelToSend = shouldSearch ? 'gemini-3.5-flash' : selectedModel;
 
       const response = await api.sendAIChat({
@@ -500,7 +461,7 @@ export const AIAdvisorPage: React.FC = () => {
         id: Math.random().toString(36).substring(2, 9),
         role: 'model',
         content: isRateLimit
-          ? `⏳ **Profile Limit Reached (40 messages in 8 hours)**\n\nYour profile has reached the allocated 40 advisory messages. To ensure uninterrupted service, the limit will automatically reset 4 hours later back to zero.`
+          ? `⏳ **Profile Limit Reached (40 messages in 8 hours)**\n\nYour profile has reached the allocated 40 advisory messages. To ensure uninterrupted service, the limit will automatically reset 4 hours later.`
           : `I ran into an issue retrieving that: ${
               err.message || 'There was a temporary service error.'
             }\n\nPlease try again or switch to another model tier.`,
@@ -533,14 +494,12 @@ export const AIAdvisorPage: React.FC = () => {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    // Like Gemini, branch from this prompt: keep messages up to this prompt
     const truncated = [...messages.slice(0, targetIdx), updatedUserMessage];
     setMessages(truncated);
     setEditingId(null);
     setEditText('');
     setIsLoading(true);
 
-    // Scroll directly to this edited prompt
     setTimeout(() => {
       const el = document.getElementById(`message-${id}`);
       el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -609,7 +568,7 @@ export const AIAdvisorPage: React.FC = () => {
         id: Math.random().toString(36).substring(2, 9),
         role: 'model',
         content: isRateLimit
-          ? `⏳ **Profile Limit Reached (40 messages in 8 hours)**\n\nYour profile has reached the allocated 40 advisory messages. To ensure uninterrupted service, the limit will automatically reset 4 hours later back to zero.`
+          ? `⏳ **Profile Limit Reached (40 messages in 8 hours)**\n\nYour profile has reached the allocated 40 advisory messages. To ensure uninterrupted service, the limit will automatically reset 4 hours later.`
           : `I ran into an issue retrieving that: ${
               err.message || 'There was a temporary service error.'
             }\n\nPlease try again or switch to another model tier.`,
@@ -639,7 +598,6 @@ export const AIAdvisorPage: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Text-to-speech reading for natural voice experience
   const handleToggleSpeak = (id: string, text: string) => {
     if (!('speechSynthesis' in window)) return;
 
@@ -650,7 +608,6 @@ export const AIAdvisorPage: React.FC = () => {
     }
 
     window.speechSynthesis.cancel();
-    // Clean markdown/latex symbols for clear speech
     const cleanSpeechText = text
       .replace(/\$\$[\s\S]*?\$\$/g, ' mathematical formula ')
       .replace(/\$([^\$]+?)\$/g, '$1')
@@ -668,19 +625,15 @@ export const AIAdvisorPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-3">
-      {/* Top Header: Model Selector & Actions (Mobile Optimized) */}
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-[#E8E5DF] dark:border-[#2D323F] pb-3">
-        {/* Prominent Model Selector: 3 Equal Tabs on Mobile, Flex on Desktop */}
-        <div className="w-full sm:w-auto grid grid-cols-3 sm:flex items-center bg-[#F7F5F2] dark:bg-[#1E222C] p-1 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] shrink-0">
+    <div className="space-y-3 pb-6">
+      {/* Top Header: Model Selector & Actions */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-line pb-3">
+        {/* Model Selector */}
+        <div className="lg-seg self-start sm:self-auto">
           <button
             type="button"
             onClick={() => setSelectedModel('gemini-3.1-flash-lite')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center whitespace-nowrap cursor-pointer ${
-              selectedModel === 'gemini-3.1-flash-lite'
-                ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-bold'
-                : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
-            }`}
+            className={`lg-seg-btn ${selectedModel === 'gemini-3.1-flash-lite' ? 'active' : ''}`}
             title="Fast calculations & quick answers (Default)"
           >
             Fast
@@ -688,11 +641,7 @@ export const AIAdvisorPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSelectedModel('gemini-3.5-flash')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center whitespace-nowrap cursor-pointer ${
-              selectedModel === 'gemini-3.5-flash'
-                ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-bold'
-                : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
-            }`}
+            className={`lg-seg-btn ${selectedModel === 'gemini-3.5-flash' ? 'active' : ''}`}
             title="Balanced reasoning & search"
           >
             Balanced
@@ -700,11 +649,7 @@ export const AIAdvisorPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setSelectedModel('gemini-3.1-pro-preview')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-center whitespace-nowrap cursor-pointer ${
-              selectedModel === 'gemini-3.1-pro-preview'
-                ? 'bg-white text-[#1A1A1A] dark:bg-[#2B303E] dark:text-white shadow-xs font-bold'
-                : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white'
-            }`}
+            className={`lg-seg-btn ${selectedModel === 'gemini-3.1-pro-preview' ? 'active' : ''}`}
             title="Deep strategic reasoning & complex financial math"
           >
             Deep
@@ -712,26 +657,18 @@ export const AIAdvisorPage: React.FC = () => {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center justify-between sm:justify-end space-x-2 py-0.5 max-w-full overflow-x-auto no-scrollbar">
+        <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar">
           {/* Search Grounding Toggle */}
           <button
             type="button"
             onClick={() => setEnableSearch(!enableSearch)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-              enableSearch
-                ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 shadow-2xs'
-                : 'bg-white dark:bg-[#1E222C] text-[#6B7280] dark:text-[#9CA3AF] border-[#E8E5DF] dark:border-[#2D323F] hover:text-[#1A1A1A] dark:hover:text-[#F3F4F6]'
-            }`}
+            className={`lg-btn-quiet text-xs ${enableSearch ? 'border-accent text-accent bg-accent/10' : ''}`}
             title="Ground answers with live Google Search data"
           >
-            <Globe
-              className={`w-3.5 h-3.5 ${
-                enableSearch ? 'text-blue-600 dark:text-blue-400 animate-pulse' : ''
-              }`}
-            />
+            <Globe className={`w-3.5 h-3.5 ${enableSearch ? 'text-accent' : 'text-ink-muted'}`} />
             <span>Search</span>
             {enableSearch && (
-              <span className="px-1 py-0.2 rounded bg-blue-600 text-white text-[9px] font-bold">
+              <span className="lg-pill lg-pill-accent text-[9px] py-0 px-1 font-bold">
                 ON
               </span>
             )}
@@ -739,12 +676,13 @@ export const AIAdvisorPage: React.FC = () => {
 
           {/* Ledger Scope Drawer Trigger */}
           <button
+            type="button"
             onClick={() => setShowLedgerSidebar(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] bg-white dark:bg-[#1E222C] text-xs font-semibold text-[#1A1A1A] dark:text-[#F3F4F6] hover:bg-[#F7F5F2] dark:hover:bg-[#262B37] transition-all shadow-xs shrink-0 cursor-pointer"
+            className="lg-btn-quiet text-xs"
             title="Inspect active ledger figures & metrics"
           >
-            <Wallet className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="hidden md:inline font-mono-num">
+            <Wallet className="w-3.5 h-3.5 text-accent" />
+            <span className="hidden md:inline font-mono-num num font-semibold">
               {profileName} • {currency} {netBalance.toLocaleString()}
             </span>
             <span className="md:hidden">Ledger</span>
@@ -752,71 +690,74 @@ export const AIAdvisorPage: React.FC = () => {
 
           {/* Voice Fima Launcher Button */}
           <button
+            type="button"
             onClick={() => setIsLiveVoiceOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer"
+            className="lg-btn-solid text-xs flex items-center space-x-1.5"
             title="Start borderless voice dialogue with Fima"
           >
             <Mic className="w-3.5 h-3.5" />
             <span>Voice</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse" />
           </button>
 
           {/* New Chat Session */}
           <button
+            type="button"
             onClick={handleResetConversation}
-            className="p-2 rounded-xl bg-white dark:bg-[#1E222C] border border-[#E8E5DF] dark:border-[#2D323F] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-[#F3F4F6] transition-colors shrink-0 cursor-pointer"
+            className="lg-btn-quiet p-2 text-ink-muted hover:text-ink"
             title="Start new conversation thread"
+            aria-label="Start new conversation thread"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      {/* Main Full-Width Gemini-Style Context Window */}
-      <div className="w-full bg-white dark:bg-[#13161F] border border-[#E8E5DF] dark:border-[#252935] rounded-3xl shadow-xs h-[calc(100vh-190px)] min-h-[620px] flex flex-col overflow-hidden relative">
-        {/* Messages Stream (Centered max-w-4xl like Gemini) */}
+      {/* Main Full-Width Advisor Window */}
+      <div className="w-full lg-card p-0 h-[calc(100vh-210px)] min-h-[580px] flex flex-col overflow-hidden relative">
+        {/* Messages Stream */}
         <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-6 space-y-7">
-            {/* Gemini Hero Greeting (Rendered when fresh or on welcome) */}
+          <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 py-6 space-y-6">
+            {/* Hero Greeting (Rendered when fresh) */}
             {messages.length <= 1 && (
               <div className="pt-4 pb-6 text-center max-w-2xl mx-auto space-y-4 animate-in fade-in duration-300">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 shadow-2xs">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-accent/15 text-accent">
                   <Sparkles className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6]">
+                  <h2 className="font-display text-xl sm:text-3xl font-bold tracking-tight text-ink">
                     Hello, {user?.name?.split(' ')[0] || profileName}
                   </h2>
-                  <p className="text-sm sm:text-base text-[#6B7280] dark:text-[#9CA3AF] mt-1 font-normal">
-                    How can I assist with your finances or answer questions today?
+                  <p className="text-xs sm:text-sm text-ink-muted mt-1">
+                    How can I assist with your finances or strategic planning today?
                   </p>
                 </div>
 
-                {/* 4 Gemini Prompt Cards */}
+                {/* Prompt Suggestions */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 text-left">
                   {QUICK_PROMPTS.map((qp, idx) => {
                     const Icon = qp.icon;
                     return (
                       <button
                         key={idx}
+                        type="button"
                         onClick={() => {
                           if (qp.enableSearch) setEnableSearch(true);
                           handleSendMessage(qp.prompt, qp.enableSearch);
                         }}
-                        className="p-3.5 rounded-2xl border border-[#E8E5DF] dark:border-[#252A36] bg-[#FDFCFB] dark:bg-[#1A1E29] hover:bg-[#F7F5F2] dark:hover:bg-[#232836] transition-all group shadow-2xs hover:shadow-xs active:scale-[0.99]"
+                        className="p-4 rounded-xl border border-line bg-sunken hover:border-ink/20 transition-all group text-left"
                       >
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center space-x-2">
-                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                            <div className="p-1.5 rounded-lg bg-accent/15 text-accent">
                               <Icon className="w-4 h-4" />
                             </div>
-                            <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] group-hover:underline">
+                            <span className="text-xs font-bold text-ink group-hover:underline">
                               {qp.title}
                             </span>
                           </div>
-                          <ArrowRight className="w-3.5 h-3.5 text-[#9CA3AF] group-hover:text-[#1A1A1A] dark:group-hover:text-white transition-colors" />
+                          <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-ink transition-colors" />
                         </div>
-                        <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] line-clamp-2 leading-relaxed">
+                        <p className="text-[11px] text-ink-muted line-clamp-2 leading-relaxed">
                           {qp.prompt}
                         </p>
                       </button>
@@ -836,13 +777,13 @@ export const AIAdvisorPage: React.FC = () => {
                   <div
                     key={msg.id}
                     id={`message-${msg.id}`}
-                    className="flex justify-end animate-in fade-in duration-150 group"
+                    className="flex justify-end animate-in fade-in duration-150"
                   >
                     <div className="max-w-[85%] sm:max-w-[75%] space-y-1.5 flex flex-col items-end">
                       {isEditing ? (
-                        <div className="w-full sm:w-[480px] max-w-full bg-[#F7F5F2] dark:bg-[#1A1E29] border border-emerald-500/60 rounded-3xl p-3.5 sm:p-4 shadow-lg space-y-3">
-                          <div className="flex items-center justify-between text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center space-x-1.5">
+                        <div className="w-full sm:w-[480px] max-w-full bg-surface border border-accent rounded-2xl p-4 shadow-lg space-y-3">
+                          <div className="flex items-center justify-between text-xs text-ink-muted">
+                            <span className="font-semibold text-accent flex items-center space-x-1.5">
                               <Pencil className="w-3.5 h-3.5" />
                               <span>Edit Prompt</span>
                             </span>
@@ -862,20 +803,22 @@ export const AIAdvisorPage: React.FC = () => {
                               }
                             }}
                             rows={3}
-                            className="w-full bg-white dark:bg-[#13161F] border border-[#E8E5DF] dark:border-[#2D323F] rounded-2xl p-3 text-base sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] outline-hidden resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                            className="w-full lg-input text-xs resize-none"
                             placeholder="Edit your prompt..."
                           />
                           <div className="flex items-center justify-end space-x-2">
                             <button
+                              type="button"
                               onClick={() => setEditingId(null)}
-                              className="px-3 py-1.5 rounded-xl text-xs font-medium text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                              className="lg-btn-quiet text-xs"
                             >
                               Cancel
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleSaveEdit(msg.id)}
                               disabled={!editText.trim() || isLoading}
-                              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 transition-all flex items-center space-x-1.5 shadow-xs cursor-pointer active:scale-95"
+                              className="lg-btn-solid text-xs"
                             >
                               <Send className="w-3 h-3" />
                               <span>Update &amp; Send</span>
@@ -884,29 +827,29 @@ export const AIAdvisorPage: React.FC = () => {
                         </div>
                       ) : (
                         <>
-                          <div className="w-full rounded-3xl rounded-tr-md bg-[#1A1A1A] dark:bg-[#F3F4F6] text-white dark:text-[#111317] px-5 py-3.5 text-sm leading-relaxed shadow-xs space-y-2">
+                          <div className="w-full rounded-2xl rounded-tr-xs bg-ink text-canvas px-4 py-3 text-xs sm:text-sm leading-relaxed shadow-xs space-y-2">
                             {msg.attachments && msg.attachments.length > 0 && (
                               <div className="flex flex-wrap gap-2 pb-1">
                                 {msg.attachments.map((att, attIdx) => (
                                   <div
                                     key={attIdx}
-                                    className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl bg-white/15 dark:bg-black/15 text-xs text-inherit backdrop-blur-xs border border-white/20 dark:border-black/20"
+                                    className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-canvas/15 text-inherit border border-canvas/20"
                                   >
                                     {att.type.startsWith('image/') ? (
                                       <img
                                         src={att.data}
                                         alt={att.name}
-                                        className="w-7 h-7 object-cover rounded-md"
+                                        className="w-7 h-7 object-cover rounded"
                                       />
                                     ) : (
-                                      <FileText className="w-4 h-4 shrink-0 text-emerald-400 dark:text-emerald-600" />
+                                      <FileText className="w-4 h-4 shrink-0 text-canvas" />
                                     )}
                                     <div className="flex flex-col min-w-0 max-w-[140px]">
                                       <span className="text-[11px] font-semibold truncate leading-tight">
                                         {att.name}
                                       </span>
                                       {att.size && (
-                                        <span className="text-[9px] opacity-70 font-mono-num">
+                                        <span className="text-[9px] opacity-70 font-mono-num num">
                                           {(att.size / 1024).toFixed(0)} KB
                                         </span>
                                       )}
@@ -916,38 +859,34 @@ export const AIAdvisorPage: React.FC = () => {
                               </div>
                             )}
                             <p className="whitespace-pre-wrap">{msg.content}</p>
-                            <div className="text-[10px] text-white/50 dark:text-[#111317]/50 text-right mt-1.5 font-mono-num">
+                            <div className="text-[10px] text-canvas/60 text-right mt-1 font-mono-num num">
                               {msg.timestamp}
                             </div>
                           </div>
 
-                          {/* Gemini-Style Action Bar: Copy & Edit Prompt */}
                           <div className="flex items-center space-x-1 pr-1">
                             <button
+                              type="button"
                               onClick={() => handleCopyMessage(msg.id, msg.content)}
-                              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F] transition-all cursor-pointer"
+                              className="p-1 text-ink-muted hover:text-ink transition-colors"
                               title="Copy prompt"
+                              aria-label="Copy prompt"
                             >
                               {copiedId === msg.id ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span className="text-emerald-600 font-medium">Copied</span>
-                                </>
+                                <Check className="w-3.5 h-3.5 text-pos" />
                               ) : (
-                                <>
-                                  <Copy className="w-3.5 h-3.5" />
-                                  <span>Copy</span>
-                                </>
+                                <Copy className="w-3.5 h-3.5" />
                               )}
                             </button>
 
                             <button
+                              type="button"
                               onClick={() => startEditPrompt(msg)}
-                              className="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F] transition-all cursor-pointer"
+                              className="p-1 text-ink-muted hover:text-accent transition-colors"
                               title="Edit prompt"
+                              aria-label="Edit prompt"
                             >
                               <Pencil className="w-3.5 h-3.5" />
-                              <span>Edit</span>
                             </button>
                           </div>
                         </>
@@ -964,38 +903,34 @@ export const AIAdvisorPage: React.FC = () => {
                   className="flex items-start space-x-3 sm:space-x-4 max-w-full animate-in fade-in duration-200"
                 >
                   {/* Fima Sparkle Avatar */}
-                  <div className="w-8 h-8 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/20 shadow-2xs">
+                  <div className="w-8 h-8 rounded-full bg-accent/15 text-accent flex items-center justify-center shrink-0 mt-0.5 border border-accent/20">
                     <Sparkles className="w-4 h-4" />
                   </div>
 
                   {/* Fima Content Presentation */}
-                  <div className="flex-1 space-y-2.5 overflow-hidden">
-                    {/* Header info */}
-                    <div className="flex items-center space-x-2 text-[11px] text-[#6B7280] dark:text-[#9CA3AF]">
-                      <span className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6]">
-                        Fima
-                      </span>
+                  <div className="flex-1 space-y-2 overflow-hidden">
+                    <div className="flex items-center space-x-2 text-[11px] text-ink-muted">
+                      <span className="font-bold text-ink">Fima</span>
                       <span>•</span>
-                      <span className="font-mono-num">{msg.timestamp}</span>
+                      <span className="font-mono-num num">{msg.timestamp}</span>
                     </div>
 
-                    {/* Markdown Body */}
-                    <div className="text-sm leading-relaxed text-[#1A1A1A] dark:text-[#E5E7EB] space-y-2">
-                      <FormattedMessage content={msg.content} className="text-sm" />
+                    <div className="text-xs sm:text-sm leading-relaxed text-ink space-y-2">
+                      <FormattedMessage content={msg.content} className="text-xs sm:text-sm" />
                     </div>
 
-                    {/* Search Queries if executed */}
+                    {/* Search Queries */}
                     {msg.searchQueries && msg.searchQueries.length > 0 && (
-                      <div className="pt-2 border-t border-[#E8E5DF] dark:border-[#252A36] space-y-1.5">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#6B7280] dark:text-[#9CA3AF] flex items-center space-x-1">
-                          <Search className="w-3 h-3 text-blue-500" />
+                      <div className="pt-2 border-t border-line space-y-1.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-ink-muted flex items-center space-x-1">
+                          <Search className="w-3 h-3 text-accent" />
                           <span>Web Grounding Inquiries:</span>
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {msg.searchQueries.map((q, idx) => (
                             <span
                               key={idx}
-                              className="px-2.5 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-mono-num"
+                              className="lg-pill lg-pill-accent text-[11px] font-mono-num"
                             >
                               "{q}"
                             </span>
@@ -1004,10 +939,10 @@ export const AIAdvisorPage: React.FC = () => {
                       </div>
                     )}
 
-                    {/* Web Grounding Citations */}
+                    {/* Grounded Sources */}
                     {msg.groundingSources && msg.groundingSources.length > 0 && (
-                      <div className="pt-2 border-t border-[#E8E5DF] dark:border-[#252A36] space-y-1.5">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center space-x-1">
+                      <div className="pt-2 border-t border-line space-y-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-accent flex items-center space-x-1">
                           <Globe className="w-3 h-3" />
                           <span>Grounded Sources:</span>
                         </span>
@@ -1018,12 +953,12 @@ export const AIAdvisorPage: React.FC = () => {
                               href={src.uri}
                               target="_blank"
                               rel="noreferrer noopener"
-                              className="flex items-center justify-between p-2 rounded-xl bg-[#F7F5F2] dark:bg-[#1C202B] hover:bg-[#E8E5DF] dark:hover:bg-[#252A38] border border-[#E8E5DF] dark:border-[#252A36] text-xs text-[#1A1A1A] dark:text-[#F3F4F6] transition-colors truncate group"
+                              className="flex items-center justify-between p-2.5 rounded-xl bg-sunken hover:bg-surface border border-line text-xs text-ink transition-colors truncate group"
                             >
                               <span className="truncate pr-2 font-medium group-hover:underline">
                                 {src.title || src.uri}
                               </span>
-                              <ExternalLink className="w-3.5 h-3.5 shrink-0 text-[#6B7280]" />
+                              <ExternalLink className="w-3.5 h-3.5 shrink-0 text-ink-muted" />
                             </a>
                           ))}
                         </div>
@@ -1033,17 +968,18 @@ export const AIAdvisorPage: React.FC = () => {
                     {/* Action Row Under Response */}
                     <div className="flex items-center space-x-2 pt-1">
                       <button
+                        type="button"
                         onClick={() => handleToggleSpeak(msg.id, msg.content)}
                         className={`px-2.5 py-1 rounded-lg text-xs flex items-center space-x-1 transition-colors ${
                           speakingMessageId === msg.id
-                            ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 font-semibold'
-                            : 'text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F]'
+                            ? 'text-accent bg-accent/15 font-semibold'
+                            : 'text-ink-muted hover:text-ink hover:bg-sunken'
                         }`}
                         title={speakingMessageId === msg.id ? 'Stop audio playback' : 'Read aloud'}
                       >
                         {speakingMessageId === msg.id ? (
                           <>
-                            <VolumeX className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                            <VolumeX className="w-3.5 h-3.5 text-accent animate-pulse" />
                             <span>Stop</span>
                           </>
                         ) : (
@@ -1055,14 +991,15 @@ export const AIAdvisorPage: React.FC = () => {
                       </button>
 
                       <button
+                        type="button"
                         onClick={() => handleCopyMessage(msg.id, msg.content)}
-                        className="px-2.5 py-1 rounded-lg text-xs text-[#6B7280] dark:text-[#9CA3AF] hover:text-[#1A1A1A] dark:hover:text-white hover:bg-[#F7F5F2] dark:hover:bg-[#1E232F] flex items-center space-x-1 transition-colors"
+                        className="px-2.5 py-1 rounded-lg text-xs text-ink-muted hover:text-ink hover:bg-sunken flex items-center space-x-1 transition-colors"
                         title="Copy answer"
                       >
                         {copiedId === msg.id ? (
                           <>
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            <span className="text-emerald-600 font-semibold">Copied</span>
+                            <Check className="w-3.5 h-3.5 text-pos" />
+                            <span className="text-pos font-semibold">Copied</span>
                           </>
                         ) : (
                           <>
@@ -1077,25 +1014,20 @@ export const AIAdvisorPage: React.FC = () => {
               );
             })}
 
-            {/* Gemini Thinking / Loading State */}
+            {/* Thinking / Loading State */}
             {isLoading && (
               <div className="flex items-start space-x-3 sm:space-x-4 animate-in fade-in duration-200">
-                <div className="w-8 h-8 rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5 border border-emerald-500/20">
-                  <Sparkles className="w-4 h-4 animate-spin text-emerald-500" />
+                <div className="w-8 h-8 rounded-full bg-accent/15 text-accent flex items-center justify-center shrink-0 mt-0.5 border border-accent/20">
+                  <Sparkles className="w-4 h-4 animate-spin" />
                 </div>
-                <div className="space-y-2 py-1">
-                  <div className="flex items-center space-x-2 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-500" />
+                <div className="space-y-1.5 py-1">
+                  <div className="flex items-center space-x-2 text-xs text-ink-muted">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-accent" />
                     <span>
                       {enableSearch
-                        ? 'Searching live web data & analyzing ledger context...'
-                        : 'Thinking and formulating response...'}
+                        ? 'Searching live data & analyzing context...'
+                        : 'Thinking and analyzing...'}
                     </span>
-                  </div>
-                  <div className="flex space-x-1.5 pt-0.5">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" />
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce [animation-delay:0.4s]" />
                   </div>
                 </div>
               </div>
@@ -1105,7 +1037,7 @@ export const AIAdvisorPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Gemini Floating Input Bar Capsule */}
+        {/* Input Bar */}
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-8 pb-4">
           <input
             ref={fileInputRef}
@@ -1135,22 +1067,22 @@ export const AIAdvisorPage: React.FC = () => {
                 handleFiles(e.dataTransfer.files);
               }
             }}
-            className={`rounded-3xl bg-[#FDFCFB] dark:bg-[#1A1E28] border shadow-md focus-within:border-[#1A1A1A] dark:focus-within:border-white focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all p-3 space-y-2 ${
+            className={`rounded-2xl bg-sunken border shadow-xs transition-all p-3 space-y-2 ${
               isDraggingFile
-                ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20'
-                : 'border-[#E8E5DF] dark:border-[#2C3242]'
+                ? 'border-accent ring-1 ring-accent'
+                : 'border-line focus-within:border-ink/40'
             }`}
           >
-            {/* Rate limit warning banner (only shown if profile limit is reached) */}
+            {/* Quota limit warning banner */}
             {quota && quota.remainingMessages <= 0 && (
-              <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 text-xs flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
                   <span>
                     <strong>Profile Limit Reached:</strong> 40 messages limit reached. Automatically resets 4 hours later.
                   </span>
                 </div>
-                <span className="text-[11px] font-mono-num text-amber-700 dark:text-amber-300">
+                <span className="text-[11px] font-mono-num num font-semibold">
                   Cooldown active
                 </span>
               </div>
@@ -1158,11 +1090,11 @@ export const AIAdvisorPage: React.FC = () => {
 
             {/* Attachments Chips Preview */}
             {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-1.5 bg-[#F7F5F2] dark:bg-[#202533] rounded-2xl border border-[#E8E5DF] dark:border-[#2C3242]">
+              <div className="flex flex-wrap gap-2 p-1.5 bg-surface rounded-xl border border-line">
                 {attachments.map((att, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center space-x-2 pl-2 pr-1.5 py-1 rounded-xl bg-white dark:bg-[#151821] border border-[#E8E5DF] dark:border-[#2C3242] text-xs shadow-2xs"
+                    className="flex items-center space-x-2 pl-2 pr-1.5 py-1 rounded-lg bg-sunken border border-line text-xs"
                   >
                     {att.type.startsWith('image/') ? (
                       <img
@@ -1171,27 +1103,27 @@ export const AIAdvisorPage: React.FC = () => {
                         className="w-6 h-6 object-cover rounded"
                       />
                     ) : (
-                      <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <FileText className="w-4 h-4 text-accent shrink-0" />
                     )}
                     <div className="flex flex-col min-w-0 max-w-[130px]">
-                      <span className="truncate text-[11px] font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                      <span className="truncate text-[11px] font-semibold text-ink">
                         {att.name}
                       </span>
-                      <span className="text-[9px] text-[#6B7280] dark:text-[#9CA3AF]">
+                      <span className="text-[9px] text-ink-muted font-mono-num num">
                         {att.size ? `${(att.size / 1024).toFixed(0)} KB` : 'File'}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={() => removeAttachment(idx)}
-                      className="p-1 rounded-lg text-[#9CA3AF] hover:text-red-500 hover:bg-[#F7F5F2] dark:hover:bg-[#252A38] transition-colors"
+                      className="p-1 rounded text-ink-muted hover:text-neg"
                       title="Remove attachment"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
-                <span className="text-[10px] text-[#6B7280] dark:text-[#9CA3AF] self-center px-1 font-mono-num">
+                <span className="text-[10px] text-ink-muted self-center px-1 font-mono-num num">
                   {attachments.length}/2 attached
                 </span>
               </div>
@@ -1212,153 +1144,137 @@ export const AIAdvisorPage: React.FC = () => {
               rows={2}
               placeholder={
                 quota && quota.remainingMessages <= 0
-                  ? 'Profile quota reached. Please wait for the 4-hour window to reset...'
+                  ? 'Profile quota reached. Please wait for the window to reset...'
                   : attachments.length > 0
-                  ? 'Add your question or notes regarding the attached document(s)...'
-                  : 'Ask Fima anything: budget analysis, debt payoffs, savings growth, or investment advice...'
+                  ? 'Add your question or instructions for attached files...'
+                  : 'Ask Fima: budget analysis, debt strategy, savings planning, or economic questions...'
               }
-              className="w-full bg-transparent text-base sm:text-sm text-[#1A1A1A] dark:text-[#F3F4F6] placeholder-[#9CA3AF] resize-none outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed px-1"
+              className="w-full bg-transparent text-xs sm:text-sm text-ink placeholder-ink-muted resize-none outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed leading-relaxed px-1"
             />
 
             {/* Controls Bar Inside Capsule */}
-            <div className="flex items-center justify-between pt-1 border-t border-[#E8E5DF]/60 dark:border-[#2C3242]/60">
-              {/* Left Capsule Controls */}
-              <div className="flex items-center space-x-3 text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+            <div className="flex items-center justify-between pt-1 border-t border-line">
+              <div className="flex items-center space-x-2 text-xs text-ink-muted">
                 {enableSearch && (
-                  <span className="text-blue-600 dark:text-blue-400 font-semibold flex items-center space-x-1 text-[11px]">
-                    <Globe className="w-3 h-3" />
-                    <span>Search On</span>
+                  <span className="lg-pill lg-pill-accent text-[10px] py-0 px-1.5 font-semibold">
+                    <Globe className="w-3 h-3 mr-1 inline" />
+                    Search On
                   </span>
                 )}
               </div>
 
-              {/* Right Capsule Action Buttons */}
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                {/* Paperclip / File Attachment Button (Max 2 files/pictures/documents) */}
+              {/* Action Buttons */}
+              <div className="flex items-center space-x-1.5">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={attachments.length >= 2 || isLoading || (quota !== null && quota.remainingMessages <= 0)}
-                  className={`p-2 rounded-full transition-colors flex items-center justify-center ${
-                    attachments.length >= 2
-                      ? 'opacity-40 cursor-not-allowed text-[#9CA3AF]'
-                      : 'hover:bg-[#F7F5F2] dark:hover:bg-[#252A38] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-white'
-                  }`}
-                  title={
-                    attachments.length >= 2
-                      ? 'Maximum 2 attachments reached'
-                      : 'Attach documents, pictures, or files (Max 2)'
-                  }
+                  className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-surface transition-colors disabled:opacity-30"
+                  title="Attach documents or pictures (Max 2)"
+                  aria-label="Attach documents or pictures"
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setIsLiveVoiceOpen(true)}
-                  className="p-2 rounded-full hover:bg-[#F7F5F2] dark:hover:bg-[#252A38] text-[#6B7280] hover:text-[#1A1A1A] dark:text-[#9CA3AF] dark:hover:text-white transition-colors"
-                  title="Speak with Fima in borderless voice mode"
+                  className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-surface transition-colors"
+                  title="Speak with Fima in voice mode"
+                  aria-label="Speak with Fima in voice mode"
                 >
                   <Mic className="w-4 h-4" />
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => handleSendMessage()}
                   disabled={(!inputPrompt.trim() && attachments.length === 0) || isLoading || (quota !== null && quota.remainingMessages <= 0)}
-                  className="p-2 sm:px-3 sm:py-2 bg-[#1A1A1A] hover:bg-[#333333] dark:bg-[#F3F4F6] dark:hover:bg-white text-white dark:text-[#111317] rounded-full sm:rounded-xl font-bold transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-xs active:scale-95 flex items-center space-x-1.5"
-                  title="Send prompt to Fima"
+                  className="lg-btn-solid text-xs p-2 sm:px-3 sm:py-2"
+                  title="Send prompt"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span className="text-xs hidden sm:inline">Send</span>
+                  <span className="hidden sm:inline">Send</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Micro Footer Status & Disclaimer (Backdoor quota - hidden from bottom) */}
-          <div className="flex items-center justify-between text-[11px] text-[#6B7280] dark:text-[#9CA3AF] px-2 pt-1.5">
-            <div className="flex items-center space-x-2 text-[10px] text-[#9CA3AF]">
-              <span>Max 2 attachments per prompt (PDF, images, docs, CSV)</span>
-            </div>
-            <p className="text-[10px] text-[#9CA3AF] text-right truncate">
-              Fima is an AI financial assistant. Verify financial decisions.
-            </p>
+          <div className="flex items-center justify-between text-[11px] text-ink-muted px-2 pt-1.5">
+            <span className="text-[10px]">Max 2 attachments (PDF, images, docs, CSV)</span>
+            <span className="text-[10px] text-right truncate">Fima is an AI financial assistant. Verify financial decisions.</span>
           </div>
         </div>
       </div>
 
-      {/* Slide-Over Drawer: Active Ledger Financial Scope */}
+      {/* Slide-Over Drawer: Active Ledger Scope */}
       {showLedgerSidebar && (
         <div className="fixed inset-0 z-50 flex justify-end animate-in fade-in duration-200">
-          {/* Backdrop */}
           <div
             onClick={() => setShowLedgerSidebar(false)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+            className="absolute inset-0 bg-ink/50 backdrop-blur-xs transition-opacity"
           />
 
-          {/* Drawer Panel */}
-          <aside className="relative z-10 w-full max-w-md bg-white dark:bg-[#1A1D24] h-full shadow-2xl p-6 overflow-y-auto space-y-5 animate-in slide-in-from-right duration-200 border-l border-[#E8E5DF] dark:border-[#2D323F]">
-            {/* Drawer Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#E8E5DF] dark:border-[#2D323F]">
+          <aside className="relative z-10 w-full max-w-md bg-surface h-full shadow-2xl p-6 overflow-y-auto space-y-5 animate-in slide-in-from-right duration-200 border-l border-line">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
               <div className="flex items-center space-x-2">
-                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                <div className="p-1.5 rounded-lg bg-accent/15 text-accent">
                   <Wallet className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-sm text-[#1A1A1A] dark:text-[#F3F4F6]">
+                  <h3 className="font-display font-bold text-sm text-ink">
                     Live Ledger Scope
                   </h3>
-                  <span className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
+                  <span className="text-xs text-ink-muted">
                     {profileName} ({currency})
                   </span>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowLedgerSidebar(false)}
-                className="p-1.5 rounded-xl hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] text-[#6B7280] dark:text-[#9CA3AF]"
+                className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-sunken"
+                aria-label="Close drawer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Financial Metrics */}
-            <div className="space-y-2 text-xs font-mono-num bg-[#FDFCFB] dark:bg-[#14161B] p-4 rounded-2xl border border-[#E8E5DF] dark:border-[#2D323F]">
+            <div className="space-y-2.5 text-xs font-mono-num num bg-sunken p-4 rounded-xl border border-line">
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Net Balance:</span>
-                <span
-                  className={`font-bold text-sm ${
-                    netBalance >= 0 ? 'text-[#15803D]' : 'text-[#DC2626]'
-                  }`}
-                >
+                <span className="text-ink-muted font-normal">Net Balance:</span>
+                <span className={`font-bold text-sm ${netBalance >= 0 ? 'text-pos' : 'text-neg'}`}>
                   {currency} {netBalance.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Month Income:</span>
-                <span className="font-semibold text-[#15803D]">
+                <span className="text-ink-muted font-normal">Month Income:</span>
+                <span className="font-semibold text-pos">
                   +{currency} {monthIncome.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Month Expenses:</span>
-                <span className="font-semibold text-[#DC2626]">
+                <span className="text-ink-muted font-normal">Month Expenses:</span>
+                <span className="font-semibold text-neg">
                   -{currency} {monthExpense.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Savings Rate:</span>
-                <span className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                <span className="text-ink-muted font-normal">Savings Rate:</span>
+                <span className="font-semibold text-ink">
                   {savingsRate}%
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Savings Vaults:</span>
-                <span className="font-semibold text-[#1A1A1A] dark:text-[#F3F4F6]">
+                <span className="text-ink-muted font-normal">Savings Vaults:</span>
+                <span className="font-semibold text-ink">
                   {goals.length} goals ({currency} {totalSavedInGoals.toLocaleString()})
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-[#6B7280] dark:text-[#9CA3AF]">Debts Balance:</span>
-                <span className="font-semibold text-rose-600 dark:text-rose-400">
+                <span className="text-ink-muted font-normal">Debts Balance:</span>
+                <span className="font-semibold text-neg">
                   {currency} {totalIOwe.toLocaleString()}
                 </span>
               </div>
@@ -1366,24 +1282,25 @@ export const AIAdvisorPage: React.FC = () => {
 
             {/* Quick Inquiries */}
             <div className="space-y-3">
-              <span className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] block">
+              <span className="text-xs font-bold text-ink block uppercase tracking-wider">
                 Suggested Financial Audits
               </span>
               <div className="space-y-2">
                 {QUICK_PROMPTS.map((qp, idx) => (
                   <button
                     key={idx}
+                    type="button"
                     onClick={() => {
                       setShowLedgerSidebar(false);
                       if (qp.enableSearch) setEnableSearch(true);
                       handleSendMessage(qp.prompt, qp.enableSearch);
                     }}
-                    className="w-full text-left p-2.5 rounded-xl border border-[#E8E5DF] dark:border-[#2D323F] hover:border-[#1A1A1A] dark:hover:border-[#F3F4F6] bg-[#FDFCFB] dark:bg-[#14161B] hover:bg-[#F7F5F2] dark:hover:bg-[#22252E] transition-all group"
+                    className="w-full text-left p-3 rounded-xl border border-line bg-sunken hover:border-ink/20 transition-all group"
                   >
-                    <div className="text-xs font-bold text-[#1A1A1A] dark:text-[#F3F4F6] group-hover:underline">
+                    <div className="text-xs font-bold text-ink group-hover:underline">
                       {qp.title}
                     </div>
-                    <p className="text-[11px] text-[#6B7280] dark:text-[#9CA3AF] line-clamp-2 mt-0.5">
+                    <p className="text-[11px] text-ink-muted line-clamp-2 mt-0.5">
                       {qp.prompt}
                     </p>
                   </button>
@@ -1392,20 +1309,21 @@ export const AIAdvisorPage: React.FC = () => {
             </div>
 
             {/* Voice Mode Callout */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800 space-y-2">
-              <div className="flex items-center space-x-2 text-emerald-800 dark:text-emerald-300 font-bold text-xs">
-                <Mic className="w-4 h-4 text-emerald-600 dark:text-emerald-400 animate-pulse" />
+            <div className="p-4 rounded-xl bg-accent/10 border border-accent/20 space-y-2">
+              <div className="flex items-center space-x-2 text-ink font-bold text-xs">
+                <Mic className="w-4 h-4 text-accent" />
                 <span>Switch to Voice Fima</span>
               </div>
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-300/80 leading-relaxed">
-                Connect hands-free with an immersive, full-screen borderless voice interface.
+              <p className="text-[11px] text-ink-muted leading-relaxed">
+                Connect hands-free with an immersive full-screen voice dialogue.
               </p>
               <button
+                type="button"
                 onClick={() => {
                   setShowLedgerSidebar(false);
                   setIsLiveVoiceOpen(true);
                 }}
-                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-2xs"
+                className="w-full py-2 rounded-xl lg-btn-solid text-xs"
               >
                 Launch Voice Session
               </button>
@@ -1414,7 +1332,7 @@ export const AIAdvisorPage: React.FC = () => {
         </div>
       )}
 
-      {/* Live Voice Modal (ChatGPT-Style Full-Screen Borderless) */}
+      {/* Live Voice Modal */}
       <LiveVoiceModal
         isOpen={isLiveVoiceOpen}
         onClose={() => setIsLiveVoiceOpen(false)}

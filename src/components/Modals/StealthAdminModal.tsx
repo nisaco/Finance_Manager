@@ -54,56 +54,53 @@ export const StealthAdminModal: React.FC<StealthAdminModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="w-full max-w-md bg-[#14161B] text-[#F3F4F6] rounded-2xl border border-amber-500/30 shadow-2xl p-6 relative overflow-hidden"
+        className="w-full max-w-md bg-surface text-ink rounded-2xl border border-line shadow-2xl p-6 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top ambient highlight */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500" />
-
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="lg-iconbtn absolute top-4 right-4"
           aria-label="Close stealth dialog"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg shadow-amber-500/20">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-solid text-on-solid flex items-center justify-center shadow-xs">
             <Shield className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center space-x-2">
-              <h2 className="text-base font-bold tracking-tight text-white">Stealth Security Clearance</h2>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+            <div className="flex items-center gap-2">
+              <h2 className="t-card">Stealth Security Clearance</h2>
+              <span className="text-[10px] num font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-warn border border-warn/30">
                 5-Tap Auth
               </span>
             </div>
-            <p className="text-xs text-neutral-400">Owner &amp; Admin Master Verification</p>
+            <p className="t-meta mt-0.5">Owner &amp; Admin Master Verification</p>
           </div>
         </div>
 
-        <p className="text-xs text-neutral-300 leading-relaxed mb-4 bg-white/5 p-3 rounded-xl border border-white/5">
-          Enter the <code className="text-amber-300 font-mono font-bold">ADMIN_SECRET_KEY</code> defined in your platform Secrets to instantly unlock the Admin Portal and elevate your session to Super Admin.
+        <p className="t-meta leading-relaxed mb-4 bg-sunken p-3.5 rounded-xl border border-line">
+          Enter the <code className="text-ink font-bold num">ADMIN_SECRET_KEY</code> defined in your platform environment to instantly unlock the Admin Portal and elevate your session.
         </p>
 
         {error && (
-          <div className="flex items-start space-x-2.5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs mb-4">
-            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-neg-soft border border-neg-soft text-neg text-xs mb-4">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-neutral-300 block flex items-center justify-between">
+            <label className="block t-eyebrow flex items-center justify-between">
               <span>Admin Secret Key</span>
-              <span className="text-[10px] text-neutral-400 font-mono">Confidential</span>
+              <span className="t-meta num">Confidential</span>
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-neutral-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-3">
                 <Key className="w-4 h-4" />
               </div>
               <input
@@ -112,12 +109,12 @@ export const StealthAdminModal: React.FC<StealthAdminModalProps> = ({
                 onChange={(e) => setSecretKey(e.target.value)}
                 placeholder="Enter ADMIN_SECRET_KEY..."
                 autoFocus
-                className="w-full pl-9 pr-10 py-2.5 bg-black/40 border border-neutral-700 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-xl text-xs font-mono text-white placeholder-neutral-500 outline-none transition-all"
+                className="w-full pl-9 pr-10 py-2.5 bg-sunken border border-line rounded-xl text-xs num text-ink placeholder-ink-3 focus:outline-none focus:border-accent"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-white transition-colors"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-3 hover:text-ink transition-colors cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -125,19 +122,19 @@ export const StealthAdminModal: React.FC<StealthAdminModalProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-end space-x-2.5 pt-2">
+          <div className="flex items-center justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-neutral-300 hover:bg-white/10 transition-colors"
+              className="lg-btn lg-btn-quiet lg-btn-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading || !secretKey.trim()}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 active:scale-95 transition-all shadow-md shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="lg-btn lg-btn-solid lg-btn-sm disabled:opacity-40 flex items-center gap-1.5"
             >
               {isLoading ? (
                 <>
