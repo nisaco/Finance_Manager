@@ -46,6 +46,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
 
   return (
     <div className="space-y-5">
+    <div className="space-y-5 animate-in fade-in duration-200">
       {/* ---- Page header ---- */}
       <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
@@ -135,6 +136,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
 
             return (
               <article key={b.id} className="lg-card p-4 sm:p-5 flex flex-col">
+              <article key={b.id} className="lg-card lg-card-interactive p-4 sm:p-5 flex flex-col">
                 {/* Name and controls */}
                 <div className="flex items-start justify-between gap-2">
                   <h2 className="t-card min-w-0 truncate">{b.category}</h2>

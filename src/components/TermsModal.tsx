@@ -82,9 +82,14 @@ export const TermsModal: React.FC<TermsModalProps> = ({
           <section className="space-y-2">
             <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
               3. User Right to Withdraw Funds &amp; Payout Policy
+              3. User Right to Withdraw Funds &amp; Next Working Day Payout Timeline
             </h3>
             <p className="text-xs leading-5">
               Users retain unalienable ownership of their deposited principal and are entitled to request the withdrawal of their available savings vault balances at any time via the platform’s <strong>Withdraw Funds / Request Payout</strong> interface. Outbound payouts are settled to the user's verified Mobile Money wallet or nominated commercial bank account. To prevent unauthorized account drainage, all withdrawal requests are subject to automated verification and administrative anti-fraud clearance before disbursement.
+              Users retain unalienable ownership of their deposited principal and are entitled to request the withdrawal of their available savings vault balances at any time via the platform’s <strong>Withdraw Funds / Request Payout</strong> interface. Outbound payouts are settled to the user's verified Mobile Money wallet or nominated commercial bank account.
+            </p>
+            <p className="text-xs leading-5">
+              <strong>Disbursement Timeline:</strong> To safeguard user balances and maintain rigorous anti-fraud clearance, all approved withdrawals are dispatched to the recipient on the <strong>next working day (T+1 business day)</strong> from the date and time the withdrawal request was issued (excluding public holidays and non-banking weekends).
             </p>
           </section>
 

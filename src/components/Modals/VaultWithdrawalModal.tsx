@@ -445,6 +445,11 @@ export const VaultWithdrawalModal: React.FC<VaultWithdrawalModalProps> = ({
                 {currency} {netPayoutAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
+
+            <div className="pt-2 border-t border-line/50 flex items-center gap-1.5 text-[11px] text-ink-muted">
+              <ShieldCheck className="w-3.5 h-3.5 text-accent shrink-0" />
+              <span>Payouts are processed & dispatched on the <strong>next working day (T+1)</strong>.</span>
+            </div>
           </div>
 
           {/* Account Details */}

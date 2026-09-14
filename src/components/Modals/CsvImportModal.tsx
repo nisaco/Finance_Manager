@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Upload, FileSpreadsheet } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useLedger } from '../../context/LedgerContext';
 import { api } from '../../api/client';
@@ -80,14 +80,13 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-surface border border-line rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-        
         <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0 bg-surface">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
               <FileSpreadsheet className="w-5 h-5 stroke-[1.8] text-accent" />
             </div>
             <div>
-              <h2 className="t-card font-bold">
+              <h2 className="t-card">
                 Import Transactions (CSV &amp; Excel)
               </h2>
               <span className="t-meta num block text-xs">
@@ -138,7 +137,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
                     setFileName(null);
                     setParsedCount(null);
                   }}
-                  className="text-xs text-ink-3 hover:text-ink underline"
+                  className="text-xs text-ink-muted hover:text-ink underline"
                 >
                   Clear
                 </button>
@@ -175,7 +174,6 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({ isOpen, onClose 
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );

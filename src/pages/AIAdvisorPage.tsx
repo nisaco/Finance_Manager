@@ -626,6 +626,7 @@ export const AIAdvisorPage: React.FC = () => {
 
   return (
     <div className="space-y-3 pb-6">
+    <div className="space-y-3 pb-6 animate-in fade-in duration-200">
       {/* Top Header: Model Selector & Actions */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-line pb-3">
         {/* Model Selector */}

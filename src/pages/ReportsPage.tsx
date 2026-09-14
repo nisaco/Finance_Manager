@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   PieChart as PieIcon,
   TrendingUp,
@@ -133,6 +133,7 @@ export const ReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header with Export Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

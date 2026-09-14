@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   PiggyBank,
   Plus,
@@ -141,6 +141,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
 
   return (
     <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -316,6 +317,7 @@ export const GoalsPage: React.FC<GoalsPageProps> = ({
               <div
                 key={g.id}
                 className="lg-card p-4 sm:p-5 flex flex-col justify-between space-y-4"
+                className="lg-card lg-card-interactive p-4 sm:p-5 flex flex-col justify-between space-y-4"
               >
                 <div>
                   {/* Top Header */}
