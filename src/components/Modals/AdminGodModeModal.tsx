@@ -228,9 +228,6 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-5xl bg-surface rounded-2xl border border-line shadow-2xl overflow-hidden text-ink max-h-[92vh] flex flex-col">
-        <ModalErrorBoundary>
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink/75 backdrop-blur-xs animate-in fade-in duration-150"
       role="dialog"
@@ -687,7 +684,6 @@ export const AdminGodModeModal: React.FC<AdminGodModeModalProps> = ({ isOpen, on
             Close Portal
           </button>
         </div>
-        </ModalErrorBoundary>
       </div>
 
       {/* Approval Sub-Modal */}
