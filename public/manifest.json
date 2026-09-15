@@ -1,6 +1,6 @@
 {
-  "name": "Ledger — Financial Operating System",
-  "short_name": "Ledger",
+  "name": "Fimara — Financial Operating System",
+  "short_name": "Fimara",
   "description": "Multi-Entity financial operating system with savings vaults, multi-profile tracking, debts, and automated Paystack receipts.",
   "start_url": "/",
   "id": "/",
