@@ -25,6 +25,7 @@ import {
   RotateCcw,
   Sliders,
   Smartphone,
+  KeyRound,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -34,6 +35,7 @@ import { PrivacyModal } from '../components/PrivacyModal';
 import { InstallPwaModal, usePwaInstall } from '../components/Modals/InstallPwaModal';
 import { api } from '../api/client';
 import { formatCurrency } from '../design/tokens';
+import { saveOfflinePin, hasOfflinePin } from '../services/offlinePinAuth';
 
 interface SettingsPageProps {
   onOpenAuditLogs: () => void;
@@ -102,6 +104,52 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   // Backup & restore
   const [restoreJson, setRestoreJson] = useState('');
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Offline PIN State
+  const [offlinePinInput, setOfflinePinInput] = useState('');
+  const [confirmOfflinePinInput, setConfirmOfflinePinInput] = useState('');
+  const [isSavingOfflinePin, setIsSavingOfflinePin] = useState(false);
+  const [hasConfiguredOfflinePin, setHasConfiguredOfflinePin] = useState(() => {
+    return user?.id ? hasOfflinePin(user.id) || Boolean(user.hasOfflinePin) : false;
+  });
+  const [showChangePinForm, setShowChangePinForm] = useState(false);
+
+  const handleSaveOfflinePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    const cleanPin = offlinePinInput.trim();
+    if (!/^\d{4}$/.test(cleanPin)) {
+      notify('PIN must be exactly 4 digits (e.g. 1234)', 'error');
+      return;
+    }
+    if (cleanPin !== confirmOfflinePinInput.trim()) {
+      notify('PIN entries do not match', 'error');
+      return;
+    }
+
+    setIsSavingOfflinePin(true);
+    try {
+      const hash = await saveOfflinePin(user.id, cleanPin);
+      if (typeof navigator !== 'undefined' && navigator.onLine) {
+        try {
+          const res = await api.setOfflinePin(cleanPin, hash);
+          notify(res.message || 'Offline PIN saved and confirmation sent to your email');
+        } catch {
+          notify('Offline PIN saved locally on this device', 'info');
+        }
+      } else {
+        notify('Offline PIN saved locally on this device', 'info');
+      }
+      setHasConfiguredOfflinePin(true);
+      setOfflinePinInput('');
+      setConfirmOfflinePinInput('');
+      setShowChangePinForm(false);
+    } catch (err: any) {
+      notify(err.message || 'Failed to save offline PIN', 'error');
+    } finally {
+      setIsSavingOfflinePin(false);
+    }
+  };
 
   const handleResetBalance = async () => {
     if (!activeProfile) return;
@@ -679,6 +727,124 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             </button>
           </div>
         </form>
+      </div>
+
+      {/* 4-Digit Offline Passcode Security Card */}
+      <div className="lg-card p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-line pb-3">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
+              <KeyRound className="w-4 h-4 text-accent" strokeWidth={1.8} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-bold text-ink">4-Digit Offline Passcode</h2>
+                {hasConfiguredOfflinePin ? (
+                  <span className="lg-tag lg-tag-pos text-[9px] font-semibold">Configured</span>
+                ) : (
+                  <span className="lg-tag text-[9px] font-semibold text-warn">Setup Required</span>
+                )}
+              </div>
+              <p className="text-xs text-ink-3 mt-0.5">
+                Use this 4-digit PIN to securely unlock your local ledger when opening Fimara without internet or mobile data.
+              </p>
+            </div>
+          </div>
+
+          {hasConfiguredOfflinePin && !showChangePinForm && (
+            <button
+              type="button"
+              onClick={() => setShowChangePinForm(true)}
+              className="lg-btn lg-btn-quiet text-xs self-start sm:self-center"
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>Change Offline PIN</span>
+            </button>
+          )}
+        </div>
+
+        {(!hasConfiguredOfflinePin || showChangePinForm) ? (
+          <form onSubmit={handleSaveOfflinePin} className="space-y-3 pt-1">
+            <div className="p-3 rounded-xl bg-sunken border border-line text-xs text-ink-2 space-y-1">
+              <div className="font-semibold text-ink">How Offline PIN Works:</div>
+              <p className="text-[11px] leading-relaxed">
+                • <strong>When Online:</strong> You always sign in with your normal password or Google account. The offline PIN cannot be used online.<br />
+                • <strong>When Offline:</strong> You enter your 4-digit PIN to instantly unlock and view your local ledger without data.<br />
+                • <strong>Email Backup:</strong> We email you a confirmation copy of your PIN for safe keeping.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-ink mb-1">
+                  New 4-Digit Offline PIN
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  required
+                  placeholder="e.g. 1234"
+                  value={offlinePinInput}
+                  onChange={(e) => setOfflinePinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className="lg-input num text-center tracking-widest text-base font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-ink mb-1">
+                  Confirm 4-Digit PIN
+                </label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={4}
+                  required
+                  placeholder="Repeat 4 digits"
+                  value={confirmOfflinePinInput}
+                  onChange={(e) => setConfirmOfflinePinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  className="lg-input num text-center tracking-widest text-base font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              {showChangePinForm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowChangePinForm(false);
+                    setOfflinePinInput('');
+                    setConfirmOfflinePinInput('');
+                  }}
+                  className="lg-btn lg-btn-ghost text-xs"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={isSavingOfflinePin || offlinePinInput.length !== 4 || offlinePinInput !== confirmOfflinePinInput}
+                className="lg-btn lg-btn-solid text-xs"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{isSavingOfflinePin ? 'Saving PIN...' : hasConfiguredOfflinePin ? 'Update Offline PIN' : 'Save Offline PIN'}</span>
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex items-center justify-between p-3 rounded-xl bg-sunken border border-line text-xs">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-pos shrink-0" />
+              <span className="text-ink-2">
+                Your 4-digit Offline Passcode is active and verified on this device.
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-ink-3">••••</span>
+          </div>
+        )}
       </div>
 
       {/* Exchange Rates & Backup Grid */}

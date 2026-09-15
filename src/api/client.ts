@@ -146,6 +146,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ exchangeRates }),
     }),
+  setOfflinePin: (pin: string, pinHash: string) =>
+    request<{ success: boolean; message: string; emailSent?: boolean }>('/api/user/offline-pin', {
+      method: 'POST',
+      body: JSON.stringify({ pin, pinHash }),
+    }),
 
   // Transactions
   getTransactions: (profileId: string, params?: Record<string, string>) => {

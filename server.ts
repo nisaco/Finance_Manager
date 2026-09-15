@@ -25,7 +25,7 @@ import {
 import { paystackService } from './server/services/paystack.js';
 import { convertAmount } from './server/services/currency.js';
 import { chatFinancialAdvisor, setupLiveWebSocket } from './server/services/gemini.js';
-import { sendPasswordResetEmail } from './server/services/email.js';
+import { sendPasswordResetEmail, sendOfflinePinConfirmationEmail } from './server/services/email.js';
 
 // Always honour the platform-assigned PORT (Render, Fly, Heroku, Docker...).
 // Falls back to 3000 for local development.
@@ -109,6 +109,7 @@ async function startServer() {
           role: user.role,
           agreedToTermsAt: user.agreedToTermsAt,
           createdAt: user.createdAt,
+          hasOfflinePin: Boolean((user as any).offlinePinHash),
         },
       });
     } catch (err: any) {
@@ -718,6 +719,41 @@ async function startServer() {
       return res.json({ success: true, user: updated });
     } catch (err: any) {
       return res.status(400).json({ error: err.message || 'Failed to update username' });
+    }
+  });
+
+  // Offline 4-digit PIN setup & confirmation email receipt
+  app.post('/api/user/offline-pin', authMiddleware, async (req: any, res: Response) => {
+    try {
+      const { pin, pinHash } = req.body;
+      if (!pin || typeof pin !== 'string' || !/^\d{4}$/.test(pin.trim())) {
+        return res.status(400).json({ error: 'Offline PIN must be a valid 4-digit numerical code (e.g. 1234)' });
+      }
+
+      const cleanPin = pin.trim();
+      const user = await dbManager.findUserById(req.user.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const hashToStore = pinHash || cleanPin;
+      await dbManager.updateUserOfflinePin(user.id, hashToStore);
+
+      // Send confirmation email with the PIN for safe keeping
+      let emailResult = { sent: false };
+      try {
+        emailResult = await sendOfflinePinConfirmationEmail(user.email, user.username, cleanPin);
+      } catch (e: any) {
+        console.warn('[OFFLINE PIN] Could not send confirmation email:', e.message);
+      }
+
+      return res.json({
+        success: true,
+        message: '4-digit Offline PIN successfully configured and confirmation sent to your email.',
+        emailSent: emailResult.sent,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Failed to configure offline PIN' });
     }
   });
 

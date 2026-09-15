@@ -6,6 +6,7 @@ export interface User {
   role: 'admin' | 'user';
   agreedToTermsAt: string;
   createdAt: string;
+  hasOfflinePin?: boolean;
 }
 
 export interface Profile {

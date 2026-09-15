@@ -504,6 +504,28 @@ export class LedgerMongoDbManager {
     return true;
   }
 
+  public async updateUserOfflinePin(userId: string, offlinePinHash: string): Promise<boolean> {
+    const idx = this.memUsers.findIndex((u) => u.id === userId);
+    if (idx !== -1) {
+      (this.memUsers[idx] as any).offlinePinHash = offlinePinHash;
+    }
+
+    try {
+      const db = await this.getDb();
+      if (db) {
+        await db.collection('users').updateOne(
+          { id: userId },
+          { $set: { offlinePinHash, offlinePinUpdatedAt: new Date().toISOString() } }
+        );
+      }
+    } catch (err) {
+      console.error('[DATABASE] updateUserOfflinePin MongoDB error:', err);
+      return false;
+    }
+
+    return true;
+  }
+
   public async setUserResetCode(email: string, code: string, expiresAt: string): Promise<boolean> {
     const cleanEmail = email.trim().toLowerCase();
     const user = await this.findUserByEmail(cleanEmail);

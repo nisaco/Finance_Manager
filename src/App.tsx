@@ -28,6 +28,8 @@ import { ProfileModal } from './components/Modals/ProfileModal';
 import { ProfileLockModal } from './components/Modals/ProfileLockModal';
 import { LiveVoiceModal } from './components/Modals/LiveVoiceModal';
 import { AdminGodModeModal } from './components/Modals/AdminGodModeModal';
+import { OfflineUnlockModal } from './components/Modals/OfflineUnlockModal';
+import { hasOfflinePin } from './services/offlinePinAuth';
 import { TermsModal } from './components/TermsModal';
 import { PrivacyModal } from './components/PrivacyModal';
 import { APP_VERSION } from './version';
@@ -439,8 +441,9 @@ const MainShell: React.FC = () => {
 };
 
 const AppRouter: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
+  const [isOfflineUnlocked, setIsOfflineUnlocked] = useState(false);
 
   if (showSplash) {
     return <SplashLoader onComplete={() => setShowSplash(false)} />;
@@ -448,6 +451,20 @@ const AppRouter: React.FC = () => {
 
   if (isAuthLoading) {
     return <SecuringWorkspaceLoader />;
+  }
+
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+  const hasPin = user ? hasOfflinePin(user.id) : false;
+
+  // When offline, if a cached user session with a configured offline PIN exists, require PIN to unlock
+  if (isOffline && user && hasPin && !isOfflineUnlocked) {
+    return (
+      <OfflineUnlockModal
+        isOpen={true}
+        user={user}
+        onUnlockSuccess={() => setIsOfflineUnlocked(true)}
+      />
+    );
   }
 
   if (!isAuthenticated) {
