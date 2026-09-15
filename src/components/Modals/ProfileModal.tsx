@@ -230,37 +230,29 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-surface border border-line rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-ink/65 backdrop-blur-xs transition-opacity"
       role="dialog"
       aria-modal="true"
     >
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
-      
       <div className="lg-card relative z-10 w-full max-w-lg bg-surface text-ink rounded-t-[24px] sm:rounded-2xl border border-line shadow-2xl flex flex-col max-h-[94vh] sm:max-h-[90vh] overflow-hidden pt-[max(env(safe-area-inset-top,0px),0.25rem)] sm:pt-0 pb-[max(env(safe-area-inset-bottom,0px),0.5rem)] sm:pb-0 animate-in fade-in-50 slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
-        {/* iOS Drag handle on mobile */}
         <div className="w-10 h-1 rounded-full bg-ink-4/30 mx-auto mt-2 sm:hidden shrink-0" aria-hidden="true" />
         
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0 bg-surface">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line shrink-0 bg-surface">
           <div className="flex items-center gap-3">
             <div
               className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
-              className="w-8.5 h-8.5 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
               style={{ backgroundColor: color }}
             >
               {isLocked ? <Lock className="w-4 h-4" /> : <User className="w-4 h-4" />}
             </div>
             <div>
               <h2 className="t-card">
-              <h2 className="t-card text-sm font-bold">
                 {initialData ? 'Edit Profile & Security' : 'Create New Profile'}
               </h2>
               <span className="t-meta num block">
-              <span className="t-meta text-[11px] block">
                 {initialData
                   ? 'Manage identity, base currency, and PIN lock'
                   : 'Add an independent financial space to your ledger'}
@@ -270,7 +262,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <button
             onClick={onClose}
             className="lg-iconbtn"
-            className="lg-iconbtn shrink-0"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -279,7 +270,6 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
           
           {error && (
             <div className="p-3 bg-neg-soft border border-neg-soft rounded-xl flex items-start gap-2.5 text-xs text-neg font-medium animate-in fade-in">
@@ -292,25 +282,20 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
           <div className="space-y-3">
             <div>
               <label className="block t-eyebrow mb-1">
-              <label className="lg-label" htmlFor="profile-name-input">
                 Profile Name *
               </label>
               <input
-                id="profile-name-input"
                 type="text"
                 required
                 placeholder="e.g., Personal, Family, Consulting LLC, Travel Fund"
-                placeholder="e.g. Personal, Family, Consulting LLC, Travel Fund"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full bg-sunken text-ink px-3.5 py-2.5 rounded-xl border border-line text-sm focus:outline-none focus:border-accent transition-colors"
-                className="lg-input w-full text-xs font-medium"
               />
             </div>
 
             <div>
               <label className="block t-eyebrow mb-1.5">
-              <label className="lg-label">
                 Entity Category
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -323,15 +308,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                       type="button"
                       onClick={() => setType(t.id)}
                       className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
-                      className={`flex items-center gap-2 p-2 rounded-lg border text-left text-xs font-medium transition-all cursor-pointer ${
                         isSelected
                           ? 'bg-solid text-on-solid border-line-strong shadow-xs'
                           : 'bg-surface text-ink-2 border-line hover:border-line-strong'
-                          : 'bg-sunken text-ink-2 border-line hover:border-line-strong hover:text-ink'
                       }`}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
-                      <Icon className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{t.label}</span>
                     </button>
                   );
@@ -342,27 +324,22 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 
           {/* Color and Currency in 2 cols */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
             {/* Color Swatches */}
             <div>
               <label className="block t-eyebrow mb-1.5">
-              <label className="lg-label">
                 Color Accent
               </label>
               <div className="flex flex-wrap gap-2">
-              <div className="flex flex-wrap gap-1.5">
                 {COLOR_PALETTE.map((c) => (
                   <button
                     key={c.hex}
                     type="button"
                     onClick={() => setColor(c.hex)}
                     className="w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 border border-line shadow-xs cursor-pointer"
-                    className="w-6.5 h-6.5 rounded-full flex items-center justify-center transition-transform hover:scale-110 active:scale-95 border border-line shadow-xs cursor-pointer"
                     style={{ backgroundColor: c.hex }}
                     title={c.name}
                   >
                     {color === c.hex && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
-                    {color === c.hex && <Check className="w-3 h-3 text-white stroke-[3]" />}
                   </button>
                 ))}
               </div>
@@ -371,14 +348,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
             {/* Display Currency */}
             <div>
               <label className="block t-eyebrow mb-1.5">
-              <label className="lg-label" htmlFor="profile-currency-select">
                 Base Currency
               </label>
               <select
                 id="profile-currency-select"
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full bg-sunken text-ink px-3 py-2.5 rounded-xl border border-line text-sm num font-semibold focus:outline-none focus:border-accent"
                 className="lg-select w-full text-xs font-mono-num num font-medium"
               >
                 {CURRENCIES.map((c) => (

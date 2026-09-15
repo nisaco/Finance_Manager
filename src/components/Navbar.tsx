@@ -127,35 +127,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     id="navbar-profile-selector-btn"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                    className="flex items-center gap-2 h-10 px-3 rounded-xl border border-line bg-sunken hover:border-line-strong active:scale-95 transition-all max-w-[170px] sm:max-w-[260px] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     className="flex items-center gap-2 h-8.5 px-2.5 rounded-lg border border-line bg-sunken hover:border-line-strong active:scale-95 transition-all max-w-[150px] sm:max-w-[220px] focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                     aria-label="Switch profile"
                     aria-expanded={profileDropdownOpen}
                   >
                     <span
-                      className="w-2 h-2 rounded-full shrink-0"
                       className="w-2 h-2 rounded-full ring-2 ring-line/50 shrink-0"
                       style={{ backgroundColor: activeProfile.color || 'var(--lg-ink)' }}
                       aria-hidden="true"
                     />
-                    <span className="t-body truncate text-ink">{activeProfile.name}</span>
                     <span className="text-xs font-semibold truncate text-ink">{activeProfile.name}</span>
                     {activeProfile.isLocked && (
                       <span title="PIN protected profile" className="shrink-0">
-                        <Lock className="w-3.5 h-3.5 text-warn" strokeWidth={1.7} />
                         <Lock className="w-3 h-3 text-warn" strokeWidth={1.8} />
                       </span>
                     )}
-                    <span className="t-meta num shrink-0 hidden sm:inline">
                     <span className="text-[10px] font-mono-num font-bold text-ink-muted bg-canvas/70 px-1 py-0.5 rounded border border-line/60 shrink-0 hidden sm:inline">
                       {activeProfile.displayCurrency}
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 text-ink-4 shrink-0 transition-transform duration-200 ${
                       className={`w-3.5 h-3.5 text-ink-4 shrink-0 transition-transform duration-200 ${
                         profileDropdownOpen ? 'rotate-180' : ''
                       }`}
-                      strokeWidth={1.7}
                       strokeWidth={1.8}
                     />
                   </button>
@@ -166,17 +159,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                         className="fixed inset-0 z-40"
                         onClick={() => setProfileDropdownOpen(false)}
                       />
-                      <div className="lg-pop fixed left-3 right-3 sm:absolute sm:left-0 sm:right-auto top-[4.25rem] sm:top-full sm:mt-2 sm:w-[19rem] sm:max-w-none z-50 overflow-hidden shadow-2xl">
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-line">
-                          <span className="t-eyebrow">Profiles</span>
-                          <span className="t-eyebrow num">{profiles.length} active</span>
                       <div className="lg-pop fixed left-3 right-3 sm:absolute sm:left-0 sm:right-auto top-[3.75rem] sm:top-full sm:mt-1.5 sm:w-64 sm:max-w-none z-50 overflow-hidden shadow-xl rounded-xl border border-line bg-surface p-0 animate-in fade-in-50 zoom-in-95 duration-150">
                         <div className="flex items-center justify-between px-3 py-2 border-b border-line bg-sunken/40">
                           <span className="text-[10px] uppercase font-mono-num font-bold tracking-wider text-ink-muted">Switch Workspace</span>
                           <span className="text-[10px] font-mono-num font-bold text-ink-muted">{profiles.length} active</span>
                         </div>
 
-                        <div className="max-h-64 overflow-y-auto">
                         <div className="max-h-52 overflow-y-auto p-1 space-y-0.5 overscroll-contain">
                           {profiles.map((p) => {
                             const isCurrent = p.id === activeProfile?.id;
@@ -189,23 +177,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                                   selectProfile(p.id);
                                   setProfileDropdownOpen(false);
                                 }}
-                                className="lg-row"
                                 className={`w-full px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2 text-left transition-colors text-xs ${
                                   isCurrent ? 'bg-sunken text-ink font-semibold' : 'text-ink-2 hover:text-ink hover:bg-sunken/60'
                                 }`}
                                 aria-current={isCurrent ? 'true' : undefined}
                               >
-                                <span
-                                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: p.color }}
-                                  aria-hidden="true"
-                                />
-                                <span className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                   <span
-                                    className={`block truncate ${isCurrent ? 't-card' : 't-body'}`}
-                                  >
-                                    {p.name}
                                     className="w-2 h-2 rounded-full shrink-0"
                                     style={{ backgroundColor: p.color }}
                                     aria-hidden="true"
@@ -227,41 +205,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                                     {p.displayCurrency}
                                   </span>
                                   {isCurrent && (
-                                    <span className="t-meta block">Currently open</span>
-                                    <Check className="w-3.5 h-3.5 text-ink shrink-0" strokeWidth={2.2} />
+                                    <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true" />
                                   )}
-                                </span>
-
-                                <span className="flex items-center gap-2 shrink-0">
-                                  {p.isLocked &&
-                                    (isLockedForUser ? (
-                                      <span className="lg-tag" style={{ color: 'var(--lg-warn)' }}>
-                                        <Lock
-                                          className="w-3 h-3 mr-1"
-                                          strokeWidth={1.7}
-                                          aria-hidden="true"
-                                        />
-                                        Locked
-                                      </span>
-                                    ) : (
-                                      <span className="lg-tag lg-tag-pos">
-                                        <Unlock
-                                          className="w-3 h-3 mr-1"
-                                          strokeWidth={1.7}
-                                          aria-hidden="true"
-                                        />
-                                        Open
-                                      </span>
-                                    ))}
-                                  <span className="t-meta num">{p.displayCurrency}</span>
-                                </span>
                                 </div>
                               </button>
                             );
                           })}
                         </div>
 
-                        <div className="border-t border-line p-2 space-y-1">
                         <div className="border-t border-line p-1 bg-sunken/30 space-y-0.5">
                           {activeProfile.isLocked && (
                             <button
@@ -269,12 +220,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 lockProfile(activeProfile.id);
                                 setProfileDropdownOpen(false);
                               }}
-                              className="lg-btn lg-btn-ghost lg-btn-sm lg-btn-block justify-start"
-                              style={{ color: 'var(--lg-warn)' }}
                               className="w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-warn hover:bg-warn-soft flex items-center gap-2 transition-colors text-left"
                             >
-                              <Lock className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-                              Lock this profile now
                               <Lock className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
                               <span>Lock current workspace</span>
                             </button>
@@ -285,11 +232,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                               setProfileDropdownOpen(false);
                               openCreateProfileModal();
                             }}
-                            className="lg-btn lg-btn-ghost lg-btn-sm lg-btn-block justify-start text-ink"
                             className="w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink hover:bg-sunken flex items-center gap-2 transition-colors text-left"
                           >
-                            <UserPlus className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-                            Create a new profile
                             <UserPlus className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
                             <span>New profile workspace</span>
                           </button>
@@ -299,37 +243,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                               setProfileDropdownOpen(false);
                               handleTabChange('settings');
                             }}
-                            className="lg-btn lg-btn-ghost lg-btn-sm lg-btn-block justify-start"
                             className="w-full px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink-3 hover:text-ink hover:bg-sunken flex items-center gap-2 transition-colors text-left"
                           >
-                            <Settings className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-                            Manage all profiles
                             <Settings className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
                             <span>Manage profiles</span>
                           </button>
                         </div>
-
-                        {user && (
-                          <div className="border-t border-line p-3 bg-sunken">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <div className="t-card truncate">@{user.username}</div>
-                                <div className="t-meta truncate">{user.email}</div>
-                              </div>
-                              <span className="lg-tag lg-tag-pos">Paystack linked</span>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setProfileDropdownOpen(false);
-                                logout();
-                              }}
-                              className="lg-btn lg-btn-danger lg-btn-sm lg-btn-block mt-3"
-                            >
-                              <LogOut className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-                              Sign out
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </>
                   )}
