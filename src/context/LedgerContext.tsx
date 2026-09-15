@@ -2,6 +2,14 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { Profile, Transaction, Budget, Goal, Debt, SummaryReport } from '../types';
 import { api } from '../api/client';
 import { useAuth } from './AuthContext';
+import {
+  saveOfflineProfiles,
+  loadOfflineProfiles,
+  saveOfflineLedgerData,
+  loadOfflineLedgerData,
+  getPendingMutations,
+  drainOfflineSyncQueue,
+} from '../services/offlineSync';
 
 interface LedgerContextType {
   profiles: Profile[];
@@ -85,6 +93,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Load profiles first
   const fetchProfiles = useCallback(async () => {
+    const currentUserId = user?.id || 'anonymous';
     try {
       let data = await api.getProfiles();
       // Ensure at least one profile is active even if database was just wiped
@@ -103,6 +112,9 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
 
       setProfiles(data);
+      if (user?.id) {
+        saveOfflineProfiles(user.id, data);
+      }
 
       if (data.length > 0) {
         const saved = localStorage.getItem('ledger_active_profile');
@@ -114,10 +126,20 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setIsLoading(false);
       }
     } catch (err) {
-      console.error('Failed to load profiles:', err);
+      console.warn('[LedgerContext] Failed to load profiles from network, checking offline storage:', err);
+      if (user?.id) {
+        const cached = loadOfflineProfiles(user.id);
+        if (cached && cached.length > 0) {
+          setProfiles(cached);
+          const saved = localStorage.getItem('ledger_active_profile');
+          const match = cached.find((p) => p.id === saved);
+          const nextId = match ? match.id : cached[0].id;
+          setActiveProfileId(nextId);
+        }
+      }
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.id]);
 
   const selectProfile = useCallback(
     (targetId: string) => {
@@ -188,6 +210,38 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setEditingProfile(null);
   };
 
+  // Background offline queue synchronization
+  const syncOfflineQueue = useCallback(async () => {
+    if (!user?.id || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    const pending = getPendingMutations(user.id);
+    if (pending.length === 0) return;
+
+    try {
+      const result = await drainOfflineSyncQueue(user.id, async (mutation) => {
+        if (mutation.type === 'CREATE_TRANSACTION') {
+          await api.createTransaction(mutation.payload);
+          return true;
+        }
+        if (mutation.type === 'UPDATE_TRANSACTION') {
+          const { id, ...rest } = mutation.payload;
+          await api.updateTransaction(id, rest);
+          return true;
+        }
+        if (mutation.type === 'DELETE_TRANSACTION') {
+          await api.deleteTransaction(mutation.payload.id);
+          return true;
+        }
+        return false;
+      });
+
+      if (result.success > 0) {
+        notify(`${result.success} offline record${result.success > 1 ? 's' : ''} synchronized successfully`);
+      }
+    } catch (err) {
+      console.warn('[LedgerContext] Background sync error:', err);
+    }
+  }, [user?.id, notify]);
+
   // Load all profile-specific resources
   const refreshData = useCallback(async () => {
     if (!isAuthenticated || !activeProfileId) {
@@ -195,6 +249,7 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return;
     }
     setIsLoading(true);
+    const userId = user?.id || 'anonymous';
     try {
       const [txs, bgts, gls, dbts, sum] = await Promise.all([
         api.getTransactions(activeProfileId),
@@ -208,12 +263,58 @@ export const LedgerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setGoals(gls);
       setDebts(dbts);
       setSummary(sum);
+
+      if (user?.id) {
+        saveOfflineLedgerData(user.id, activeProfileId, {
+          transactions: txs,
+          budgets: bgts,
+          goals: gls,
+          debts: dbts,
+          summary: sum,
+        });
+      }
     } catch (err: any) {
-      console.error('Error refreshing profile data:', err);
+      console.warn('[LedgerContext] Failed to refresh profile data from network, loading offline cache:', err);
+      if (user?.id) {
+        const cached = loadOfflineLedgerData(user.id, activeProfileId);
+        if (cached) {
+          const pending = getPendingMutations(user.id);
+          const pendingTxIds = new Set(
+            pending
+              .filter((m) => m.profileId === activeProfileId)
+              .map((m) => m.payload.id || m.id)
+          );
+          const taggedTransactions = cached.transactions.map((t) => ({
+            ...t,
+            pendingSync: t.pendingSync || pendingTxIds.has(t.id),
+          }));
+          setTransactions(taggedTransactions);
+          setBudgets(cached.budgets);
+          setGoals(cached.goals);
+          setDebts(cached.debts);
+          setSummary(cached.summary);
+        }
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated, activeProfileId]);
+  }, [isAuthenticated, activeProfileId, user?.id]);
+
+  // Listen to network reconnection and auto-sync
+  useEffect(() => {
+    const handleOnline = () => {
+      syncOfflineQueue().then(() => {
+        refreshData();
+      });
+    };
+    window.addEventListener('online', handleOnline);
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      syncOfflineQueue();
+    }
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [syncOfflineQueue, refreshData]);
 
   useEffect(() => {
     if (isAuthenticated) {

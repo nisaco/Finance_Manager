@@ -35,6 +35,7 @@ export interface Transaction {
   description?: string;
   recurring: 'none' | 'weekly' | 'monthly';
   createdAt: string;
+  pendingSync?: boolean;
 }
 
 export interface Budget {

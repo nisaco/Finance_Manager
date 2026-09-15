@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { X, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Transaction } from '../../types';
 import { useLedger } from '../../context/LedgerContext';
+import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/client';
+import {
+  queueOfflineMutation,
+  loadOfflineLedgerData,
+  saveOfflineLedgerData,
+} from '../../services/offlineSync';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -36,6 +42,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   initialData,
 }) => {
   const { activeProfile, refreshData, notify } = useLedger();
+  const { user } = useAuth();
 
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
@@ -82,6 +89,55 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     setIsSubmitting(true);
     try {
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (isOffline) {
+        if (initialData) {
+          queueOfflineMutation(user?.id || 'anonymous', activeProfile.id, 'UPDATE_TRANSACTION', {
+            id: initialData.id,
+            type,
+            amount: numAmount,
+            currency,
+            category,
+            date,
+            note,
+            recurring,
+          });
+          notify('Transaction updated locally · Will sync when reconnected');
+        } else {
+          const tempId = `offline_${Date.now()}`;
+          const newTxPayload = {
+            profileId: activeProfile.id,
+            type,
+            amount: numAmount,
+            currency,
+            category,
+            date,
+            note,
+            recurring,
+          };
+          queueOfflineMutation(user?.id || 'anonymous', activeProfile.id, 'CREATE_TRANSACTION', newTxPayload);
+
+          if (user?.id) {
+            const cached = loadOfflineLedgerData(user.id, activeProfile.id);
+            if (cached) {
+              const optimisticTx: Transaction = {
+                id: tempId,
+                ...newTxPayload,
+                createdAt: new Date().toISOString(),
+                pendingSync: true,
+              };
+              cached.transactions = [optimisticTx, ...cached.transactions];
+              saveOfflineLedgerData(user.id, activeProfile.id, cached);
+            }
+          }
+          notify('Transaction recorded offline · Will sync when reconnected');
+        }
+        await refreshData();
+        onClose();
+        return;
+      }
+
       if (initialData) {
         const res: any = await api.updateTransaction(initialData.id, {
           type,
@@ -117,7 +173,40 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       await refreshData();
       onClose();
     } catch (err: any) {
-      notify(err.message || 'Failed to save transaction', 'error');
+      // If network failure occurred in-flight, fallback to offline queue
+      const isNetworkErr = err?.message?.toLowerCase().includes('fetch') || err?.message?.toLowerCase().includes('network');
+      if (isNetworkErr) {
+        const tempId = `offline_${Date.now()}`;
+        const newTxPayload = {
+          profileId: activeProfile.id,
+          type,
+          amount: numAmount,
+          currency,
+          category,
+          date,
+          note,
+          recurring,
+        };
+        queueOfflineMutation(user?.id || 'anonymous', activeProfile.id, 'CREATE_TRANSACTION', newTxPayload);
+        if (user?.id) {
+          const cached = loadOfflineLedgerData(user.id, activeProfile.id);
+          if (cached) {
+            const optimisticTx: Transaction = {
+              id: tempId,
+              ...newTxPayload,
+              createdAt: new Date().toISOString(),
+              pendingSync: true,
+            };
+            cached.transactions = [optimisticTx, ...cached.transactions];
+            saveOfflineLedgerData(user.id, activeProfile.id, cached);
+          }
+        }
+        notify('Network dropped. Transaction queued offline · Will sync when reconnected');
+        await refreshData();
+        onClose();
+      } else {
+        notify(err.message || 'Failed to save transaction', 'error');
+      }
     } finally {
       setIsSubmitting(false);
     }

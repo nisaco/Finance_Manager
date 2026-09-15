@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LedgerProvider, useLedger } from './context/LedgerContext';
 import { LandingPage } from './pages/LandingPage';
 import { Navbar } from './components/Navbar';
+import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
 import { Overview } from './pages/Overview';
 import { TransactionsPage } from './pages/TransactionsPage';
 import { BudgetsPage } from './pages/BudgetsPage';
@@ -200,6 +201,8 @@ const MainShell: React.FC = () => {
         onOpenLiveVoice={() => setLiveVoiceModalOpen(true)}
         onOpenAdminModal={() => setAdminModalOpen(true)}
       />
+
+      <NetworkStatusBanner />
 
       {/* Main Page Content Area with Fluid Transitions and Skeletons */}
       {/* lg-page carries the gutters and the measure cap; lg-page-bottom keeps the

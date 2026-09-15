@@ -76,8 +76,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuth = useCallback(async () => {
     setIsLoading(true);
+    const token = localStorage.getItem('ledger_token');
     try {
-      const token = localStorage.getItem('ledger_token');
       const headers: HeadersInit = {};
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -93,8 +93,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (data.user) {
           setUser(data.user);
           setIsAuthenticated(true);
+          try {
+            localStorage.setItem('ledger_cached_user', JSON.stringify(data.user));
+          } catch {}
           localStorage.setItem('ledger_last_activity', Date.now().toString());
         } else {
+          localStorage.removeItem('ledger_cached_user');
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } else {
+        // If server explicitly responds with 401/403, clear session
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('ledger_cached_user');
+          setUser(null);
+          setIsAuthenticated(false);
+        } else {
+          // Attempt offline fallback if server had 5xx issue
+          const cachedUserRaw = localStorage.getItem('ledger_cached_user');
+          if (cachedUserRaw && token) {
+            setUser(JSON.parse(cachedUserRaw));
+            setIsAuthenticated(true);
+          } else {
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        }
+      }
+    } catch {
+      // Network fetch failure (e.g. offline) -> attempt offline fallback with cached user
+      const cachedUserRaw = localStorage.getItem('ledger_cached_user');
+      if (cachedUserRaw && token) {
+        try {
+          setUser(JSON.parse(cachedUserRaw));
+          setIsAuthenticated(true);
+          console.info('[AuthContext] Operating in offline mode with cached session');
+        } catch {
           setUser(null);
           setIsAuthenticated(false);
         }
@@ -102,9 +136,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setIsAuthenticated(false);
       }
-    } catch {
-      setUser(null);
-      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -354,6 +385,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       if (resData.user) {
         setUser(resData.user);
+        try {
+          localStorage.setItem('ledger_cached_user', JSON.stringify(resData.user));
+        } catch {}
         setIsAuthenticated(true);
         setRequireAuthModal(false);
       }
@@ -371,6 +405,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     } catch {}
     localStorage.removeItem('ledger_token');
+    localStorage.removeItem('ledger_cached_user');
     localStorage.removeItem('ledger_last_activity');
     if (reason) {
       localStorage.setItem('ledger_session_expired', reason);

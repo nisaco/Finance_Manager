@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ledger-cache-v1.6.5';
+const CACHE_NAME = 'fimara-cache-v1.7.0';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -7,7 +7,7 @@ const STATIC_ASSETS = [
   '/favicon.svg'
 ];
 
-// Install: Cache core static assets
+// Install: Pre-cache shell assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -16,7 +16,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activate: Clean up old cache versions
+// Activate: Purge obsolete caches and claim clients immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -29,25 +29,61 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch: Strategy for offline capability & caching
+// Fetch: Strategic offline delivery
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Strictly skip all API requests and non-GET requests from caching to protect dynamic financial data
-  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket.io/')) {
+  // Security: Never cache server API routes or WebSocket traffic
+  if (
+    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/socket.io/')
+  ) {
     return;
   }
 
-  // Handle static assets and navigation
+  // Handle Vite built chunks (/assets/*) with Cache-First & network background update
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          // Return cache immediately, revalidate in background
+          fetch(event.request).then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, networkResponse);
+              });
+            }
+          }).catch(() => {});
+          return cachedResponse;
+        }
+
+        return fetch(event.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        });
+      })
+    );
+    return;
+  }
+
+  // General static assets and web font CDNs
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      // Network fetch with cache update
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (
             networkResponse &&
             networkResponse.status === 200 &&
-            (url.origin === location.origin || url.hostname.includes('fonts.') || url.hostname.includes('fontshare.com'))
+            (url.origin === location.origin ||
+              url.hostname.includes('fonts.') ||
+              url.hostname.includes('fontshare.com') ||
+              url.hostname.includes('cdn.jsdelivr.net'))
           ) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -57,16 +93,14 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // If offline and request is HTML navigation, fallback to root / index.html
+          // Fallback for HTML navigations when offline
           if (event.request.mode === 'navigate') {
             return caches.match('/') || caches.match('/index.html');
           }
           return cachedResponse;
         });
 
-      // Return cached response immediately if found, or wait for network
       return cachedResponse || fetchPromise;
     })
   );
 });
-

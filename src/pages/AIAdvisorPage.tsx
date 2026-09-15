@@ -23,9 +23,11 @@ import {
   Paperclip,
   FileText,
   Pencil,
+  WifiOff,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useAuth } from '../context/AuthContext';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { api } from '../api/client';
 import { AIMessageQuota } from '../types';
 import { LiveVoiceModal } from '../components/Modals/LiveVoiceModal';
@@ -93,6 +95,7 @@ export const AIAdvisorPage: React.FC = () => {
     summary,
   } = useLedger();
   const { user } = useAuth();
+  const { isOnline } = useNetworkStatus(user?.id);
 
   const [selectedModel, setSelectedModel] = useState<string>('gemini-3.1-flash-lite');
   const [enableSearch, setEnableSearch] = useState<boolean>(false);
@@ -386,6 +389,11 @@ export const AIAdvisorPage: React.FC = () => {
     const textToSend = (customText || inputPrompt).trim();
     if ((!textToSend && attachments.length === 0) || isLoading) return;
 
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      alert('Internet connection required. Fima AI requires an active internet connection to evaluate prompts. Your core financial ledgers and reports remain fully accessible offline.');
+      return;
+    }
+
     const shouldSearch = forceSearch !== undefined ? forceSearch : enableSearch;
     const sentAttachments = [...attachments];
 
@@ -450,7 +458,11 @@ export const AIAdvisorPage: React.FC = () => {
     } catch (err: any) {
       console.error('Chat error:', err);
       const isRateLimit = err.status === 429 || err.message?.includes('429') || err.message?.toLowerCase().includes('rate limit') || err.message?.toLowerCase().includes('quota');
-      
+      const isOfflineError = (typeof navigator !== 'undefined' && !navigator.onLine) ||
+        err?.message?.toLowerCase().includes('fetch') ||
+        err?.message?.toLowerCase().includes('network') ||
+        err?.message?.toLowerCase().includes('offline');
+
       if (err.quota) {
         setQuota(err.quota);
       } else if (activeProfile?.id) {
@@ -460,7 +472,9 @@ export const AIAdvisorPage: React.FC = () => {
       const errorMessage: Message = {
         id: Math.random().toString(36).substring(2, 9),
         role: 'model',
-        content: isRateLimit
+        content: isOfflineError
+          ? `📡 **Internet Required for Fima AI**\n\nFima AI requires an active internet connection to communicate with the intelligence engine and evaluate financial queries. Please check your internet connection and try again once online.\n\nAll your core ledgers, balances, offline transactions, and reports remain fully accessible offline.`
+          : isRateLimit
           ? `⏳ **Profile Limit Reached (40 messages in 8 hours)**\n\nYour profile has reached the allocated 40 advisory messages. To ensure uninterrupted service, the limit will automatically reset 4 hours later.`
           : `I ran into an issue retrieving that: ${
               err.message || 'There was a temporary service error.'
@@ -1129,12 +1143,22 @@ export const AIAdvisorPage: React.FC = () => {
               </div>
             )}
 
+            {/* Offline Guard Banner */}
+            {!isOnline && (
+              <div className="mb-2 p-2.5 rounded-lg bg-surface-2 border border-line flex items-center gap-2.5 text-xs text-ink-2">
+                <WifiOff className="w-4 h-4 text-amber-500 shrink-0" />
+                <span>
+                  <strong className="text-ink font-medium">Internet Required for Fima AI</strong> — Please connect to the internet to consult Fima. Past conversations and offline financial ledgers remain available.
+                </span>
+              </div>
+            )}
+
             {/* Input Textarea */}
             <textarea
               ref={textareaRef}
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              disabled={quota !== null && quota.remainingMessages <= 0}
+              disabled={!isOnline || (quota !== null && quota.remainingMessages <= 0)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -1143,7 +1167,9 @@ export const AIAdvisorPage: React.FC = () => {
               }}
               rows={2}
               placeholder={
-                quota && quota.remainingMessages <= 0
+                !isOnline
+                  ? 'Fima AI requires an active internet connection. Offline ledgers, transactions, and reports remain active.'
+                  : quota && quota.remainingMessages <= 0
                   ? 'Profile quota reached. Please wait for the window to reset...'
                   : attachments.length > 0
                   ? 'Add your question or instructions for attached files...'
@@ -1168,7 +1194,7 @@ export const AIAdvisorPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={attachments.length >= 2 || isLoading || (quota !== null && quota.remainingMessages <= 0)}
+                  disabled={!isOnline || attachments.length >= 2 || isLoading || (quota !== null && quota.remainingMessages <= 0)}
                   className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-surface transition-colors disabled:opacity-30"
                   title="Attach documents or pictures (Max 2)"
                   aria-label="Attach documents or pictures"
@@ -1179,8 +1205,9 @@ export const AIAdvisorPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsLiveVoiceOpen(true)}
-                  className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-surface transition-colors"
-                  title="Speak with Fima in voice mode"
+                  disabled={!isOnline}
+                  className="p-2 rounded-lg text-ink-muted hover:text-ink hover:bg-surface transition-colors disabled:opacity-30"
+                  title={!isOnline ? "Fima Voice requires an active internet connection" : "Speak with Fima in voice mode"}
                   aria-label="Speak with Fima in voice mode"
                 >
                   <Mic className="w-4 h-4" />
@@ -1189,9 +1216,9 @@ export const AIAdvisorPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleSendMessage()}
-                  disabled={(!inputPrompt.trim() && attachments.length === 0) || isLoading || (quota !== null && quota.remainingMessages <= 0)}
-                  className="lg-btn-solid text-xs p-2 sm:px-3 sm:py-2"
-                  title="Send prompt"
+                  disabled={!isOnline || (!inputPrompt.trim() && attachments.length === 0) || isLoading || (quota !== null && quota.remainingMessages <= 0)}
+                  className="lg-btn-solid text-xs p-2 sm:px-3 sm:py-2 disabled:opacity-40"
+                  title={!isOnline ? "Internet connection required" : "Send prompt"}
                 >
                   <Send className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Send</span>

@@ -178,6 +178,14 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
     setStatus('connecting');
     setErrorMessage(null);
 
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setStatus('error');
+      setErrorMessage(
+        'Fima Voice requires an active internet connection to stream live dialogue. Your core ledgers, balances, and reports remain fully accessible offline.'
+      );
+      return;
+    }
+
     try {
       // 1. Request microphone access
       let stream: MediaStream | null = null;
@@ -399,7 +407,13 @@ export const LiveVoiceModal: React.FC<LiveVoiceModalProps> = ({ isOpen, onClose 
       };
 
       ws.onerror = () => {
-        setErrorMessage('Voice connection encountered an error.');
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          setErrorMessage(
+            'Connection lost. Fima Voice requires an active internet connection to stream live audio. Please reconnect and retry.'
+          );
+        } else {
+          setErrorMessage('Voice connection encountered an error. Please retry in a few moments.');
+        }
         setStatus('error');
       };
 
