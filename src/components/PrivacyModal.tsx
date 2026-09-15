@@ -34,7 +34,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
                 Privacy Policy
               </h2>
               <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                Data Protection &amp; Confidentiality Standards • Ledger
+                Data Protection &amp; Confidentiality Standards • Fimara
               </p>
             </div>
           </div>
@@ -54,7 +54,7 @@ export const PrivacyModal: React.FC<PrivacyModalProps> = ({
               <ShieldCheck className="w-4 h-4 text-[#10B981]" /> 1. Information We Collect
             </h3>
             <p className="text-xs leading-5">
-              When creating an account on Ledger, we collect your chosen username, email address, cryptographically salted password hash, and the exact timestamp of your legal terms acceptance. When you track finances, your profile configurations, ledger transactions, budget allocations, savings goals, and debts are stored securely in dedicated, isolated collections.
+              When creating an account on Fimara, we collect your chosen username, email address, cryptographically salted password hash, and the exact timestamp of your legal terms acceptance. When you track finances, your profile configurations, financial records, budget allocations, savings goals, and debts are stored securely in dedicated, isolated collections.
             </p>
           </section>
 

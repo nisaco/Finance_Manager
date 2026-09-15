@@ -111,11 +111,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={() => handleTabChange('overview')}
                 className="flex items-center gap-2.5 text-left shrink-0 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-lg active:scale-95 transition-transform"
-                title="Ledger Financial Platform"
+                title="Fimara Financial Operating System"
                 id="navbar-brand-button"
               >
                 <LedgerLogo size={30} />
-                <span className="t-card hidden xs:block sm:text-base tracking-tight">Ledger</span>
+                <span className="t-card hidden xs:block sm:text-base tracking-tight">Fimara</span>
               </button>
 
               <span className="h-5 w-px bg-line shrink-0 hidden xs:block" aria-hidden="true" />
@@ -330,8 +330,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               {!isInstalled && (
                 <button
                   onClick={() => setShowInstallModal(true)}
-                  title="Install Ledger App"
-                  aria-label="Install Ledger App"
+                  title="Install Fimara App"
+                  aria-label="Install Fimara App"
                   className="lg-btn lg-btn-quiet lg-btn-sm"
                 >
                   <Download className="w-4 h-4 text-amber-500" strokeWidth={1.8} aria-hidden="true" />

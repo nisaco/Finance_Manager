@@ -446,7 +446,7 @@ export const LandingPage: React.FC = () => {
             <LedgerLogo size={32} />
             <div>
               <span className="text-base font-bold tracking-tight text-ink font-display block leading-none">
-                Ledger
+                Fimara
               </span>
               <span className="text-[10px] uppercase font-mono-num tracking-widest text-ink-3">
                 Financial Operating System

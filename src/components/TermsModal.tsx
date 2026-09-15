@@ -34,7 +34,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
                 Terms and Conditions
               </h2>
               <p className="text-xs text-[#6B7280] dark:text-[#9CA3AF]">
-                Last updated: January 2026 • Ledger Financial Platform
+                Last updated: January 2026 • Fimara Financial Platform
               </p>
             </div>
           </div>
@@ -57,7 +57,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
               <span>IMPORTANT LEGAL NOTICE &amp; NON-BANK STATUS</span>
             </div>
             <p className="leading-relaxed">
-              Ledger is a financial management software tool and digital budgeting ledger. <strong>Ledger is NOT a bank, NOT a depository institution, NOT an investment fund, and does NOT generate income or pay interest.</strong> You cannot earn percentages or yields on savings goals. All features are self-directed budgeting mechanisms.
+              Fimara is a financial management software tool and digital budgeting system. <strong>Fimara is NOT a bank, NOT a depository institution, NOT an investment fund, and does NOT generate income or pay interest.</strong> You cannot earn percentages or yields on savings goals. All features are self-directed budgeting mechanisms.
             </p>
           </div>
 
@@ -66,7 +66,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
               <Shield className="w-4 h-4 text-emerald-600" /> 1. Non-Banking &amp; Non-Yield Generating Principle
             </h3>
             <p className="text-xs leading-5">
-              You explicitly acknowledge and agree that Ledger is solely a technology and ledger management platform. Ledger does not operate as a financial institution or investment advisor. <strong>Savings goals and vaults do NOT earn interest, percentages, capital gains, or yields.</strong> We are not an income generator. Any balance shown in a savings goal represents funds ring-fenced from your own deposits for your personal budgeting milestones.
+              You explicitly acknowledge and agree that Fimara is solely a technology and ledger management platform. Fimara does not operate as a financial institution or investment advisor. <strong>Savings goals and vaults do NOT earn interest, percentages, capital gains, or yields.</strong> We are not an income generator. Any balance shown in a savings goal represents funds ring-fenced from your own deposits for your personal budgeting milestones.
             </p>
           </section>
 
@@ -75,17 +75,15 @@ export const TermsModal: React.FC<TermsModalProps> = ({
               2. Payment Collection &amp; Licensed Custodial Rails
             </h3>
             <p className="text-xs leading-5">
-              Ledger does not custody or hold customer funds directly on its own balance sheet. All deposit inflows and withdrawal disbursements are collected, routed, and processed via certified, licensed third-party Payment Service Providers (specifically <strong>Paystack Payments Limited</strong> and partner commercial banks and Mobile Money telecommunication operators including MTN MoMo, Telecel Cash, and AirtelTigo Money). Deposit receipts and transaction references are transmitted electronically to your registered email address.
+              Fimara does not custody or hold customer funds directly on its own balance sheet. All deposit inflows and withdrawal disbursements are collected, routed, and processed via certified, licensed third-party Payment Service Providers (specifically <strong>Paystack Payments Limited</strong> and partner commercial banks and Mobile Money telecommunication operators including MTN MoMo, Telecel Cash, and AirtelTigo Money). Deposit receipts and transaction references are transmitted electronically to your registered email address.
             </p>
           </section>
 
           <section className="space-y-2">
             <h3 className="font-bold text-[#1A1A1A] dark:text-[#F3F4F6] text-sm">
-              3. User Right to Withdraw Funds &amp; Payout Policy
               3. User Right to Withdraw Funds &amp; Next Working Day Payout Timeline
             </h3>
             <p className="text-xs leading-5">
-              Users retain unalienable ownership of their deposited principal and are entitled to request the withdrawal of their available savings vault balances at any time via the platform’s <strong>Withdraw Funds / Request Payout</strong> interface. Outbound payouts are settled to the user's verified Mobile Money wallet or nominated commercial bank account. To prevent unauthorized account drainage, all withdrawal requests are subject to automated verification and administrative anti-fraud clearance before disbursement.
               Users retain unalienable ownership of their deposited principal and are entitled to request the withdrawal of their available savings vault balances at any time via the platform’s <strong>Withdraw Funds / Request Payout</strong> interface. Outbound payouts are settled to the user's verified Mobile Money wallet or nominated commercial bank account.
             </p>
             <p className="text-xs leading-5">
@@ -127,7 +125,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
               6. Security, Profile Locks &amp; User Liability
             </h3>
             <p className="text-xs leading-5">
-              Ledger equips users with optional multi-profile PIN locks and session safeguards. You are solely responsible for maintaining the confidentiality of your credentials and PIN codes. Ledger will not be liable for any unauthorized transfers, data breaches, or compromised payouts resulting from device theft, shared credentials, or incorrect account/wallet numbers provided by the user.
+              Fimara equips users with optional multi-profile PIN locks and session safeguards. You are solely responsible for maintaining the confidentiality of your credentials and PIN codes. Fimara will not be liable for any unauthorized transfers, data breaches, or compromised payouts resulting from device theft, shared credentials, or incorrect account/wallet numbers provided by the user.
             </p>
           </section>
 
@@ -136,7 +134,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
               7. Absolute Limitation of Liability &amp; Hold Harmless
             </h3>
             <p className="text-xs leading-5">
-              To the fullest extent permissible by applicable law, you agree to <strong>fully indemnify, defend, and hold harmless Ledger, its creators, operators, and affiliates</strong> from and against any claims, losses, damages, liabilities, regulatory inquiries, or expenses (including legal fees) arising out of your use of the platform, third-party payment gateway downtime (including Paystack or telecommunication network outages), inaccurate financial inputs, or delays in payout disbursement. You agree that Ledger’s total aggregate liability shall under no circumstances exceed the total fees collected directly from your account in the preceding 30 days.
+              To the fullest extent permissible by applicable law, you agree to <strong>fully indemnify, defend, and hold harmless Fimara, its creators, operators, and affiliates</strong> from and against any claims, losses, damages, liabilities, regulatory inquiries, or expenses (including legal fees) arising out of your use of the platform, third-party payment gateway downtime (including Paystack or telecommunication network outages), inaccurate financial inputs, or delays in payout disbursement. You agree that Fimara’s total aggregate liability shall under no circumstances exceed the total fees collected directly from your account in the preceding 30 days.
             </p>
           </section>
 
@@ -145,7 +143,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
               8. Compliance with Financial Regulations &amp; Anti-Money Laundering (AML)
             </h3>
             <p className="text-xs leading-5">
-              You agree not to utilize Ledger for any unlawful activity, money laundering, terrorist financing, or fraudulent transactions. Ledger and its payment partners reserve the right to freeze suspicious transfers, request proof of identity, or report unlawful conduct to relevant regulatory authorities without prior notice.
+              You agree not to utilize Fimara for any unlawful activity, money laundering, terrorist financing, or fraudulent transactions. Fimara and its payment partners reserve the right to freeze suspicious transfers, request proof of identity, or report unlawful conduct to relevant regulatory authorities without prior notice.
             </p>
           </section>
         </div>

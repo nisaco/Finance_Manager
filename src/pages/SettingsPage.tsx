@@ -834,8 +834,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               </span>
               <span className="text-[11px] text-ink-3">
                 {isInstalled 
-                  ? 'Ledger is running as an installed standalone application.' 
-                  : 'Install Ledger directly to your home screen or desktop for rapid offline access.'}
+                  ? 'Fimara is running as an installed standalone application.' 
+                  : 'Install Fimara directly to your home screen or desktop for rapid offline access.'}
               </span>
             </div>
             {!isInstalled && (

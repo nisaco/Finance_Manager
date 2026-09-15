@@ -151,11 +151,11 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
         {/* Header Icon & Title */}
         <div className="flex items-center gap-3.5 mb-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 shrink-0">
-            <img src="/ledger-icon.svg" alt="Ledger" className="w-8 h-8 rounded-lg" />
+            <img src="/ledger-icon.svg" alt="Fimara" className="w-8 h-8 rounded-lg" />
           </div>
           <div>
             <h3 className="text-lg font-bold font-sans tracking-tight">
-              Install Ledger App
+              Install Fimara App
             </h3>
             <p className="text-xs text-stone-500 dark:text-stone-400">
               Fast, offline-ready & standalone experience
@@ -168,7 +168,7 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
           <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-3 my-4">
             <CheckCircle2 className="w-6 h-6 shrink-0" />
             <p className="text-sm font-medium">
-              Ledger is installed on this device! You can launch it directly from your Home Screen or Applications.
+              Fimara is installed on this device! You can launch it directly from your Home Screen or Applications.
             </p>
           </div>
         ) : isIOS && !hasNativePrompt ? (
@@ -199,14 +199,14 @@ export const InstallPwaModal: React.FC<InstallPwaModalProps> = ({ isOpen, onClos
                 3
               </div>
               <div className="flex-1">
-                Tap <strong className="text-stone-900 dark:text-white">Add</strong> in the top-right corner.
+                Tap <strong className="text-stone-900 dark:text-white">Add</strong> in the top-right corner to launch Fimara natively anytime.
               </div>
             </div>
           </div>
         ) : (
           <div className="space-y-3 my-4">
             <p className="text-sm text-stone-600 dark:text-stone-300">
-              Install Ledger directly to your home screen or desktop. Enjoy instant loading, dedicated app window, and full offline caching.
+              Install Fimara directly to your home screen or desktop. Enjoy instant loading, dedicated app window, and full offline caching.
             </p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="p-2.5 rounded-lg bg-stone-50 dark:bg-white/5 border border-stone-100 dark:border-white/5 flex items-center gap-2">

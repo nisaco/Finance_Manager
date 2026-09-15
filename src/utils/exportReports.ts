@@ -99,7 +99,7 @@ export function exportFinancialReportExcel(data: ReportExportData): void {
   XLSX.utils.book_append_sheet(wb, wsDebts, 'Debts & Obligations');
 
   // Trigger download
-  const filename = `Ledger_Report_${profile.name.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
+  const filename = `Fimara_Report_${profile.name.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
 
@@ -124,7 +124,7 @@ export function exportFinancialReportPdf(data: ReportExportData): void {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(26, 26, 26);
-  doc.text('LEDGER FINANCIAL REPORT', 14, y);
+  doc.text('FIMARA FINANCIAL REPORT', 14, y);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -305,13 +305,13 @@ export function exportFinancialReportPdf(data: ReportExportData): void {
     doc.setFontSize(8);
     doc.setTextColor(156, 163, 175);
     doc.text(
-      `Ledger Financial Operating System — Page ${i} of ${totalPages} — Confidential`,
+      `Fimara Financial Operating System — Page ${i} of ${totalPages} — Confidential`,
       pageWidth / 2,
       288,
       { align: 'center' }
     );
   }
 
-  const filename = `Ledger_Report_${profile.name.replace(/\s+/g, '_')}_${timestamp}.pdf`;
+  const filename = `Fimara_Report_${profile.name.replace(/\s+/g, '_')}_${timestamp}.pdf`;
   doc.save(filename);
 }

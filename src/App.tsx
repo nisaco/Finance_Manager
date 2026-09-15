@@ -414,7 +414,7 @@ const MainShell: React.FC = () => {
       <footer className="border-t border-line">
         <div className="lg-page py-5 flex flex-col sm:flex-row items-center justify-between gap-x-4 gap-y-2 text-center sm:text-left">
           <span className="t-meta">
-            Ledger · Personal and business financial management
+            Fimara · Personal &amp; Business Financial Operating System
             <span className="hidden sm:inline" aria-hidden="true"> · </span>
             <span className="block sm:inline">
               Version <span className="num">{APP_VERSION}</span>

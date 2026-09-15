@@ -106,13 +106,10 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             className="flex items-center gap-2.5 min-w-0 text-left active:scale-95 transition-transform"
           >
             <LedgerLogo size={30} />
-            <span className="min-w-0">
-              <span className="t-card block tracking-tight">Ledger</span>
-              <span className="t-meta block truncate">
-                {user ? `@${user.username}` : 'Signed out'}
-                {activeProfile ? ` · ${activeProfile.name}` : ''}
-              </span>
-            </span>
+            <div className="min-w-0">
+              <span className="t-card block tracking-tight">Fimara</span>
+              <span className="t-meta block truncate">Financial OS</span>
+            </div>
           </button>
 
           <button onClick={onClose} className="lg-iconbtn shrink-0 active:scale-90 transition-transform" aria-label="Close menu">
@@ -237,7 +234,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                     <Download className="w-[18px] h-[18px]" strokeWidth={1.7} />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="t-body text-ink block">Install Ledger</span>
+                    <span className="t-body text-ink block">Install Fimara</span>
                     <span className="t-meta block">Add to Home Screen or Desktop</span>
                   </span>
                   <ChevronRight

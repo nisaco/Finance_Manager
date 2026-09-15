@@ -50,7 +50,7 @@ export function exportTransactionsCsv(options: TransactionExportOptions): void {
  * 2. Export Transactions as Excel (.xlsx)
  */
 export function exportTransactionsExcel(options: TransactionExportOptions): void {
-  const { profile, transactions, title = 'Ledger Transactions', subtitle, filenamePrefix = 'transactions' } = options;
+  const { profile, transactions, title = 'Fimara Transactions', subtitle, filenamePrefix = 'transactions' } = options;
   const currency = profile.displayCurrency || 'GHS';
   const timestamp = new Date().toISOString().split('T')[0];
 
@@ -251,7 +251,7 @@ export function exportTransactionsPdf(options: TransactionExportOptions): void {
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      `Ledger Financial Operating System  ·  Page ${i} of ${totalPages}  ·  Confidential`,
+      `Fimara Financial Operating System  ·  Page ${i} of ${totalPages}  ·  Confidential`,
       pageWidth / 2,
       288,
       { align: 'center' }

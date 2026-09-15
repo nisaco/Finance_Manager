@@ -108,7 +108,7 @@ export const LedgerLogo: React.FC<LedgerLogoProps> = ({
       {showText && (
         <div className="flex flex-col">
           <span className="font-display font-bold tracking-tight text-[#1A1A1A] dark:text-[#F3F4F6] text-base leading-none">
-            Ledger
+            Fimara
           </span>
           <span className="text-[9px] tracking-widest uppercase text-[#6B7280] dark:text-[#9CA3AF] font-mono-num mt-0.5">
             Financial OS
