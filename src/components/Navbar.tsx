@@ -92,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-surface/85 backdrop-blur-md border-b border-line transition-colors pt-[env(safe-area-inset-top,0px)]">
+      <header className="sticky top-0 z-40 bg-surface/85 backdrop-blur-md border-b border-line transition-colors pt-[max(env(safe-area-inset-top,0px),0px)]">
         <div className="lg-page pt-1 sm:pt-1.5">
           {/* ---- Identity, profile, tools ---------------------------------- */}
           <div className="flex items-center justify-between h-16 sm:h-[4.25rem]">

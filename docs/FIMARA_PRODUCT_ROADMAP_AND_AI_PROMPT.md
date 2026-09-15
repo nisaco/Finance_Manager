@@ -179,3 +179,4 @@ Before writing or editing any code, read this entire brief and inspect `docs/UI_
 
 Proceed with extreme precision, craft, and care.
 ```
+
