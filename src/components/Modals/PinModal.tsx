@@ -55,7 +55,7 @@ export const PinModal: React.FC = () => {
         </div>
 
         <h2 className="t-title">
-          Ledger Protected
+          Fimara Protected
         </h2>
         <p className="t-meta num mt-1">
           Enter your owner security PIN to access accounts
@@ -123,7 +123,7 @@ export const PinModal: React.FC = () => {
           disabled={isSubmitting || pin.length < 4}
           className="w-full max-w-[240px] mx-auto py-3 lg-btn lg-btn-solid justify-center disabled:opacity-40"
         >
-          <span>Unlock Ledger</span>
+          <span>Unlock Fimara</span>
           <ArrowRight className="w-4 h-4 ml-1" />
         </button>
 

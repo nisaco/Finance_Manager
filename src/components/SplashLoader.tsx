@@ -65,7 +65,7 @@ export const SplashLoader: React.FC<SplashLoaderProps> = ({
         {/* Minimalist Brand Typography */}
         <div className="text-center space-y-1.5">
           <div className="text-sm font-bold tracking-[0.25em] uppercase font-display text-[#1A1A1A] dark:text-[#F3F4F6]">
-            Ledger
+            Fimara
           </div>
           <div className="text-[10px] tracking-[0.2em] uppercase font-mono text-[#6B7280] dark:text-[#9CA3AF]">
             Financial OS

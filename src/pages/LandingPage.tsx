@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { TermsModal } from '../components/TermsModal';
@@ -31,6 +32,29 @@ import {
   Smartphone,
 } from 'lucide-react';
 
+const HERO_CYCLES = [
+  {
+    badge: 'Next-Gen Financial Operating System',
+    title: 'The intelligent way to manage, grow, and protect your wealth.',
+    description: 'Unified multi-entity finance for personal and business cashflows, high-discipline savings vaults, and verified Paystack money rails.',
+  },
+  {
+    badge: 'AI-Powered Financial Intelligence',
+    title: 'Your 24/7 AI Chief Financial Officer with live voice insights.',
+    description: 'Ask questions, forecast category budgets, and converse with real-time financial intelligence built for modern living.',
+  },
+  {
+    badge: 'High-Discipline Savings Vaults',
+    title: 'Lock in financial freedom with automated next-day payouts.',
+    description: 'Deposit securely via Mobile Money or Card, ring-fence your goals, and receive automated next-working-day settlement to your account.',
+  },
+  {
+    badge: 'Multi-Entity Architecture',
+    title: 'Separate personal life and business cashflow in one single tap.',
+    description: 'Switch between personal, business, and family profiles with discrete PIN security locks, dedicated currency rates, and instant statements.',
+  },
+];
+
 declare global {
   interface Window {
     google?: any;
@@ -50,6 +74,15 @@ export const LandingPage: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
 
   const [authMode, setAuthMode] = useState<'signup' | 'login' | 'forgot_password'>('login');
+  const [headlineIndex, setHeadlineIndex] = useState(0);
+
+  // Rotate headline every 3 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeadlineIndex((prev) => (prev + 1) % HERO_CYCLES.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Signup fields
   const [username, setUsername] = useState('');
@@ -484,18 +517,47 @@ export const LandingPage: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-14 animate-in fade-in duration-200">
         {/* Left Side: Crisp Hero & Value Props */}
         <div className="flex-1 space-y-6 max-w-xl text-left">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-soft text-accent text-xs font-semibold border border-line">
-            <Sparkles className="w-3.5 h-3.5" strokeWidth={1.8} />
-            <span>Multi-Entity Financial Engine</span>
-          </div>
+          {/* Animated 3-Second Dynamic Headline Carousel */}
+          <div className="min-h-[170px] sm:min-h-[190px] flex flex-col justify-start">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={headlineIndex}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="space-y-3"
+              >
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent-soft text-accent text-xs font-semibold border border-line">
+                  <Sparkles className="w-3.5 h-3.5" strokeWidth={1.8} />
+                  <span>{HERO_CYCLES[headlineIndex].badge}</span>
+                </div>
 
-          <div className="space-y-3">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-[1.12] font-display">
-              Master your money with mathematical precision.
-            </h1>
-            <p className="text-sm sm:text-base text-ink-3 leading-relaxed">
-              Separate personal and business cashflows, lock high-yield savings vaults with automatic 2% payouts, and track verified Paystack receipts.
-            </p>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-ink leading-[1.12] font-display">
+                  {HERO_CYCLES[headlineIndex].title}
+                </h1>
+
+                <p className="text-sm sm:text-base text-ink-3 leading-relaxed">
+                  {HERO_CYCLES[headlineIndex].description}
+                </p>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Futuristic Indicator Progress Bars */}
+            <div className="flex items-center gap-2 pt-4">
+              {HERO_CYCLES.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setHeadlineIndex(idx)}
+                  aria-label={`Switch to headline ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    idx === headlineIndex
+                      ? 'w-8 bg-accent shadow-xs'
+                      : 'w-2 bg-line hover:bg-line-strong'
+                  }`}
+                />
+              ))}
+            </div>
           </div>
 
           {/* Core Feature Grid - Crisp, no clutter */}
@@ -504,9 +566,9 @@ export const LandingPage: React.FC = () => {
               <div className="w-8 h-8 rounded-xl bg-accent/15 text-accent flex items-center justify-center">
                 <Layers className="w-4 h-4" strokeWidth={1.8} />
               </div>
-              <h3 className="text-xs font-bold text-ink">Multi-Profile Ledger</h3>
+              <h3 className="text-xs font-bold text-ink">Multi-Entity Profiles</h3>
               <p className="text-[11px] text-ink-3 leading-snug">
-                Personal, Business &amp; Family profiles with individual PIN locks and multi-currency tracking.
+                Personal, Business &amp; Family profiles with discrete PIN security locks and multi-currency tracking.
               </p>
             </div>
 
@@ -516,7 +578,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <h3 className="text-xs font-bold text-ink">Savings Vaults (T+1)</h3>
               <p className="text-[11px] text-ink-3 leading-snug">
-                Lock target savings, earn growth, and receive next-working-day payouts directly to MoMo or Bank.
+                Lock target savings, earn disciplined growth, and receive next-working-day payouts to MoMo or Bank.
               </p>
             </div>
 
@@ -526,7 +588,7 @@ export const LandingPage: React.FC = () => {
               </div>
               <h3 className="text-xs font-bold text-ink">Paystack &amp; Receipts</h3>
               <p className="text-[11px] text-ink-3 leading-snug">
-                Automated deposits via Mobile Money &amp; Card with verified instant email payment receipts.
+                Instant deposits via Mobile Money &amp; Card with verified automated electronic payment receipts.
               </p>
             </div>
 
@@ -534,7 +596,7 @@ export const LandingPage: React.FC = () => {
               <div className="w-8 h-8 rounded-xl bg-accent-soft text-accent flex items-center justify-center">
                 <TrendingUp className="w-4 h-4" strokeWidth={1.8} />
               </div>
-              <h3 className="text-xs font-bold text-ink">Real-Time Analytics</h3>
+              <h3 className="text-xs font-bold text-ink">Real-Time AI Analytics</h3>
               <p className="text-[11px] text-ink-3 leading-snug">
                 Instant cashflow breakdowns, spending limits, monthly cycle resets, and Excel/PDF export.
               </p>
