@@ -473,8 +473,8 @@ export const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-canvas text-ink flex flex-col font-sans transition-colors selection:bg-accent/20">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-40 w-full border-b border-line bg-canvas/80 backdrop-blur-md transition-colors">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-40 w-full border-b border-line bg-canvas/80 backdrop-blur-md transition-colors pt-[env(safe-area-inset-top,0px)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-[4.25rem] pt-1 sm:pt-1.5 flex items-center justify-between">
           <div className="flex items-center space-x-3 text-left">
             <LedgerLogo size={32} />
             <div>
