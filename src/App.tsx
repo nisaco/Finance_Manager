@@ -309,6 +309,7 @@ const MainShell: React.FC = () => {
 
       {/* Toast Notification Alert Banner */}
       {notification && (
+        <div className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 animate-in slide-in-from-bottom-5 duration-200">
         <div className="fixed bottom-[max(env(safe-area-inset-bottom,0px),1rem)] sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-50 animate-in slide-in-from-bottom-5 duration-200">
           <div
             className={`flex items-center space-x-2.5 px-4 py-3 rounded-xl shadow-xl border text-xs font-medium backdrop-blur-md max-w-md ${
@@ -411,6 +412,7 @@ const MainShell: React.FC = () => {
       />
 
       {/* Footer: what this is, which build you are on, and the legal links. */}
+      <footer className="border-t border-line">
       <footer className="border-t border-line pb-[max(env(safe-area-inset-bottom,0px),0.5rem)]">
         <div className="lg-page py-5 flex flex-col sm:flex-row items-center justify-between gap-x-4 gap-y-2 text-center sm:text-left">
           <span className="t-meta">
