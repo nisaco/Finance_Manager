@@ -27,16 +27,6 @@ interface NavigationSidebarProps {
 
 /**
  * Slide-over navigation drawer for phones.
- *
- * Behaviour is unchanged: opened by the header menu button, slides in from the
- * left, closes on backdrop click, Escape, or picking a section, and locks
- * background scroll while open.
- *
- * What changed is the feel. The panel animates on transform alone so it runs on
- * the compositor and stays smooth on a mid-range Android; it carries real
- * layered elevation so it reads as sitting above the page; and its rows arrive
- * a beat behind it rather than appearing all at once. All of it is disabled
- * outright for anyone whose system asks for reduced motion.
  */
 export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   isOpen,
@@ -45,7 +35,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   onTabChange,
   navItems,
   user,
-  activeProfile,
   resolvedTheme,
   toggleTheme,
   logout,
@@ -92,35 +81,35 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     >
       <div className="lg-drawer-scrim backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
 
-      <aside className="lg-drawer w-[19.5rem] max-w-[85vw] z-10 overscroll-contain touch-pan-y shadow-2xl">
+      <aside className="lg-drawer w-[14.75rem] max-w-[60vw] sm:w-[16.5rem] z-10 overscroll-contain touch-pan-y shadow-2xl pt-[max(env(safe-area-inset-top,0px),2.25rem)]">
         {/* iOS Drag Pill for tactile native mobile feel */}
-        <div className="w-9 h-1 rounded-full bg-ink-4/35 mx-auto mt-2 -mb-1" aria-hidden="true" />
+        <div className="w-8 h-1 rounded-full bg-ink-4/30 mx-auto -mt-1 mb-2.5 shrink-0" aria-hidden="true" />
 
         {/* ---- Identity ---- */}
-        <div className="flex items-center justify-between gap-3 px-4 h-16 border-b border-line shrink-0">
+        <div className="flex items-center justify-between gap-2 px-3.5 pb-3 min-h-[3.5rem] border-b border-line shrink-0">
           <button
             onClick={() => {
               onClose();
               onTabChange('overview');
             }}
-            className="flex items-center gap-2.5 min-w-0 text-left active:scale-95 transition-transform"
+            className="flex items-center gap-2 min-w-0 text-left active:scale-95 transition-transform"
           >
-            <LedgerLogo size={30} />
+            <LedgerLogo size={28} />
             <div className="min-w-0">
-              <span className="t-card block tracking-tight">Fimara</span>
-              <span className="t-meta block truncate">Financial OS</span>
+              <span className="t-card block tracking-tight text-sm font-bold truncate">Fimara</span>
+              <span className="t-meta block truncate text-[10px]">Financial OS</span>
             </div>
           </button>
 
-          <button onClick={onClose} className="lg-iconbtn shrink-0 active:scale-90 transition-transform" aria-label="Close menu">
-            <X className="w-5 h-5" strokeWidth={1.7} />
+          <button onClick={onClose} className="lg-iconbtn shrink-0 active:scale-90 transition-transform p-1.5" aria-label="Close menu">
+            <X className="w-4 h-4" strokeWidth={1.7} />
           </button>
         </div>
 
         {/* ---- Sections ---- */}
         <div className="flex-1 overflow-y-auto overscroll-contain touch-pan-y lg-stagger">
-          <div className="px-4 pt-4 pb-1" style={delay()}>
-            <span className="t-eyebrow">Go to</span>
+          <div className="px-3.5 pt-3 pb-1" style={delay()}>
+            <span className="t-eyebrow text-[10px]">Go to</span>
           </div>
 
           {navItems.map((item) => {
@@ -133,12 +122,12 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   onTabChange(item.id);
                   onClose();
                 }}
-                className="lg-row active:scale-[0.98] transition-transform"
+                className="lg-row !min-h-[50px] !py-2.5 !px-3.5 active:scale-[0.98] transition-transform"
                 style={delay()}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <span
-                  className="lg-row-icon"
+                  className="lg-row-icon !w-[32px] !h-[32px] !rounded-lg"
                   aria-hidden="true"
                   style={
                     isActive
@@ -150,16 +139,16 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                       : undefined
                   }
                 >
-                  <Icon className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  <Icon className="w-4 h-4" strokeWidth={1.7} />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className={`block truncate ${isActive ? 't-card' : 't-body text-ink'}`}>
+                  <span className={`block truncate ${isActive ? 't-card text-xs font-semibold' : 't-body text-xs text-ink'}`}>
                     {item.label}
                   </span>
-                  {isActive && <span className="t-meta block">You are here</span>}
+                  {isActive && <span className="t-meta block text-[10px] leading-tight">Current</span>}
                 </span>
                 <ChevronRight
-                  className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                  className="w-3.5 h-3.5 text-ink-4 shrink-0"
                   strokeWidth={1.7}
                   aria-hidden="true"
                 />
@@ -167,10 +156,10 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             );
           })}
 
-          {(onOpenLiveVoice || onOpenAuditLogs) && (
+          {(onOpenLiveVoice || onOpenAuditLogs || onOpenInstallModal) && (
             <>
-              <div className="px-4 pt-5 pb-1 mt-2 border-t border-line" style={delay()}>
-                <span className="t-eyebrow">Tools</span>
+              <div className="px-3.5 pt-4 pb-1 mt-1 border-t border-line" style={delay()}>
+                <span className="t-eyebrow text-[10px]">Tools</span>
               </div>
 
               {onOpenLiveVoice && (
@@ -179,18 +168,18 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                     onClose();
                     onOpenLiveVoice();
                   }}
-                  className="lg-row"
+                  className="lg-row !min-h-[50px] !py-2.5 !px-3.5"
                   style={delay()}
                 >
-                  <span className="lg-row-icon" aria-hidden="true">
-                    <Mic className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  <span className="lg-row-icon !w-[32px] !h-[32px] !rounded-lg" aria-hidden="true">
+                    <Mic className="w-4 h-4" strokeWidth={1.7} />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="t-body text-ink block">Live Voice Fima</span>
-                    <span className="t-meta block">Talk through your finances</span>
+                    <span className="t-body text-xs text-ink block truncate">Live Voice Fima</span>
+                    <span className="t-meta block text-[10px] truncate">Talk with AI</span>
                   </span>
                   <ChevronRight
-                    className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                    className="w-3.5 h-3.5 text-ink-4 shrink-0"
                     strokeWidth={1.7}
                     aria-hidden="true"
                   />
@@ -203,18 +192,18 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                     onClose();
                     onOpenAuditLogs();
                   }}
-                  className="lg-row"
+                  className="lg-row !min-h-[50px] !py-2.5 !px-3.5"
                   style={delay()}
                 >
-                  <span className="lg-row-icon" aria-hidden="true">
-                    <History className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  <span className="lg-row-icon !w-[32px] !h-[32px] !rounded-lg" aria-hidden="true">
+                    <History className="w-4 h-4" strokeWidth={1.7} />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="t-body text-ink block">Audit log</span>
-                    <span className="t-meta block">Every fund movement, in order</span>
+                    <span className="t-body text-xs text-ink block truncate">Audit log</span>
+                    <span className="t-meta block text-[10px] truncate">Fund movement</span>
                   </span>
                   <ChevronRight
-                    className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                    className="w-3.5 h-3.5 text-ink-4 shrink-0"
                     strokeWidth={1.7}
                     aria-hidden="true"
                   />
@@ -227,18 +216,18 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                     onClose();
                     onOpenInstallModal();
                   }}
-                  className="lg-row"
+                  className="lg-row !min-h-[50px] !py-2.5 !px-3.5"
                   style={delay()}
                 >
-                  <span className="lg-row-icon text-amber-500" aria-hidden="true">
-                    <Download className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  <span className="lg-row-icon !w-[32px] !h-[32px] !rounded-lg text-amber-500" aria-hidden="true">
+                    <Download className="w-4 h-4" strokeWidth={1.7} />
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="t-body text-ink block">Install Fimara</span>
-                    <span className="t-meta block">Add to Home Screen or Desktop</span>
+                    <span className="t-body text-xs text-ink block truncate">Install App</span>
+                    <span className="t-meta block text-[10px] truncate">Add to Home Screen</span>
                   </span>
                   <ChevronRight
-                    className="w-[18px] h-[18px] text-ink-4 shrink-0"
+                    className="w-3.5 h-3.5 text-ink-4 shrink-0"
                     strokeWidth={1.7}
                     aria-hidden="true"
                   />
@@ -249,26 +238,26 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         </div>
 
         {/* ---- Account ---- */}
-        <div className="border-t border-line p-4 bg-sunken shrink-0">
-          <div className="flex items-center justify-between gap-3">
+        <div className="border-t border-line p-3 pb-[max(env(safe-area-inset-bottom,0px),1.25rem)] bg-sunken shrink-0">
+          <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <div className="t-card truncate">{user?.username || 'User'}</div>
-              <div className="t-meta truncate">{user?.email}</div>
+              <div className="t-card truncate text-xs font-semibold">{user?.username || 'User'}</div>
+              <div className="t-meta truncate text-[10px]">{user?.email}</div>
             </div>
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="lg-btn lg-btn-quiet lg-btn-sm shrink-0"
+              className="lg-btn lg-btn-quiet lg-btn-sm shrink-0 text-xs px-2 py-1"
             >
               {resolvedTheme === 'dark' ? (
                 <>
-                  <Sun className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-                  Light
+                  <Sun className="w-3.5 h-3.5" strokeWidth={1.7} aria-hidden="true" />
+                  <span>Light</span>
                 </>
               ) : (
                 <>
-                  <Moon className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
-                  Dark
+                  <Moon className="w-3.5 h-3.5" strokeWidth={1.7} aria-hidden="true" />
+                  <span>Dark</span>
                 </>
               )}
             </button>
@@ -280,9 +269,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                 onClose();
                 logout();
               }}
-              className="lg-btn lg-btn-danger lg-btn-block mt-4"
+              className="lg-btn lg-btn-danger lg-btn-block mt-3 text-xs py-2"
             >
-              <LogOut className="w-4 h-4" strokeWidth={1.7} aria-hidden="true" />
+              <LogOut className="w-3.5 h-3.5" strokeWidth={1.7} aria-hidden="true" />
               Sign out
             </button>
           )}
