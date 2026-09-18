@@ -1,10 +1,14 @@
-const CACHE_NAME = 'fimara-cache-v1.7.0';
+const CACHE_NAME = 'fimara-cache-v1.7.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/ledger-icon.svg',
-  '/favicon.svg'
+  '/favicon.svg',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/icon-maskable-192x192.png',
+  '/icon-maskable-512x512.png'
 ];
 
 // Install: Pre-cache shell assets

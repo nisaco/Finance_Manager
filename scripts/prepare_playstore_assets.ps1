@@ -79,3 +79,4 @@ foreach ($sc in $screenshots) {
 }
 
 Write-Output "All Play Store assets prepared successfully!"
+

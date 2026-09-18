@@ -30,31 +30,27 @@ export const LedgerLogo: React.FC<LedgerLogoProps> = ({
         >
           <defs>
             <linearGradient id="logoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#1E222D" />
-              <stop offset="50%" stopColor="#11141A" />
-              <stop offset="100%" stopColor="#090B0E" />
+              <stop offset="0%" stopColor="#141923" />
+              <stop offset="50%" stopColor="#0B0E14" />
+              <stop offset="100%" stopColor="#06080B" />
             </linearGradient>
 
-            <linearGradient id="logoGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FDE68A" />
-              <stop offset="45%" stopColor="#F59E0B" />
-              <stop offset="100%" stopColor="#D97706" />
-            </linearGradient>
-
-            <linearGradient id="logoEmeraldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <linearGradient id="logoWingTop" x1="0%" y1="0%" x2="100%" y2="40%">
               <stop offset="0%" stopColor="#059669" />
-              <stop offset="60%" stopColor="#10B981" />
-              <stop offset="100%" stopColor="#6EE7B7" />
+              <stop offset="50%" stopColor="#10B981" />
+              <stop offset="100%" stopColor="#34D399" />
             </linearGradient>
 
-            <linearGradient id="logoPillarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="70%" stopColor="#F1F5F9" />
-              <stop offset="100%" stopColor="#CBD5E1" />
+            <linearGradient id="logoWingMid" x1="10%" y1="90%" x2="90%" y2="20%">
+              <stop offset="0%" stopColor="#047857" />
+              <stop offset="40%" stopColor="#059669" />
+              <stop offset="75%" stopColor="#10B981" />
+              <stop offset="100%" stopColor="#34D399" />
             </linearGradient>
 
-            <filter id="logoShadow" x="-10%" y="-10%" width="120%" height="120%">
-              <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#000000" floodOpacity="0.4" />
+            <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="8" stdDeviation="16" floodColor="#10B981" floodOpacity="0.4" />
+              <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#10B981" floodOpacity="0.6" />
             </filter>
           </defs>
 
@@ -67,40 +63,38 @@ export const LedgerLogo: React.FC<LedgerLogoProps> = ({
             height="508"
             rx="118"
             fill="none"
-            stroke="#FFFFFF"
-            strokeOpacity="0.14"
-            strokeWidth="4"
+            stroke="#10B981"
+            strokeOpacity="0.18"
+            strokeWidth="3"
           />
 
           <g filter="url(#logoShadow)">
-            {/* Subtle underlay ledger sheet */}
-            <rect x="200" y="316" width="180" height="40" rx="12" fill="#64748B" opacity="0.35" />
-
-            {/* Base Horizontal Ledger Block */}
-            <rect x="128" y="332" width="252" height="52" rx="14" fill="url(#logoGoldGrad)" />
-
-            {/* Vertical Stability Pillar */}
-            <rect x="128" y="128" width="58" height="256" rx="16" fill="url(#logoPillarGrad)" />
-            <rect x="134" y="136" width="6" height="240" rx="3" fill="#FFFFFF" opacity="0.8" />
-
-            {/* Ascent Bar 1 */}
-            <rect x="220" y="244" width="52" height="72" rx="12" fill="#E2E8F0" opacity="0.9" />
-
-            {/* Ascent Bar 2 */}
-            <rect x="298" y="180" width="52" height="136" rx="12" fill="url(#logoPillarGrad)" />
-
-            {/* Emerald Growth Arrow Peak */}
+            {/* Top Aerodynamic Ribbon Wing */}
             <path
-              d="M 324 112 L 384 172 C 390 178 388 188 380 188 H 340 C 331 188 324 181 324 172 Z"
-              fill="url(#logoEmeraldGrad)"
+              d="M 152 166
+                 C 152 136, 172 122, 208 122
+                 L 366 122
+                 C 386 122, 396 132, 392 148
+                 C 386 174, 362 192, 334 192
+                 L 202 192
+                 C 172 192, 152 182, 152 166 Z"
+              fill="url(#logoWingTop)"
             />
-            <circle cx="384" cy="128" r="10" fill="#6EE7B7" />
-            <circle cx="384" cy="128" r="4" fill="#FFFFFF" />
 
-            {/* Ledger Notch details */}
-            <line x1="145" y1="184" x2="169" y2="184" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
-            <line x1="145" y1="220" x2="169" y2="220" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
-            <line x1="145" y1="256" x2="169" y2="256" stroke="#94A3B8" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
+            {/* Lower Stem & Middle Aerodynamic Crossbar */}
+            <path
+              d="M 154 374
+                 C 152 398, 166 404, 176 384
+                 C 188 360, 192 312, 192 264
+                 C 192 238, 212 230, 238 230
+                 L 324 230
+                 C 342 230, 350 238, 346 254
+                 C 338 280, 316 296, 288 296
+                 L 222 296
+                 C 188 296, 182 320, 178 354
+                 C 168 392, 154 398, 154 374 Z"
+              fill="url(#logoWingMid)"
+            />
           </g>
         </svg>
       </div>

@@ -1,194 +1,60 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
     <!-- Background Gradient -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1E222D"/>
-      <stop offset="50%" stop-color="#11141A"/>
-      <stop offset="100%" stop-color="#090B0E"/>
+    <linearGradient id="ledgerBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141923"/>
+      <stop offset="50%" stop-color="#0B0E14"/>
+      <stop offset="100%" stop-color="#06080B"/>
     </linearGradient>
 
-    <!-- Subtle Ambient Radial Glow -->
-    <radialGradient id="ambientGlow" cx="30%" cy="25%" r="60%">
-      <stop offset="0%" stop-color="#10B981" stop-opacity="0.22"/>
-      <stop offset="50%" stop-color="#059669" stop-opacity="0.06"/>
-      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
-    </radialGradient>
-
-    <!-- Metallic Gold Gradient -->
-    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FDE68A"/>
-      <stop offset="45%" stop-color="#F59E0B"/>
-      <stop offset="100%" stop-color="#D97706"/>
-    </linearGradient>
-
-    <!-- Vivid Emerald Growth Gradient -->
-    <linearGradient id="emeraldGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+    <!-- Emerald Wing Gradient (Top Bar) -->
+    <linearGradient id="ledgerWingTop" x1="0%" y1="0%" x2="100%" y2="40%">
       <stop offset="0%" stop-color="#059669"/>
-      <stop offset="60%" stop-color="#10B981"/>
-      <stop offset="100%" stop-color="#6EE7B7"/>
+      <stop offset="50%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
     </linearGradient>
 
-    <!-- Architectural Pillar (Pure Silver/Platinum) Gradient -->
-    <linearGradient id="pillarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="65%" stop-color="#F1F5F9"/>
-      <stop offset="100%" stop-color="#CBD5E1"/>
+    <!-- Emerald Stem & Mid Wing Gradient -->
+    <linearGradient id="ledgerWingMid" x1="10%" y1="90%" x2="90%" y2="20%">
+      <stop offset="0%" stop-color="#047857"/>
+      <stop offset="40%" stop-color="#059669"/>
+      <stop offset="75%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#34D399"/>
     </linearGradient>
 
-    <!-- Secondary Ledger Layer Gradient -->
-    <linearGradient id="layerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#94A3B8"/>
-      <stop offset="100%" stop-color="#64748B"/>
-    </linearGradient>
-
-    <!-- Drop Shadows -->
-    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.5"/>
-      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.3"/>
-    </filter>
-
-    <filter id="symbolShadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.55"/>
-      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.3"/>
-    </filter>
-
-    <filter id="emeraldGlow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="4" stdDeviation="12" flood-color="#10B981" flood-opacity="0.45"/>
+    <!-- Soft Glow Filter -->
+    <filter id="ledgerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#10B981" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#10B981" flood-opacity="0.6"/>
     </filter>
   </defs>
 
-  <!-- Outer Squircle Container with Soft Shadow -->
-  <rect 
-    x="32" 
-    y="32" 
-    width="448" 
-    height="448" 
-    rx="112" 
-    fill="url(#bgGrad)" 
-    filter="url(#cardShadow)"
-  />
+  <!-- Full Bleed Dark Obsidian Background (Zero white border guaranteed) -->
+  <rect width="512" height="512" fill="url(#ledgerBgGrad)"/>
 
-  <!-- Subtle Radial Glow Over Container -->
-  <rect 
-    x="32" 
-    y="32" 
-    width="448" 
-    height="448" 
-    rx="112" 
-    fill="url(#ambientGlow)"
-  />
+  <!-- Logo Mark Group -->
+  <g filter="url(#ledgerGlow)">
+    <!-- Top Aerodynamic Ribbon Wing -->
+    <path d="M 152 166
+             C 152 136, 172 122, 208 122
+             L 366 122
+             C 386 122, 396 132, 392 148
+             C 386 174, 362 192, 334 192
+             L 202 192
+             C 172 192, 152 182, 152 166 Z"
+          fill="url(#ledgerWingTop)"/>
 
-  <!-- Crisp 1px Inner Highlight Border -->
-  <rect 
-    x="33" 
-    y="33" 
-    width="446" 
-    height="446" 
-    rx="111" 
-    fill="none" 
-    stroke="#FFFFFF" 
-    stroke-opacity="0.12" 
-    stroke-width="2"
-  />
-
-  <!-- Geometric Grid Accent Dots (Fine FinTech Security Aesthetic) -->
-  <g opacity="0.18">
-    <circle cx="108" cy="108" r="2.5" fill="#FFFFFF"/>
-    <circle cx="404" cy="108" r="2.5" fill="#FFFFFF"/>
-    <circle cx="108" cy="404" r="2.5" fill="#FFFFFF"/>
-    <circle cx="404" cy="404" r="2.5" fill="#FFFFFF"/>
-  </g>
-
-  <!-- Central Emblem: The Architectural "Ledger & Growth" Monogram -->
-  <g filter="url(#symbolShadow)">
-    
-    <!-- 1. Background Ledger Plate (Bottom-Right Balance Foundation) -->
-    <rect 
-      x="206" 
-      y="312" 
-      width="170" 
-      height="38" 
-      rx="12" 
-      fill="url(#layerGrad)" 
-      opacity="0.4"
-    />
-
-    <!-- 2. Primary Horizontal Ledger Base (The "L" Foundation) -->
-    <rect 
-      x="136" 
-      y="328" 
-      width="240" 
-      height="48" 
-      rx="14" 
-      fill="url(#goldGrad)"
-    />
-
-    <!-- Highlight Reflection on Gold Base -->
-    <path 
-      d="M148 333 H364 C370 333 373 336 373 340 C373 342 370 344 364 344 H148 C142 344 139 342 139 340 C139 336 142 333 148 333 Z" 
-      fill="#FFFFFF" 
-      opacity="0.35"
-    />
-
-    <!-- 3. The Vertical Pillar (Security, Balance & Integrity) -->
-    <rect 
-      x="136" 
-      y="136" 
-      width="54" 
-      height="240" 
-      rx="16" 
-      fill="url(#pillarGrad)"
-    />
-
-    <!-- Vertical Pillar Chamfer Highlight -->
-    <rect 
-      x="142" 
-      y="142" 
-      width="6" 
-      height="228" 
-      rx="3" 
-      fill="#FFFFFF" 
-      opacity="0.75"
-    />
-
-    <!-- 4. Ascending Growth Bars (Dynamic Financial Vector / Vault Progress) -->
-    <!-- Middle Step Bar -->
-    <rect 
-      x="222" 
-      y="246" 
-      width="48" 
-      height="66" 
-      rx="12" 
-      fill="#E2E8F0" 
-      opacity="0.9"
-    />
-
-    <!-- Tall Step Bar -->
-    <rect 
-      x="294" 
-      y="186" 
-      width="48" 
-      height="126" 
-      rx="12" 
-      fill="url(#pillarGrad)"
-    />
-
-    <!-- 5. Ascending Growth Arrowhead / Peak Crest (Emerald Vitality) -->
-    <g filter="url(#emeraldGlow)">
-      <!-- Diagonal Growth Crest -->
-      <path 
-        d="M 318 116 L 376 174 C 382 180 380 190 372 190 H 332 C 324 190 318 184 318 176 Z" 
-        fill="url(#emeraldGrad)"
-      />
-      <!-- Dynamic Sparkling Apex Dot -->
-      <circle cx="376" cy="132" r="10" fill="#6EE7B7"/>
-      <circle cx="376" cy="132" r="4" fill="#FFFFFF"/>
-    </g>
-
-    <!-- Subtle Horizontal Ledger Lines on Pillar for Journal Texture -->
-    <line x1="152" y1="192" x2="174" y2="192" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-    <line x1="152" y1="228" x2="174" y2="228" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-    <line x1="152" y1="264" x2="174" y2="264" stroke="#94A3B8" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-
+    <!-- Lower Stem & Middle Aerodynamic Crossbar -->
+    <path d="M 154 374
+             C 152 398, 166 404, 176 384
+             C 188 360, 192 312, 192 264
+             C 192 238, 212 230, 238 230
+             L 324 230
+             C 342 230, 350 238, 346 254
+             C 338 280, 316 296, 288 296
+             L 222 296
+             C 188 296, 182 320, 178 354
+             C 168 392, 154 398, 154 374 Z"
+          fill="url(#ledgerWingMid)"/>
   </g>
 </svg>
