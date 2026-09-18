@@ -88,6 +88,48 @@ async function startServer() {
     });
   });
 
+  // Digital Asset Links for Google Play Store (TWA / Trusted Web Activity)
+  app.get('/.well-known/assetlinks.json', (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // If an environment variable is set in production (e.g. Render / Cloud), prefer that
+    const envFingerprint = process.env.ANDROID_SHA256_FINGERPRINT;
+    const envPackageName = process.env.ANDROID_PACKAGE_NAME || 'xyz.fimara.app';
+    const filePath = path.join(process.cwd(), 'public', '.well-known', 'assetlinks.json');
+
+    if (envFingerprint) {
+      return res.json([
+        {
+          relation: ['delegate_permission/common.handle_all_urls'],
+          target: {
+            namespace: 'android_app',
+            package_name: envPackageName,
+            sha256_cert_fingerprints: [envFingerprint],
+          },
+        },
+      ]);
+    }
+
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    }
+
+    return res.json([
+      {
+        relation: ['delegate_permission/common.handle_all_urls'],
+        target: {
+          namespace: 'android_app',
+          package_name: envPackageName,
+          sha256_cert_fingerprints: [
+            '14:6D:E9:7D:0F:52:AB:E0:85:41:CA:B2:4C:CE:FE:84:DE:E8:42:C1:B6:13:B4:28:45:B0:EC:A6:11:C2:77:58',
+          ],
+        },
+      },
+    ]);
+  });
+
+
   // ==========================================
   // AUTHENTICATION & MULTI-USER ROUTES
   // ==========================================

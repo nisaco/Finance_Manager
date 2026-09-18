@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "xyz.fimara.app",
+      "sha256_cert_fingerprints": [
+        "14:6D:E9:7D:0F:52:AB:E0:85:41:CA:B2:4C:CE:FE:84:DE:E8:42:C1:B6:13:B4:28:45:B0:EC:A6:11:C2:77:58"
+      ]
+    }
+  }
+]
