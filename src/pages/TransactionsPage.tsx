@@ -161,10 +161,10 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
           {onOpenSmartParser && (
             <button
               onClick={onOpenSmartParser}
-              className="lg-btn lg-btn-sm flex items-center gap-1.5 border border-emerald-500/35 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 font-bold transition-all active:scale-95 shadow-xs"
+              className="lg-btn lg-btn-quiet lg-btn-sm"
               aria-label="Smart MoMo SMS & Receipt AI Parser"
             >
-              <Sparkles className="w-4 h-4 text-emerald-400" strokeWidth={2} aria-hidden="true" />
+              <Sparkles className="w-4 h-4 text-emerald-400" strokeWidth={1.7} aria-hidden="true" />
               <span className="hidden sm:inline">MoMo &amp; Receipt AI</span>
               <span className="sm:hidden">Scan / SMS</span>
             </button>

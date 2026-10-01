@@ -225,7 +225,6 @@ const MainShell: React.FC = () => {
                 onOpenNewGoal={handleOpenNewGoal}
                 onFundGoal={handleFundGoal}
                 onEditTx={handleEditTx}
-                onOpenSmartParser={() => setSmartParserOpen(true)}
               />
             )
           )}
@@ -361,10 +360,6 @@ const MainShell: React.FC = () => {
         isOpen={txModalOpen}
         onClose={() => setTxModalOpen(false)}
         initialData={editingTx}
-        onOpenSmartParser={() => {
-          setTxModalOpen(false);
-          setSmartParserOpen(true);
-        }}
       />
 
       <SmartParserModal

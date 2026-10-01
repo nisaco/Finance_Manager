@@ -311,12 +311,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               {onOpenSmartParser && (
                 <button
                   onClick={onOpenSmartParser}
-                  title="MoMo SMS & Receipt AI Auto-Parser"
-                  aria-label="Smart MoMo & Receipt AI Scan"
-                  className="lg-btn lg-btn-sm flex items-center gap-1.5 border border-emerald-500/35 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 font-bold transition-all active:scale-95 shadow-xs"
+                  title="Scan MoMo SMS or Receipt"
+                  aria-label="Smart MoMo & Receipt Scan"
+                  className="lg-btn lg-btn-quiet lg-btn-sm"
                 >
-                  <Sparkles className="w-4 h-4 text-emerald-400" strokeWidth={2} aria-hidden="true" />
-                  <span className="text-xs">MoMo &amp; Receipt AI</span>
+                  <Sparkles className="w-4 h-4 text-accent" strokeWidth={1.8} aria-hidden="true" />
+                  <span className="hidden lg:inline">Smart Scan</span>
                 </button>
               )}
 
@@ -335,12 +335,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               {onOpenSmartParser && (
                 <button
                   onClick={onOpenSmartParser}
-                  aria-label="Smart MoMo & Receipt AI Scan"
-                  title="MoMo SMS & Receipt AI Auto-Parser"
-                  className="lg-btn lg-btn-sm shrink-0 px-2.5 flex items-center gap-1 border border-emerald-500/35 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 font-bold transition-all active:scale-95"
+                  aria-label="Smart MoMo & Receipt Scan"
+                  title="Scan MoMo SMS or Receipt"
+                  className="lg-btn lg-btn-quiet shrink-0 w-10 px-0 flex items-center justify-center"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" strokeWidth={2} aria-hidden="true" />
-                  <span className="text-[11px]">AI Scan</span>
+                  <Sparkles className="w-4 h-4 text-accent" strokeWidth={2} aria-hidden="true" />
                 </button>
               )}
 
