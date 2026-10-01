@@ -50,6 +50,53 @@ export async function saveOfflinePin(userId: string, pin: string): Promise<strin
 }
 
 /**
+ * Cache user profile locally so they can log in completely offline
+ */
+export function cacheOfflineUser(user: { id: string; email: string; username: string; [key: string]: any }) {
+  if (!user || !user.id) return;
+  try {
+    const json = JSON.stringify(user);
+    localStorage.setItem('ledger_cached_user', json);
+    if (user.email) {
+      localStorage.setItem(`fimara_offline_user_${user.email.toLowerCase().trim()}`, json);
+    }
+    if (user.username) {
+      localStorage.setItem(`fimara_offline_user_${user.username.toLowerCase().trim()}`, json);
+    }
+  } catch (err) {
+    console.warn('[OfflinePin] Failed to cache user for offline access:', err);
+  }
+}
+
+/**
+ * Find locally cached user by email or username
+ */
+export function findOfflineUser(identifier: string): any | null {
+  if (!identifier) return null;
+  try {
+    const clean = identifier.toLowerCase().trim();
+    const byId = localStorage.getItem(`fimara_offline_user_${clean}`);
+    if (byId) return JSON.parse(byId);
+
+    // Fallback: check general cached user if username or email matches
+    const general = localStorage.getItem('ledger_cached_user');
+    if (general) {
+      const parsed = JSON.parse(general);
+      if (
+        parsed.email?.toLowerCase().trim() === clean ||
+        parsed.username?.toLowerCase().trim() === clean ||
+        parsed.id === clean
+      ) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('[OfflinePin] Error looking up offline user:', err);
+  }
+  return null;
+}
+
+/**
  * Check if the user has an offline PIN configured on this device
  */
 export function hasOfflinePin(userId: string): boolean {

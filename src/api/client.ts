@@ -356,6 +356,24 @@ export const api = {
     }),
   getAIQuota: (profileId?: string) =>
     request<AIMessageQuota>(`/api/ai/quota${profileId ? `?profileId=${encodeURIComponent(profileId)}` : ''}`),
+  parseTransactionWithAI: (data: { text?: string; imageBase64?: string; mimeType?: string }) =>
+    request<{
+      success: boolean;
+      data: {
+        type: 'income' | 'expense' | 'transfer';
+        amount: number;
+        currency: string;
+        category: string;
+        description: string;
+        date: string;
+        merchantOrParty?: string;
+        reference?: string;
+        fee?: number;
+      };
+    }>('/api/ai/parse-transaction', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   // Stealth Admin Clearance
   stealthAdminAuth: (secretKey: string) =>

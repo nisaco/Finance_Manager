@@ -24,7 +24,7 @@ import {
 } from './server/auth.js';
 import { paystackService } from './server/services/paystack.js';
 import { convertAmount } from './server/services/currency.js';
-import { chatFinancialAdvisor, setupLiveWebSocket } from './server/services/gemini.js';
+import { chatFinancialAdvisor, setupLiveWebSocket, parseTransactionWithAI } from './server/services/gemini.js';
 import { sendPasswordResetEmail, sendOfflinePinConfirmationEmail } from './server/services/email.js';
 
 // Always honour the platform-assigned PORT (Render, Fly, Heroku, Docker...).
@@ -2162,6 +2162,30 @@ async function startServer() {
       res.status(500).json({
         error: err.message || 'Failed to process AI conversation request',
       });
+    }
+  });
+
+  app.post('/api/ai/parse-transaction', optionalAuthMiddleware, async (req: any, res: Response) => {
+    try {
+      const { text, imageBase64, mimeType } = req.body;
+      if (!text && !imageBase64) {
+        return res.status(400).json({ error: 'Either SMS/receipt text or an image is required to parse.' });
+      }
+
+      const result = await parseTransactionWithAI({
+        text,
+        imageBase64,
+        mimeType,
+      });
+
+      if (!result.success) {
+        return res.status(422).json({ error: result.error || 'Could not parse transaction details' });
+      }
+
+      res.json(result);
+    } catch (err: any) {
+      console.error('[AI Parse Transaction Route Error]:', err);
+      res.status(500).json({ error: err.message || 'Internal server error while parsing transaction' });
     }
   });
 

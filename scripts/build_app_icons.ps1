@@ -79,3 +79,4 @@ Generate-Icon -size 512 -outputPath (Join-Path $publicAssetsDir "app-icon-512x51
 
 $src.Dispose()
 Write-Output "All icons generated successfully with full-bleed zero-white-border guarantee!"
+

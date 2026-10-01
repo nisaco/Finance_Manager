@@ -29,6 +29,7 @@ import { ProfileLockModal } from './components/Modals/ProfileLockModal';
 import { LiveVoiceModal } from './components/Modals/LiveVoiceModal';
 import { AdminGodModeModal } from './components/Modals/AdminGodModeModal';
 import { OfflineUnlockModal } from './components/Modals/OfflineUnlockModal';
+import { SmartParserModal } from './components/Modals/SmartParserModal';
 import { hasOfflinePin } from './services/offlinePinAuth';
 import { TermsModal } from './components/TermsModal';
 import { PrivacyModal } from './components/PrivacyModal';
@@ -62,6 +63,7 @@ const MainShell: React.FC = () => {
 
   // Modal states
   const [liveVoiceModalOpen, setLiveVoiceModalOpen] = useState(false);
+  const [smartParserOpen, setSmartParserOpen] = useState(false);
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
@@ -201,6 +203,7 @@ const MainShell: React.FC = () => {
         onTabChange={(tab) => setActiveTab(tab as any)}
         onOpenNewTx={handleOpenNewTx}
         onOpenLiveVoice={() => setLiveVoiceModalOpen(true)}
+        onOpenSmartParser={() => setSmartParserOpen(true)}
         onOpenAdminModal={() => setAdminModalOpen(true)}
       />
 
@@ -234,6 +237,7 @@ const MainShell: React.FC = () => {
                 onOpenNewTx={handleOpenNewTx}
                 onEditTx={handleEditTx}
                 onOpenCsvImport={() => setCsvModalOpen(true)}
+                onOpenSmartParser={() => setSmartParserOpen(true)}
                 onNavigateToHistory={() => setActiveTab('history')}
               />
             )
@@ -356,6 +360,11 @@ const MainShell: React.FC = () => {
         isOpen={txModalOpen}
         onClose={() => setTxModalOpen(false)}
         initialData={editingTx}
+      />
+
+      <SmartParserModal
+        isOpen={smartParserOpen}
+        onClose={() => setSmartParserOpen(false)}
       />
 
       <GoalModal

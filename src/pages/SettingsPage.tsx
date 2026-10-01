@@ -26,6 +26,7 @@ import {
   Sliders,
   Smartphone,
   KeyRound,
+  Fingerprint,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -36,6 +37,12 @@ import { InstallPwaModal, usePwaInstall } from '../components/Modals/InstallPwaM
 import { api } from '../api/client';
 import { formatCurrency } from '../design/tokens';
 import { saveOfflinePin, hasOfflinePin } from '../services/offlinePinAuth';
+import {
+  isBiometricsSupported,
+  isBiometricsConfigured,
+  registerBiometrics,
+  disableBiometrics,
+} from '../services/biometrics';
 
 interface SettingsPageProps {
   onOpenAuditLogs: () => void;
@@ -113,6 +120,46 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     return user?.id ? hasOfflinePin(user.id) || Boolean(user.hasOfflinePin) : false;
   });
   const [showChangePinForm, setShowChangePinForm] = useState(false);
+
+  // Biometrics State
+  const [isBioSupported, setIsBioSupported] = useState(false);
+  const [isBioConfigured, setIsBioConfigured] = useState(false);
+  const [isSettingUpBio, setIsSettingUpBio] = useState(false);
+
+  useEffect(() => {
+    if (user?.id) {
+      isBiometricsSupported().then((supported) => {
+        setIsBioSupported(supported);
+        if (supported) {
+          setIsBioConfigured(isBiometricsConfigured(user.id));
+        }
+      });
+    }
+  }, [user?.id]);
+
+  const handleToggleBiometrics = async () => {
+    if (!user) return;
+    if (isBioConfigured) {
+      disableBiometrics(user.id);
+      setIsBioConfigured(false);
+      notify('Biometric unlock disabled on this device', 'info');
+    } else {
+      setIsSettingUpBio(true);
+      try {
+        const res = await registerBiometrics(user.id, user.username);
+        if (res.success) {
+          setIsBioConfigured(true);
+          notify('Biometrics configured successfully! You can now unlock with Fingerprint or Face ID.');
+        } else {
+          notify(res.error || 'Failed to setup biometrics', 'error');
+        }
+      } catch (err: any) {
+        notify(err.message || 'Failed to setup biometrics', 'error');
+      } finally {
+        setIsSettingUpBio(false);
+      }
+    }
+  };
 
   const handleSaveOfflinePin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -845,6 +892,56 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
             <span className="text-[11px] font-mono text-ink-3">••••</span>
           </div>
         )}
+
+        {/* Biometrics (Fingerprint & Face ID) Setting */}
+        <div className="pt-3 border-t border-line">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-sunken border border-line">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-surface border border-line flex items-center justify-center text-accent shrink-0 mt-0.5 sm:mt-0">
+                <Fingerprint className="w-4 h-4" strokeWidth={2} />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-ink">Biometric Fast Unlock</span>
+                  {isBioConfigured ? (
+                    <span className="lg-tag text-[9px] font-semibold text-pos">Active</span>
+                  ) : (
+                    <span className="lg-tag text-[9px] font-semibold text-ink-3">Optional</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-ink-3">
+                  Unlock Fimara instantly using your device's Fingerprint, Face ID, or Windows Hello.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center self-end sm:self-center shrink-0">
+              {isBioSupported ? (
+                <button
+                  type="button"
+                  onClick={handleToggleBiometrics}
+                  disabled={isSettingUpBio}
+                  className={`lg-btn text-xs ${
+                    isBioConfigured ? 'lg-btn-quiet text-neg hover:bg-neg/10' : 'lg-btn-solid'
+                  }`}
+                >
+                  <Fingerprint className="w-3.5 h-3.5" />
+                  <span>
+                    {isSettingUpBio
+                      ? 'Registering...'
+                      : isBioConfigured
+                      ? 'Disable Biometrics'
+                      : 'Enable Biometrics'}
+                  </span>
+                </button>
+              ) : (
+                <span className="text-[11px] text-ink-3 italic">
+                  Not supported on this browser
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Exchange Rates & Backup Grid */}

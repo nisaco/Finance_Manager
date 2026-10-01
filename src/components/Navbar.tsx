@@ -38,6 +38,7 @@ interface NavbarProps {
   onOpenNewTx: () => void;
   onOpenAuditLogs?: () => void;
   onOpenLiveVoice?: () => void;
+  onOpenSmartParser?: () => void;
   onOpenAdminModal?: () => void;
   onOpenStealthAdmin?: () => void;
 }
@@ -50,6 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNewTx,
   onOpenAuditLogs,
   onOpenLiveVoice,
+  onOpenSmartParser,
   onOpenAdminModal,
   onOpenStealthAdmin,
 }) => {
@@ -306,6 +308,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               )}
 
+              {onOpenSmartParser && (
+                <button
+                  onClick={onOpenSmartParser}
+                  title="Scan MoMo SMS or Receipt"
+                  aria-label="Smart MoMo & Receipt Scan"
+                  className="lg-btn lg-btn-quiet lg-btn-sm"
+                >
+                  <Sparkles className="w-4 h-4 text-accent" strokeWidth={1.8} aria-hidden="true" />
+                  <span className="hidden lg:inline">Smart Scan</span>
+                </button>
+              )}
+
               <button
                 onClick={onOpenNewTx}
                 aria-label="Record an entry"
@@ -317,13 +331,26 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             {/* The primary action stays on screen at every width */}
-            <button
-              onClick={onOpenNewTx}
-              aria-label="Record an entry"
-              className="lg-btn lg-btn-solid md:hidden shrink-0 w-11 px-0"
-            >
-              <Plus className="w-5 h-5" strokeWidth={2.2} aria-hidden="true" />
-            </button>
+            <div className="flex items-center gap-1.5 md:hidden">
+              {onOpenSmartParser && (
+                <button
+                  onClick={onOpenSmartParser}
+                  aria-label="Smart MoMo & Receipt Scan"
+                  title="Scan MoMo SMS or Receipt"
+                  className="lg-btn lg-btn-quiet shrink-0 w-10 px-0 flex items-center justify-center"
+                >
+                  <Sparkles className="w-4 h-4 text-accent" strokeWidth={2} aria-hidden="true" />
+                </button>
+              )}
+
+              <button
+                onClick={onOpenNewTx}
+                aria-label="Record an entry"
+                className="lg-btn lg-btn-solid shrink-0 w-10 px-0 flex items-center justify-center"
+              >
+                <Plus className="w-5 h-5" strokeWidth={2.2} aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
           {/* ---- Desktop section navigation -------------------------------- */}

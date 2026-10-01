@@ -65,3 +65,4 @@ $bmp.Dispose()
 $src.Dispose()
 
 Write-Output "Generated padded safe-zone maskable test"
+

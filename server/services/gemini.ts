@@ -442,3 +442,92 @@ When speaking:
     });
   });
 }
+
+export async function parseTransactionWithAI(params: {
+  text?: string;
+  imageBase64?: string;
+  mimeType?: string;
+}): Promise<{
+  success: boolean;
+  data?: {
+    type: 'income' | 'expense' | 'transfer';
+    amount: number;
+    currency: string;
+    category: string;
+    description: string;
+    date: string;
+    merchantOrParty?: string;
+    reference?: string;
+    fee?: number;
+  };
+  error?: string;
+}> {
+  try {
+    const ai = getGenAI();
+    const today = new Date().toISOString().split('T')[0];
+
+    const prompt = `You are an expert financial ledger document and SMS parser for Africa and global financial systems.
+Extract transaction details from the provided mobile money SMS, bank alert SMS, paper receipt, invoice, or billing slip.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "type": "income" | "expense" | "transfer",
+  "amount": number (positive float, e.g. 150.00),
+  "currency": "GHS" | "USD" | "EUR" | "GBP" | "NGN" | "KES",
+  "category": "Shopping" | "Food & Dining" | "Transportation" | "Utilities" | "Healthcare" | "Education" | "Salary" | "Investments" | "Transfer" | "General Expense",
+  "description": string (e.g. "Paid to Melcom Plus Accra", "Received from Kwame Mensah", "Total Fuel Station"),
+  "date": "YYYY-MM-DD" (use "${today}" if not explicitly stated),
+  "merchantOrParty": string,
+  "reference": string,
+  "fee": number
+}
+
+Context or SMS text to parse:
+${params.text || 'Analyze the attached receipt image carefully.'}`;
+
+    const parts: any[] = [{ text: prompt }];
+
+    if (params.imageBase64) {
+      const cleanBase64 = params.imageBase64.replace(/^data:[^;]+;base64,/, '');
+      parts.push({
+        inlineData: {
+          data: cleanBase64,
+          mimeType: params.mimeType || 'image/jpeg',
+        },
+      });
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.5-flash',
+      contents: [{ role: 'user', parts }],
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const rawJson = response.text?.trim() || '{}';
+    const parsed = JSON.parse(rawJson);
+
+    if (!parsed.amount || isNaN(Number(parsed.amount))) {
+      return { success: false, error: 'Could not detect a valid transaction amount in the provided text/image.' };
+    }
+
+    return {
+      success: true,
+      data: {
+        type: parsed.type === 'income' ? 'income' : parsed.type === 'transfer' ? 'transfer' : 'expense',
+        amount: Math.abs(Number(parsed.amount)),
+        currency: parsed.currency || 'GHS',
+        category: parsed.category || 'General Expense',
+        description: parsed.description || 'Imported Transaction',
+        date: parsed.date || today,
+        merchantOrParty: parsed.merchantOrParty || undefined,
+        reference: parsed.reference || undefined,
+        fee: parsed.fee ? Math.abs(Number(parsed.fee)) : undefined,
+      },
+    };
+  } catch (err: any) {
+    console.error('[AI Parse Error]:', err);
+    return { success: false, error: err.message || 'Failed to parse transaction with AI' };
+  }
+}

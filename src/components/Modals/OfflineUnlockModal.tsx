@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Lock, ShieldAlert, KeyRound, ArrowRight, Delete } from 'lucide-react';
+import { Lock, ShieldAlert, KeyRound, ArrowRight, Delete, Fingerprint } from 'lucide-react';
 import { verifyOfflinePin, getOfflineLockoutStatus } from '../../services/offlinePinAuth';
+import { isBiometricsSupported, isBiometricsConfigured, verifyBiometrics } from '../../services/biometrics';
 
 interface OfflineUnlockModalProps {
   isOpen: boolean;
@@ -21,7 +22,17 @@ export const OfflineUnlockModal: React.FC<OfflineUnlockModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [lockout, setLockout] = useState(() => getOfflineLockoutStatus(user.id));
+  const [hasBiometrics, setHasBiometrics] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Check if biometrics configured for this user
+  useEffect(() => {
+    isBiometricsSupported().then((supported) => {
+      if (supported && isBiometricsConfigured(user.id)) {
+        setHasBiometrics(true);
+      }
+    });
+  }, [user.id]);
 
   // Keep lockout status updated
   useEffect(() => {
@@ -39,6 +50,23 @@ export const OfflineUnlockModal: React.FC<OfflineUnlockModalProps> = ({
       setTimeout(() => inputRef.current?.focus(), 150);
     }
   }, [isOpen, user.id]);
+
+  const triggerBiometrics = async () => {
+    setIsVerifying(true);
+    setErrorMsg(null);
+    try {
+      const res = await verifyBiometrics(user.id);
+      if (res.success) {
+        onUnlockSuccess();
+      } else {
+        setErrorMsg(res.error || 'Biometric verification failed.');
+      }
+    } catch {
+      setErrorMsg('Failed to verify biometrics. Please use your PIN.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const handleDigit = (digit: string) => {
     if (lockout.isLocked || pin.length >= 4 || isVerifying) return;
@@ -198,7 +226,7 @@ export const OfflineUnlockModal: React.FC<OfflineUnlockModalProps> = ({
             0
           </button>
 
-          <button
+            <button
             type="button"
             onClick={handleBackspace}
             disabled={pin.length === 0 || isVerifying}
@@ -208,6 +236,21 @@ export const OfflineUnlockModal: React.FC<OfflineUnlockModalProps> = ({
             <Delete className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Biometrics Quick Unlock */}
+        {hasBiometrics && (
+          <div className="pt-1 max-w-[240px] mx-auto w-full">
+            <button
+              type="button"
+              onClick={triggerBiometrics}
+              disabled={lockout.isLocked || isVerifying}
+              className="w-full h-11 rounded-xl text-xs font-semibold text-accent bg-accent/10 hover:bg-accent/20 border border-accent/30 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-40"
+            >
+              <Fingerprint className="w-4 h-4 text-accent" strokeWidth={2} />
+              <span>Unlock with Fingerprint / Face ID</span>
+            </button>
+          </div>
+        )}
 
         {/* Informational Footer */}
         <div className="pt-2 border-t border-line text-[11px] text-ink-3 leading-relaxed">

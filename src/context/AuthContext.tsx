@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
+import { cacheOfflineUser, findOfflineUser, verifyOfflinePin } from '../services/offlinePinAuth';
+import { getLastBiometricUser, verifyBiometrics } from '../services/biometrics';
 
 interface RegisterData {
   username: string;
@@ -18,6 +20,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (data: LoginData) => Promise<{ success: boolean; error?: string }>;
+  loginOffline: (identifier: string, pin: string) => Promise<{ success: boolean; error?: string }>;
+  loginBiometrics: (identifier?: string) => Promise<{ success: boolean; error?: string }>;
   adminLogin: (secretKey: string) => Promise<{ success: boolean; error?: string }>;
   register: (data: RegisterData) => Promise<{ success: boolean; error?: string }>;
   logout: (reason?: string) => Promise<void>;
@@ -94,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(data.user);
           setIsAuthenticated(true);
           try {
-            localStorage.setItem('ledger_cached_user', JSON.stringify(data.user));
+            cacheOfflineUser(data.user);
           } catch {}
           localStorage.setItem('ledger_last_activity', Date.now().toString());
         } else {
@@ -145,9 +149,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, [checkAuth]);
 
-  // Session Inactivity Timeout Tracker
+  // Session Inactivity Timeout Tracker (Mobile-Resilient)
   useEffect(() => {
     if (!isAuthenticated) return;
+
+    const checkInactivity = (): boolean => {
+      const lastActiveStr = localStorage.getItem('ledger_last_activity');
+      if (lastActiveStr) {
+        const lastActive = parseInt(lastActiveStr, 10);
+        if (Date.now() - lastActive > INACTIVITY_TIMEOUT_MS) {
+          const reason = 'Your session expired due to 15 minutes of inactivity. Please sign in again.';
+          localStorage.setItem('ledger_session_expired', reason);
+          setSessionExpiredMessage(reason);
+          logout(reason);
+          return true;
+        }
+      }
+      return false;
+    };
 
     const updateActivity = () => {
       localStorage.setItem('ledger_last_activity', Date.now().toString());
@@ -156,6 +175,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
     let lastThrottledTime = 0;
     const throttledHandler = () => {
+      // CRITICAL FOR MOBILE: If session has already expired while the screen was off,
+      // expire immediately instead of letting the touch event reset the clock!
+      if (checkInactivity()) return;
+
       const now = Date.now();
       if (now - lastThrottledTime > 15000) { // Throttle every 15s
         lastThrottledTime = now;
@@ -165,25 +188,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     events.forEach(evt => window.addEventListener(evt, throttledHandler, { passive: true }));
 
+    // Listen for tab focus and mobile screen wake-up
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkInactivity();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', checkInactivity);
+
     // Periodic check for inactivity
     const interval = setInterval(() => {
-      const lastActiveStr = localStorage.getItem('ledger_last_activity');
-      if (lastActiveStr) {
-        const lastActive = parseInt(lastActiveStr, 10);
-        if (Date.now() - lastActive > INACTIVITY_TIMEOUT_MS) {
-          const reason = 'Your session expired due to 15 minutes of inactivity. Please sign in again.';
-          localStorage.setItem('ledger_session_expired', reason);
-          setSessionExpiredMessage(reason);
-          logout();
-        }
-      }
+      checkInactivity();
     }, 20000);
 
     return () => {
       events.forEach(evt => window.removeEventListener(evt, throttledHandler));
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', checkInactivity);
       clearInterval(interval);
     };
   }, [isAuthenticated]);
+
+  const loginOffline = async (identifier: string, pin: string) => {
+    try {
+      const cachedUser = findOfflineUser(identifier);
+      if (!cachedUser) {
+        return {
+          success: false,
+          error: 'No offline profile found on this device for this account. Sign in online once first.',
+        };
+      }
+
+      const verifyResult = await verifyOfflinePin(cachedUser.id, pin);
+      if (!verifyResult.success) {
+        return {
+          success: false,
+          error: verifyResult.error || 'Incorrect Offline PIN.',
+        };
+      }
+
+      // Offline login successful
+      setUser(cachedUser);
+      setIsAuthenticated(true);
+      setRequireAuthModal(false);
+      localStorage.setItem('ledger_last_activity', Date.now().toString());
+      clearSessionExpiredMessage();
+      return { success: true };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || 'Failed to authenticate offline',
+      };
+    }
+  };
+
+  const loginBiometrics = async (identifier?: string) => {
+    try {
+      let cachedUser: User | null = null;
+      if (identifier) {
+        cachedUser = findOfflineUser(identifier);
+      } else {
+        const lastBio = getLastBiometricUser();
+        if (lastBio) {
+          cachedUser = findOfflineUser(lastBio.id);
+        }
+      }
+
+      if (!cachedUser) {
+        return {
+          success: false,
+          error: 'No registered biometric profile found on this device. Sign in once with PIN or password.',
+        };
+      }
+
+      const bioResult = await verifyBiometrics(cachedUser.id);
+      if (!bioResult.success) {
+        return {
+          success: false,
+          error: bioResult.error || 'Biometric verification failed.',
+        };
+      }
+
+      setUser(cachedUser);
+      setIsAuthenticated(true);
+      setRequireAuthModal(false);
+      localStorage.setItem('ledger_last_activity', Date.now().toString());
+      clearSessionExpiredMessage();
+      return { success: true };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.message || 'Biometric authentication failed.',
+      };
+    }
+  };
 
   const login = async ({ usernameOrEmail, password }: LoginData) => {
     try {
@@ -208,6 +307,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user?.role === 'admin' || data.user?.email?.toLowerCase() === 'jnkpappoe@gmail.com') {
         localStorage.setItem('ledger_open_admin_modal', 'true');
       }
+
+      try {
+        cacheOfflineUser(data.user);
+      } catch {}
 
       setUser(data.user);
       setIsAuthenticated(true);
@@ -457,6 +560,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         isLoading,
         login,
+        loginOffline,
+        loginBiometrics,
         adminLogin,
         register,
         logout,

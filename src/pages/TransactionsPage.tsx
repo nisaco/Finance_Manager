@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, Upload, Plus, History, X, ChevronDown, FileSpreadsheet, FileText, File } from 'lucide-react';
+import { Search, Download, Upload, Plus, History, X, ChevronDown, FileSpreadsheet, FileText, File, Sparkles } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { ReceiptRow } from '../components/ReceiptRow';
 import { Transaction } from '../types';
@@ -11,6 +11,7 @@ interface TransactionsPageProps {
   onOpenNewTx: () => void;
   onEditTx: (tx: Transaction) => void;
   onOpenCsvImport: () => void;
+  onOpenSmartParser?: () => void;
   onNavigateToHistory?: () => void;
 }
 
@@ -18,6 +19,7 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
   onOpenNewTx,
   onEditTx,
   onOpenCsvImport,
+  onOpenSmartParser,
   onNavigateToHistory,
 }) => {
   const { activeProfile, transactions, refreshData, notify } = useLedger();
@@ -156,6 +158,18 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {onOpenSmartParser && (
+            <button
+              onClick={onOpenSmartParser}
+              className="lg-btn lg-btn-quiet lg-btn-sm"
+              aria-label="Smart MoMo SMS & Receipt AI Parser"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-400" strokeWidth={1.7} aria-hidden="true" />
+              <span className="hidden sm:inline">MoMo &amp; Receipt AI</span>
+              <span className="sm:hidden">Scan / SMS</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenCsvImport}
             className="lg-btn lg-btn-quiet lg-btn-sm"

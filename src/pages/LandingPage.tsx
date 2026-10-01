@@ -8,6 +8,7 @@ import { ForgotPasswordModal } from '../components/Modals/ForgotPasswordModal';
 import { AuthTransitionOverlay } from '../components/AuthTransitionOverlay';
 import { LedgerLogo } from '../components/LedgerLogo';
 import { api } from '../api/client';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import {
   Layers,
   ArrowRight,
@@ -30,7 +31,14 @@ import {
   ArrowLeft,
   Wallet,
   Smartphone,
+  WifiOff,
+  Fingerprint,
 } from 'lucide-react';
+import {
+  isBiometricsSupported,
+  isBiometricsConfigured,
+  getLastBiometricUser,
+} from '../services/biometrics';
 
 const HERO_CYCLES = [
   {
@@ -64,6 +72,8 @@ declare global {
 export const LandingPage: React.FC = () => {
   const {
     login,
+    loginOffline,
+    loginBiometrics,
     register,
     loginWithGoogle,
     forgotPassword,
@@ -72,9 +82,34 @@ export const LandingPage: React.FC = () => {
     clearSessionExpiredMessage,
   } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { isOnline } = useNetworkStatus();
 
   const [authMode, setAuthMode] = useState<'signup' | 'login' | 'forgot_password'>('login');
   const [headlineIndex, setHeadlineIndex] = useState(0);
+  const [isOfflinePinMode, setIsOfflinePinMode] = useState(!isOnline);
+  const [offlinePin, setOfflinePin] = useState('');
+  const [hasBiometrics, setHasBiometrics] = useState(false);
+  const [isBiometricPrompting, setIsBiometricPrompting] = useState(false);
+
+  // Auto-switch to offline PIN mode when device disconnects
+  useEffect(() => {
+    if (!isOnline) {
+      setIsOfflinePinMode(true);
+      setAuthMode('login');
+    }
+  }, [isOnline]);
+
+  // Check if platform biometrics are supported and configured on device
+  useEffect(() => {
+    isBiometricsSupported().then((supported) => {
+      if (supported) {
+        const last = getLastBiometricUser();
+        if (last && isBiometricsConfigured(last.id)) {
+          setHasBiometrics(true);
+        }
+      }
+    });
+  }, []);
 
   // Rotate headline every 3 seconds
   useEffect(() => {
@@ -436,12 +471,47 @@ export const LandingPage: React.FC = () => {
     }
   };
 
+  const handleBiometricLogin = async () => {
+    setIsBiometricPrompting(true);
+    setFormError(null);
+    try {
+      const res = await loginBiometrics(loginIdentifier.trim() || undefined);
+      if (!res.success) {
+        setFormError(res.error || 'Biometric authentication failed.');
+      }
+    } catch (err: any) {
+      setFormError(err.message || 'Biometric authentication failed.');
+    } finally {
+      setIsBiometricPrompting(false);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
     if (!loginIdentifier.trim()) {
       setFormError('Please enter your username or email.');
+      return;
+    }
+
+    if (isOfflinePinMode) {
+      if (!offlinePin || offlinePin.length !== 4) {
+        setFormError('Please enter your 4-digit Offline PIN.');
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const result = await loginOffline(loginIdentifier.trim(), offlinePin);
+        if (!result.success) {
+          setIsSubmitting(false);
+          setFormError(result.error || 'Invalid Offline PIN or user not cached on this device.');
+        }
+      } catch (err: any) {
+        setIsSubmitting(false);
+        setFormError(err.message || 'Offline login failed. Please verify your PIN.');
+      }
       return;
     }
 
@@ -1007,6 +1077,33 @@ export const LandingPage: React.FC = () => {
           ) : (
             /* LOGIN FORM */
             <form onSubmit={handleLogin} className="space-y-3.5">
+              {!isOnline && (
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs flex items-center gap-2">
+                  <WifiOff className="w-4 h-4 shrink-0 text-amber-500" />
+                  <span className="text-[11px] leading-tight">
+                    Device is offline. Use your 4-digit PIN to securely unlock your local ledger.
+                  </span>
+                </div>
+              )}
+
+              {isOnline && (
+                <div className="flex items-center justify-between text-[11px] pb-0.5">
+                  <span className="text-ink-3">
+                    {isOfflinePinMode ? 'Offline PIN Mode' : 'Account Password Mode'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOfflinePinMode(!isOfflinePinMode);
+                      setFormError(null);
+                    }}
+                    className="text-accent hover:underline font-semibold"
+                  >
+                    {isOfflinePinMode ? 'Use Password instead' : 'Use 4-digit PIN'}
+                  </button>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-semibold text-ink mb-1">
                   Username or Email <span className="text-neg">*</span>
@@ -1024,75 +1121,116 @@ export const LandingPage: React.FC = () => {
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-semibold text-ink">
-                    Password <span className="text-neg">*</span>
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotIdentifier(loginIdentifier);
-                      setAuthMode('forgot_password');
-                      setFormError(null);
-                      setFormSuccess(null);
-                      setForgotError(null);
-                      setForgotSuccess(null);
-                    }}
-                    className="text-[11px] font-semibold text-accent hover:underline"
-                  >
-                    Forgot password?
-                  </button>
+              {isOfflinePinMode ? (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-ink">
+                      4-Digit Offline PIN <span className="text-neg">*</span>
+                    </label>
+                    <span className="text-[10px] text-ink-3 font-mono-num">Local device lock</span>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      required
+                      value={offlinePin}
+                      onChange={(e) => setOfflinePin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="••••"
+                      className="lg-input pl-9 text-xs font-mono-num tracking-widest text-base font-bold"
+                    />
+                  </div>
                 </div>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    required
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="lg-input pl-9 pr-9 text-xs"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink"
-                    title={showLoginPassword ? 'Hide password' : 'View password'}
-                  >
-                    {showLoginPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-ink">
+                      Password <span className="text-neg">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForgotIdentifier(loginIdentifier);
+                        setAuthMode('forgot_password');
+                        setFormError(null);
+                        setFormSuccess(null);
+                        setForgotError(null);
+                        setForgotSuccess(null);
+                      }}
+                      className="text-[11px] font-semibold text-accent hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2" strokeWidth={1.8} />
+                    <input
+                      type={showLoginPassword ? 'text' : 'password'}
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="lg-input pl-9 pr-9 text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowLoginPassword(!showLoginPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink"
+                      title={showLoginPassword ? 'Hide password' : 'View password'}
+                    >
+                      {showLoginPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {hasBiometrics && (
+                <button
+                  type="button"
+                  onClick={handleBiometricLogin}
+                  disabled={isBiometricPrompting}
+                  className="w-full lg-btn lg-btn-quiet text-xs py-2 flex items-center justify-center gap-2 border border-accent/30 text-accent hover:bg-accent/10"
+                >
+                  <Fingerprint className="w-4 h-4 text-accent" strokeWidth={2} />
+                  <span>{isBiometricPrompting ? 'Scanning Biometrics...' : 'Unlock with Fingerprint / Face ID'}</span>
+                </button>
+              )}
 
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="w-full lg-btn lg-btn-solid text-xs py-2.5 flex items-center justify-center gap-2 mt-2"
               >
-                {isSubmitting ? 'Signing in...' : 'Sign In to Ledger'}
+                {isSubmitting
+                  ? (isOfflinePinMode ? 'Unlocking Ledger...' : 'Signing in...')
+                  : (isOfflinePinMode ? 'Unlock Offline Ledger' : 'Sign In to Ledger')}
                 <ArrowRight className="w-4 h-4" strokeWidth={1.8} />
               </button>
 
-              {/* Social Login Separator */}
-              <div className="relative my-2 flex items-center justify-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-line"></div>
-                </div>
-                <span className="relative bg-surface px-2.5 text-[10px] font-medium text-ink-3 uppercase tracking-wider font-mono-num">
-                  or sign in with
-                </span>
-              </div>
+              {/* Social Login Separator (Online only) */}
+              {isOnline && !isOfflinePinMode && (
+                <>
+                  <div className="relative my-2 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-line"></div>
+                    </div>
+                    <span className="relative bg-surface px-2.5 text-[10px] font-medium text-ink-3 uppercase tracking-wider font-mono-num">
+                      or sign in with
+                    </span>
+                  </div>
 
-              {/* Google Sign-in */}
-              <div className="w-full flex flex-col items-center">
-                <div ref={googleBtnLoginRef} className="w-full flex justify-center min-h-[40px]" />
-                {!gsiLoaded && (
-                  <button
-                    type="button"
-                    onClick={handleTriggerGoogleAuth}
-                    className="w-full lg-btn lg-btn-quiet text-xs py-2 flex items-center justify-center gap-2"
-                  >
+                  {/* Google Sign-in */}
+                  <div className="w-full flex flex-col items-center">
+                    <div ref={googleBtnLoginRef} className="w-full flex justify-center min-h-[40px]" />
+                    {!gsiLoaded && (
+                      <button
+                        type="button"
+                        onClick={handleTriggerGoogleAuth}
+                        className="w-full lg-btn lg-btn-quiet text-xs py-2 flex items-center justify-center gap-2"
+                      >
                     <svg className="w-4 h-4" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -1103,10 +1241,12 @@ export const LandingPage: React.FC = () => {
                   </button>
                 )}
               </div>
-            </form>
+            </>
           )}
-        </div>
-      </main>
+        </form>
+      )}
+    </div>
+  </main>
 
       {/* Footer */}
       <footer className="border-t border-line bg-surface py-5 px-4 sm:px-6 lg:px-8 text-xs text-ink-3 transition-colors">
