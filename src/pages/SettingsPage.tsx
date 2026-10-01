@@ -893,30 +893,30 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </div>
         )}
 
-        {/* Biometrics (Fingerprint & Face ID) Setting */}
-        <div className="pt-3 border-t border-line">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-sunken border border-line">
-            <div className="flex items-start sm:items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-surface border border-line flex items-center justify-center text-accent shrink-0 mt-0.5 sm:mt-0">
-                <Fingerprint className="w-4 h-4" strokeWidth={2} />
-              </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-ink">Biometric Fast Unlock</span>
-                  {isBioConfigured ? (
-                    <span className="lg-tag text-[9px] font-semibold text-pos">Active</span>
-                  ) : (
-                    <span className="lg-tag text-[9px] font-semibold text-ink-3">Optional</span>
-                  )}
+        {/* Biometrics (Fingerprint & Face ID) Setting - Rendered ONLY if user's current device supports platform biometrics */}
+        {isBioSupported && (
+          <div className="pt-3 border-t border-line">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-sunken border border-line">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-surface border border-line flex items-center justify-center text-accent shrink-0 mt-0.5 sm:mt-0 shadow-xs">
+                  <Fingerprint className="w-5 h-5 text-accent" strokeWidth={2} />
                 </div>
-                <p className="text-[11px] text-ink-3">
-                  Unlock Fimara instantly using your device's Fingerprint, Face ID, or Windows Hello.
-                </p>
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-ink">Biometric Fast Unlock</span>
+                    {isBioConfigured ? (
+                      <span className="lg-tag text-[9px] font-semibold text-pos">Active</span>
+                    ) : (
+                      <span className="lg-tag text-[9px] font-semibold text-ink-3">Available on this device</span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-ink-3">
+                    Unlock Fimara instantly using your device's Fingerprint, Touch ID, Face ID, or Windows Hello.
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center self-end sm:self-center shrink-0">
-              {isBioSupported ? (
+              <div className="flex items-center self-end sm:self-center shrink-0">
                 <button
                   type="button"
                   onClick={handleToggleBiometrics}
@@ -934,14 +934,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                       : 'Enable Biometrics'}
                   </span>
                 </button>
-              ) : (
-                <span className="text-[11px] text-ink-3 italic">
-                  Not supported on this browser
-                </span>
-              )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Exchange Rates & Backup Grid */}

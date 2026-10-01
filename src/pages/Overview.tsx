@@ -7,6 +7,7 @@ import { CategorySpend } from '../components/overview/CategorySpend';
 import { BudgetMonitor } from '../components/overview/BudgetMonitor';
 import { VaultList } from '../components/overview/VaultList';
 import { DebtStrip } from '../components/overview/DebtStrip';
+import { Sparkles } from 'lucide-react';
 import { Goal, Transaction } from '../types';
 
 interface OverviewProps {
@@ -16,6 +17,7 @@ interface OverviewProps {
   onOpenNewGoal: () => void;
   onFundGoal: (goal: Goal) => void;
   onEditTx: (tx: Transaction) => void;
+  onOpenSmartParser?: () => void;
 }
 
 /**
@@ -33,6 +35,7 @@ export const Overview: React.FC<OverviewProps> = ({
   onOpenNewGoal,
   onFundGoal,
   onEditTx,
+  onOpenSmartParser,
 }) => {
   const {
     activeProfile,
@@ -79,7 +82,48 @@ export const Overview: React.FC<OverviewProps> = ({
             {activeProfile?.name ? ` · ${activeProfile.name}` : ''}
           </p>
         </div>
+
+        {onOpenSmartParser && (
+          <button
+            type="button"
+            onClick={onOpenSmartParser}
+            className="lg-btn lg-btn-sm flex items-center gap-2 border border-emerald-500/35 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 font-bold shadow-xs transition-all active:scale-95"
+            aria-label="Launch MoMo SMS & Receipt AI Auto-Parser"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-400" strokeWidth={2} />
+            <span>MoMo &amp; Receipt AI</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono-num font-semibold uppercase">Auto</span>
+          </button>
+        )}
       </header>
+
+      {/* Prominent Quick-Scan Banner for MoMo SMS and Receipts */}
+      {onOpenSmartParser && (
+        <div className="lg-card p-3.5 sm:p-4 bg-gradient-to-r from-emerald-500/10 via-surface to-accent/10 border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-xs">
+              <Sparkles className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs sm:text-sm font-bold text-ink">MoMo SMS &amp; Receipt AI Auto-Parser</span>
+                <span className="lg-tag text-[9px] font-semibold bg-emerald-500/20 text-emerald-400 border-emerald-500/40">Ghana MoMo &amp; Banks</span>
+              </div>
+              <p className="text-[11px] text-ink-3 mt-0.5">
+                Paste an MTN MoMo, Telecel Cash, or Bank SMS notification, or snap a photo of any receipt to auto-extract and log entries.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenSmartParser}
+            className="lg-btn text-xs py-2 px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-1.5 shrink-0 shadow-sm transition-all active:scale-95 border border-emerald-400/25"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Scan or Paste SMS</span>
+          </button>
+        </div>
+      )}
 
       <BalanceHero
         summary={summary}
