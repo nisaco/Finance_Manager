@@ -9,6 +9,7 @@ import {
   loadOfflineLedgerData,
   saveOfflineLedgerData,
 } from '../../services/offlineSync';
+import { haptic } from '../../utils/haptics';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   }, [initialData, isOpen, activeProfile]);
 
   const handleTypeChange = (newType: 'expense' | 'income') => {
+    haptic.tap();
     setType(newType);
     setCategory(newType === 'income' ? DEFAULT_INCOME_CATEGORIES[0] : DEFAULT_EXPENSE_CATEGORIES[0]);
   };
@@ -85,6 +87,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     if (!activeProfile) return;
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount <= 0) {
+      haptic.warning();
       notify('Please enter a valid amount', 'error');
       return;
     }
@@ -135,6 +138,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           }
           notify('Transaction recorded offline · Will sync when reconnected');
         }
+        haptic.success();
         await refreshData();
         onClose();
         return;
@@ -151,8 +155,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           recurring,
         });
         if (res?.budgetExceededAlert?.message) {
+          haptic.warning();
           notify(res.budgetExceededAlert.message, 'error');
         } else {
+          haptic.success();
           notify('Transaction updated successfully');
         }
       } else {
@@ -167,14 +173,17 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           recurring,
         });
         if (res?.budgetExceededAlert?.message) {
+          haptic.warning();
           notify(res.budgetExceededAlert.message, 'error');
         } else {
+          haptic.success();
           notify('Transaction added to ledger');
         }
       }
       await refreshData();
       onClose();
     } catch (err: any) {
+      haptic.error();
       // If network failure occurred in-flight, fallback to offline queue
       const isNetworkErr = err?.message?.toLowerCase().includes('fetch') || err?.message?.toLowerCase().includes('network');
       if (isNetworkErr) {
@@ -352,6 +361,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <input
                   id="tx-amount-input"
                   type="number"
+                  inputMode="decimal"
                   step="0.01"
                   min="0"
                   required

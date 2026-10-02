@@ -454,7 +454,15 @@ const MainShell: React.FC = () => {
 };
 
 const AppRouter: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading, user } = useAuth();
+  const {
+    isAuthenticated,
+    isLoading: isAuthLoading,
+    user,
+    isAppLocked,
+    unlockApp,
+    logout,
+    isPrivacyShieldActive,
+  } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
   const [isOfflineUnlocked, setIsOfflineUnlocked] = useState(false);
 
@@ -469,6 +477,21 @@ const AppRouter: React.FC = () => {
   const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
   const hasPin = user ? hasOfflinePin(user.id) : false;
 
+  // Bank-Grade Security: In-app lock when auto-lock timeout triggers
+  if (isAuthenticated && user && isAppLocked) {
+    return (
+      <OfflineUnlockModal
+        isOpen={true}
+        user={user}
+        onUnlockSuccess={unlockApp}
+        title="Fimara App Locked"
+        subtitle={`Logged in as @${user.username} · Enter PIN or scan biometrics`}
+        isOfflineMode={false}
+        onLogout={() => logout('You signed out from the lock screen')}
+      />
+    );
+  }
+
   // When offline, if a cached user session with a configured offline PIN exists, require PIN to unlock
   if (isOffline && user && hasPin && !isOfflineUnlocked) {
     return (
@@ -476,6 +499,8 @@ const AppRouter: React.FC = () => {
         isOpen={true}
         user={user}
         onUnlockSuccess={() => setIsOfflineUnlocked(true)}
+        isOfflineMode={true}
+        onLogout={() => logout('You signed out')}
       />
     );
   }
@@ -486,6 +511,13 @@ const AppRouter: React.FC = () => {
 
   return (
     <LedgerProvider>
+      {/* Bank-Grade Background Privacy Shield (Active when app is minimized/backgrounded) */}
+      {isPrivacyShieldActive && (
+        <div
+          className="fixed inset-0 z-50 bg-canvas/80 backdrop-blur-xl pointer-events-none transition-opacity duration-150 animate-in fade-in"
+          aria-hidden="true"
+        />
+      )}
       <MainShell />
     </LedgerProvider>
   );

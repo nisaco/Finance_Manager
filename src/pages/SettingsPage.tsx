@@ -27,6 +27,8 @@ import {
   Smartphone,
   KeyRound,
   Fingerprint,
+  Timer,
+  Eye,
 } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { useTheme } from '../context/ThemeContext';
@@ -37,6 +39,7 @@ import { InstallPwaModal, usePwaInstall } from '../components/Modals/InstallPwaM
 import { api } from '../api/client';
 import { formatCurrency } from '../design/tokens';
 import { saveOfflinePin, hasOfflinePin, cacheOfflineUser } from '../services/offlinePinAuth';
+import { LOCK_TIMEOUT_OPTIONS, LockTimeoutOption } from '../services/sessionLock';
 import {
   isBiometricsSupported,
   isBiometricsConfigured,
@@ -55,7 +58,16 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   onOpenAdminModal,
   onNavigateToHistory,
 }) => {
-  const { user, logout, setUserRole } = useAuth();
+  const {
+    user,
+    logout,
+    setUserRole,
+    lockTimeoutOption,
+    setLockTimeoutPreference,
+    isPrivacyShieldSettingEnabled,
+    setPrivacyShieldSetting,
+    lockApp,
+  } = useAuth();
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
@@ -940,6 +952,87 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
                   Not supported on this browser
                 </span>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Banking-Grade Auto-Lock Timeout */}
+        <div className="pt-3 border-t border-line">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-sunken border border-line">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-surface border border-line flex items-center justify-center text-accent shrink-0 mt-0.5 sm:mt-0">
+                <Timer className="w-4 h-4" strokeWidth={2} />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-ink">Auto-Lock Inactivity Timeout</span>
+                  <span className="lg-tag text-[9px] font-semibold text-accent">Bank Grade</span>
+                </div>
+                <p className="text-[11px] text-ink-3">
+                  Screen locks without destroying your active session or offline ledger.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+              <select
+                value={lockTimeoutOption}
+                onChange={(e) => setLockTimeoutPreference(e.target.value as LockTimeoutOption)}
+                className="lg-select text-xs py-1.5 px-2.5 font-medium"
+                aria-label="Auto-lock timeout selector"
+              >
+                {LOCK_TIMEOUT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={lockApp}
+                className="lg-btn lg-btn-quiet text-xs"
+                title="Lock screen immediately"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Lock Now</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* App Switcher Privacy Shield */}
+        <div className="pt-3 border-t border-line">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-sunken border border-line">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-surface border border-line flex items-center justify-center text-accent shrink-0 mt-0.5 sm:mt-0">
+                <Eye className="w-4 h-4" strokeWidth={2} />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-ink">App Switcher Privacy Shield</span>
+                  {isPrivacyShieldSettingEnabled ? (
+                    <span className="lg-tag text-[9px] font-semibold text-pos">Protected</span>
+                  ) : (
+                    <span className="lg-tag text-[9px] font-semibold text-ink-3">Disabled</span>
+                  )}
+                </div>
+                <p className="text-[11px] text-ink-3">
+                  Blurs app snapshot when switching apps to protect sensitive balances from screen previews.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center self-end sm:self-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setPrivacyShieldSetting(!isPrivacyShieldSettingEnabled)}
+                className={`lg-btn text-xs ${
+                  isPrivacyShieldSettingEnabled ? 'lg-btn-solid' : 'lg-btn-quiet'
+                }`}
+              >
+                {isPrivacyShieldSettingEnabled ? 'Enabled' : 'Disabled'}
+              </button>
             </div>
           </div>
         </div>

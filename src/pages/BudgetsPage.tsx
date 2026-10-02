@@ -1,9 +1,10 @@
 import React from 'react';
-import { Plus, Edit2, Trash2, ShieldAlert, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, ShieldAlert, AlertCircle, CheckCircle, Flame, Calendar } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { Budget } from '../types';
 import { formatCurrency } from '../design/tokens';
 import { api } from '../api/client';
+import { calculateBudgetVelocity, calculateOverallVelocity } from '../services/budgetVelocity';
 
 interface BudgetsPageProps {
   onOpenNewBudget: () => void;
@@ -43,6 +44,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
   const remainingOverall = Math.max(0, totalBudgetLimit - totalBudgetSpent);
   const overallTone =
     overallPercentage >= 100 ? 'neg' : overallPercentage >= 80 ? 'warn' : 'ink';
+  const overallVelocity = calculateOverallVelocity(budgets);
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
@@ -64,7 +66,15 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
 
       {/* ---- The month in one card ---- */}
       <section className="lg-card p-5 sm:p-6">
-        <p className="t-eyebrow">This month across all budgets</p>
+        <div className="flex items-center justify-between">
+          <p className="t-eyebrow">This month across all budgets</p>
+          {overallVelocity.isBurningFast && overallPercentage < 100 && (
+            <span className="lg-tag text-[10px] font-semibold text-warn flex items-center gap-1">
+              <Flame className="w-3 h-3 text-warn" strokeWidth={2} />
+              Pacing {overallVelocity.burnVelocityRatio}x calendar
+            </span>
+          )}
+        </div>
 
         <div className="mt-2 flex items-baseline gap-2 flex-wrap">
           <span className="num text-[clamp(1.5rem,5vw,2rem)] font-bold tracking-[-0.02em]">
@@ -75,11 +85,18 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
           </span>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-line grid grid-cols-2 gap-4">
+        <div className="mt-4 pt-4 border-t border-line grid grid-cols-2 sm:grid-cols-3 gap-4">
           <div>
             <p className="t-eyebrow">Still available</p>
             <p className="num mt-1.5 text-[1.0625rem] font-bold">
               {formatCurrency(remainingOverall, currency)}
+            </p>
+          </div>
+          <div>
+            <p className="t-eyebrow">Safe to spend</p>
+            <p className="num mt-1.5 text-[1.0625rem] font-bold text-ink">
+              {formatCurrency(overallVelocity.dailySafeTotal, currency)}
+              <span className="text-xs text-ink-3 font-normal"> / day</span>
             </p>
           </div>
           <div>
@@ -132,6 +149,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
                   : 'var(--lg-ink)';
 
             const remaining = b.limit - spent;
+            const vel = calculateBudgetVelocity(b);
 
             return (
               <article key={b.id} className="lg-card lg-card-interactive p-4 sm:p-5 flex flex-col">
@@ -160,7 +178,7 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
                 </div>
 
                 {/* Status, in words as well as colour */}
-                <div className="mt-2">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {isFrozen ? (
                     <span
                       className="lg-tag"
@@ -195,12 +213,26 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
                       }}
                     >
                       <AlertCircle className="w-3 h-3 mr-1" strokeWidth={1.8} aria-hidden="true" />
-                      Close to the limit
+                      80% Alert ({pct}%)
                     </span>
                   ) : (
                     <span className="lg-tag lg-tag-pos">
                       <CheckCircle className="w-3 h-3 mr-1" strokeWidth={1.8} aria-hidden="true" />
                       Within limit
+                    </span>
+                  )}
+
+                  {vel.isBurningFast && !isOver && (
+                    <span
+                      className="lg-tag text-[10px]"
+                      style={{
+                        background: 'var(--lg-warn-soft)',
+                        borderColor: 'transparent',
+                        color: 'var(--lg-warn)',
+                      }}
+                    >
+                      <Flame className="w-3 h-3 mr-1" strokeWidth={1.8} aria-hidden="true" />
+                      Pacing fast ({vel.burnVelocityRatio}x)
                     </span>
                   )}
                 </div>
@@ -243,7 +275,27 @@ export const BudgetsPage: React.FC<BudgetsPageProps> = ({ onOpenNewBudget, onEdi
                       {pct}%
                     </dd>
                   </div>
+
+                  <div className="flex items-baseline justify-between gap-3 pt-1 border-t border-line/60">
+                    <dt className="text-ink-3">Safe daily pace</dt>
+                    <dd className="num font-semibold text-ink">
+                      {formatCurrency(vel.safeDailyRemaining, b.currency)}/day
+                    </dd>
+                  </div>
                 </dl>
+
+                {vel.projectedExhaustionDay && vel.projectedExhaustionDay <= vel.daysInMonth && !isOver && (
+                  <p
+                    className="t-meta mt-3 rounded-lg px-3 py-2 text-[11px] flex items-center gap-1.5"
+                    style={{
+                      background: 'var(--lg-warn-soft)',
+                      color: 'var(--lg-warn)',
+                    }}
+                  >
+                    <Flame className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} />
+                    <span>Current burn pace projects limit exhaustion around day {vel.projectedExhaustionDay}.</span>
+                  </p>
+                )}
 
                 {isFrozen && (
                   <p className="t-meta mt-3.5 rounded-lg bg-neg-soft px-3 py-2.5" style={{ color: 'var(--lg-neg)' }}>
