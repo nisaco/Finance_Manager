@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, Upload, Plus, History, X, ChevronDown, FileSpreadsheet, FileText, File, Sparkles } from 'lucide-react';
+import { Search, Download, Upload, Plus, History, X, ChevronDown, FileSpreadsheet, FileText, File, ReceiptText } from 'lucide-react';
 import { useLedger } from '../context/LedgerContext';
 import { ReceiptRow } from '../components/ReceiptRow';
 import { Transaction } from '../types';
@@ -162,10 +162,11 @@ export const TransactionsPage: React.FC<TransactionsPageProps> = ({
             <button
               onClick={onOpenSmartParser}
               className="lg-btn lg-btn-quiet lg-btn-sm"
-              aria-label="Smart MoMo SMS & Receipt AI Parser"
+              aria-label="Scan Receipt or MoMo SMS"
+              title="Scan Receipt or Paste MoMo SMS"
             >
-              <Sparkles className="w-4 h-4 text-emerald-400" strokeWidth={1.7} aria-hidden="true" />
-              <span className="hidden sm:inline">MoMo &amp; Receipt AI</span>
+              <ReceiptText className="w-4 h-4 text-ink-2" strokeWidth={1.8} aria-hidden="true" />
+              <span className="hidden sm:inline">Scan Receipt / SMS</span>
               <span className="sm:hidden">Scan / SMS</span>
             </button>
           )}

@@ -43,7 +43,17 @@ export function isBiometricsConfigured(userId: string): boolean {
   return Boolean(localStorage.getItem(`${BIOMETRICS_PREFIX}${userId}`));
 }
 
-export function getLastBiometricUser(): { id: string; username: string } | null {
+export interface BiometricUserProfile {
+  id: string;
+  username: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  currency?: string;
+  [key: string]: any;
+}
+
+export function getLastBiometricUser(): BiometricUserProfile | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(LAST_BIOMETRIC_USER_KEY);
@@ -53,12 +63,38 @@ export function getLastBiometricUser(): { id: string; username: string } | null 
   }
 }
 
-export async function registerBiometrics(userId: string, username: string): Promise<{ success: boolean; error?: string }> {
+export function getBiometricProfile(userId?: string): BiometricUserProfile | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    if (userId) {
+      const raw = localStorage.getItem(`fimara_biometric_profile_${userId}`);
+      if (raw) return JSON.parse(raw);
+    }
+    const last = getLastBiometricUser();
+    if (last) {
+      const raw = localStorage.getItem(`fimara_biometric_profile_${last.id}`);
+      if (raw) return JSON.parse(raw);
+      return last;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function registerBiometrics(
+  userOrId: string | BiometricUserProfile | { id: string; username: string; [key: string]: any },
+  maybeUsername?: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const supported = await isBiometricsSupported();
     if (!supported) {
       return { success: false, error: 'Platform biometrics (Fingerprint/Face ID) are not supported on this device.' };
     }
+
+    const userId = typeof userOrId === 'string' ? userOrId : userOrId.id;
+    const username = typeof userOrId === 'string' ? (maybeUsername || 'User') : (userOrId.username || 'User');
+    const fullProfile = typeof userOrId === 'object' ? userOrId : { id: userId, username };
 
     const challenge = window.crypto.getRandomValues(new Uint8Array(32));
     const userIdBuffer = new TextEncoder().encode(userId);
@@ -95,7 +131,8 @@ export async function registerBiometrics(userId: string, username: string): Prom
 
     const credIdBase64 = bufferToBase64(credential.rawId);
     localStorage.setItem(`${BIOMETRICS_PREFIX}${userId}`, credIdBase64);
-    localStorage.setItem(LAST_BIOMETRIC_USER_KEY, JSON.stringify({ id: userId, username }));
+    localStorage.setItem(LAST_BIOMETRIC_USER_KEY, JSON.stringify(fullProfile));
+    localStorage.setItem(`fimara_biometric_profile_${userId}`, JSON.stringify(fullProfile));
 
     return { success: true };
   } catch (err: any) {

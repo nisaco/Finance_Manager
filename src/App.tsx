@@ -225,7 +225,6 @@ const MainShell: React.FC = () => {
                 onOpenNewGoal={handleOpenNewGoal}
                 onFundGoal={handleFundGoal}
                 onEditTx={handleEditTx}
-                onOpenSmartParser={() => setSmartParserOpen(true)}
               />
             )
           )}

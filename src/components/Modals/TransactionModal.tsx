@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowUpRight, ArrowDownRight, Sparkles } from 'lucide-react';
+import { X, ArrowUpRight, ArrowDownRight, ReceiptText } from 'lucide-react';
 import { Transaction } from '../../types';
 import { useLedger } from '../../context/LedgerContext';
 import { useAuth } from '../../context/AuthContext';
@@ -274,28 +274,28 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 overscroll-contain touch-pan-y">
-          {/* Quick MoMo SMS / Receipt AI Autofill button */}
+          {/* Quick MoMo SMS / Receipt Autofill button */}
           {onOpenSmartParser && !initialData && (
             <button
               type="button"
               onClick={onOpenSmartParser}
-              className="w-full p-3 rounded-xl border border-emerald-500/35 bg-emerald-500/10 hover:bg-emerald-500/20 text-left flex items-center justify-between gap-3 transition-all active:scale-[0.99] group shadow-xs"
+              className="w-full p-3 rounded-xl border border-line hover:border-accent/40 bg-sunken/60 hover:bg-sunken text-left flex items-center justify-between gap-3 transition-all active:scale-[0.99] group shadow-xs"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                <div className="w-8 h-8 rounded-lg bg-surface border border-line flex items-center justify-center text-ink shrink-0 group-hover:text-accent transition-colors">
+                  <ReceiptText className="w-4 h-4 text-ink-2 group-hover:text-accent" strokeWidth={1.8} />
                 </div>
                 <div className="truncate">
                   <span className="text-xs font-bold text-ink flex items-center gap-1.5 truncate">
-                    <span>Paste MoMo SMS or Scan Receipt</span>
-                    <span className="text-[9px] font-mono-num px-1.5 py-0.2 rounded bg-emerald-500/25 text-emerald-300 uppercase font-semibold">AI Auto-Fill</span>
+                    <span>Scan Receipt or Paste MoMo SMS</span>
+                    <span className="text-[9px] font-mono-num px-1.5 py-0.5 rounded bg-surface border border-line text-ink-2 uppercase font-semibold">Auto-Fill</span>
                   </span>
                   <span className="text-[11px] text-ink-3 block truncate">
-                    Auto-extract amount, merchant &amp; category from Ghana SMS or photo
+                    Extract amount, merchant &amp; category from alert or receipt
                   </span>
                 </div>
               </div>
-              <span className="text-xs font-bold text-emerald-400 shrink-0 underline decoration-emerald-500/40">
+              <span className="text-xs font-semibold text-accent shrink-0">
                 Scan &rarr;
               </span>
             </button>

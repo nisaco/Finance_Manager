@@ -36,7 +36,7 @@ import { PrivacyModal } from '../components/PrivacyModal';
 import { InstallPwaModal, usePwaInstall } from '../components/Modals/InstallPwaModal';
 import { api } from '../api/client';
 import { formatCurrency } from '../design/tokens';
-import { saveOfflinePin, hasOfflinePin } from '../services/offlinePinAuth';
+import { saveOfflinePin, hasOfflinePin, cacheOfflineUser } from '../services/offlinePinAuth';
 import {
   isBiometricsSupported,
   isBiometricsConfigured,
@@ -146,8 +146,9 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     } else {
       setIsSettingUpBio(true);
       try {
-        const res = await registerBiometrics(user.id, user.username);
+        const res = await registerBiometrics(user);
         if (res.success) {
+          cacheOfflineUser(user);
           setIsBioConfigured(true);
           notify('Biometrics configured successfully! You can now unlock with Fingerprint or Face ID.');
         } else {

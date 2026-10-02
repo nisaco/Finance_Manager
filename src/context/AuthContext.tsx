@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
 import { cacheOfflineUser, findOfflineUser, verifyOfflinePin } from '../services/offlinePinAuth';
-import { getLastBiometricUser, verifyBiometrics } from '../services/biometrics';
+import { getLastBiometricUser, getBiometricProfile, verifyBiometrics } from '../services/biometrics';
 
 interface RegisterData {
   username: string;
@@ -248,14 +248,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       let cachedUser: User | null = null;
       if (identifier) {
         cachedUser = findOfflineUser(identifier);
-      } else {
+      }
+      
+      if (!cachedUser) {
         const lastBio = getLastBiometricUser();
-        if (lastBio) {
-          cachedUser = findOfflineUser(lastBio.id);
+        if (lastBio && lastBio.id) {
+          cachedUser = findOfflineUser(lastBio.id) || (getBiometricProfile(lastBio.id) as User | null);
         }
       }
 
       if (!cachedUser) {
+        const fallbackBio = getBiometricProfile();
+        if (fallbackBio && fallbackBio.id) {
+          cachedUser = fallbackBio as User;
+        }
+      }
+
+      if (!cachedUser || !cachedUser.id) {
         return {
           success: false,
           error: 'No registered biometric profile found on this device. Sign in once with PIN or password.',
@@ -270,6 +279,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       }
 
+      cacheOfflineUser(cachedUser);
       setUser(cachedUser);
       setIsAuthenticated(true);
       setRequireAuthModal(false);
@@ -370,6 +380,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       localStorage.setItem('ledger_last_activity', Date.now().toString());
       clearSessionExpiredMessage();
+      if (data.user) {
+        cacheOfflineUser(data.user);
+      }
       setUser(data.user);
       setIsAuthenticated(true);
       setRequireAuthModal(false);
@@ -413,6 +426,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('ledger_open_admin_modal', 'true');
       }
 
+      if (data.user) {
+        cacheOfflineUser(data.user);
+      }
       setUser(data.user);
       setIsAuthenticated(true);
       setRequireAuthModal(false);

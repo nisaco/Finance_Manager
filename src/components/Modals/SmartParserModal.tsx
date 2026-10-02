@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   X,
-  Sparkles,
+  ReceiptText,
   MessageSquare,
   Camera,
   Upload,
@@ -300,12 +300,12 @@ export const SmartParserModal: React.FC<SmartParserModalProps> = ({ isOpen, onCl
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-line flex items-center justify-between shrink-0 bg-surface">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-accent/15 flex items-center justify-center text-accent">
-              <Sparkles className="w-4 h-4" />
+            <div className="w-8 h-8 rounded-xl bg-sunken border border-line flex items-center justify-center text-ink shrink-0">
+              <ReceiptText className="w-4 h-4 text-ink" strokeWidth={1.8} />
             </div>
             <div>
               <h2 id="smart-parser-title" className="text-sm sm:text-base font-bold text-ink">
-                Smart MoMo &amp; Receipt Parser
+                MoMo &amp; Receipt Parser
               </h2>
               <p className="text-[11px] text-ink-3">
                 Auto-extract Ghana MoMo alerts, bank SMS, or receipt photos

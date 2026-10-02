@@ -52,11 +52,12 @@ export async function saveOfflinePin(userId: string, pin: string): Promise<strin
 /**
  * Cache user profile locally so they can log in completely offline
  */
-export function cacheOfflineUser(user: { id: string; email: string; username: string; [key: string]: any }) {
+export function cacheOfflineUser(user: { id: string; email?: string; username?: string; [key: string]: any }) {
   if (!user || !user.id) return;
   try {
     const json = JSON.stringify(user);
     localStorage.setItem('ledger_cached_user', json);
+    localStorage.setItem(`fimara_offline_user_${user.id.toLowerCase().trim()}`, json);
     if (user.email) {
       localStorage.setItem(`fimara_offline_user_${user.email.toLowerCase().trim()}`, json);
     }
@@ -69,7 +70,7 @@ export function cacheOfflineUser(user: { id: string; email: string; username: st
 }
 
 /**
- * Find locally cached user by email or username
+ * Find locally cached user by email, username, or user ID
  */
 export function findOfflineUser(identifier: string): any | null {
   if (!identifier) return null;
@@ -78,6 +79,10 @@ export function findOfflineUser(identifier: string): any | null {
     const byId = localStorage.getItem(`fimara_offline_user_${clean}`);
     if (byId) return JSON.parse(byId);
 
+    // Fallback: check biometric profile by ID
+    const byBioProfile = localStorage.getItem(`fimara_biometric_profile_${clean}`);
+    if (byBioProfile) return JSON.parse(byBioProfile);
+
     // Fallback: check general cached user if username or email matches
     const general = localStorage.getItem('ledger_cached_user');
     if (general) {
@@ -85,7 +90,20 @@ export function findOfflineUser(identifier: string): any | null {
       if (
         parsed.email?.toLowerCase().trim() === clean ||
         parsed.username?.toLowerCase().trim() === clean ||
-        parsed.id === clean
+        parsed.id?.toLowerCase().trim() === clean
+      ) {
+        return parsed;
+      }
+    }
+
+    // Fallback: check last biometric user profile
+    const lastBio = localStorage.getItem('fimara_last_biometric_user');
+    if (lastBio) {
+      const parsed = JSON.parse(lastBio);
+      if (
+        parsed.email?.toLowerCase().trim() === clean ||
+        parsed.username?.toLowerCase().trim() === clean ||
+        parsed.id?.toLowerCase().trim() === clean
       ) {
         return parsed;
       }
