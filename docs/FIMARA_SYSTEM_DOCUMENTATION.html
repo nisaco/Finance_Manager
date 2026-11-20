@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fimara — Complete System Architecture & Documentation</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #111726;
+      --sidebar-bg: #0c111e;
+      --border: #1f293d;
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.15);
+      --cyan: #06b6d4;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --code-bg: #070a12;
+      --tag-bg: rgba(16, 185, 129, 0.12);
+      --warn: #f59e0b;
+      --neg: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: 290px;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      padding: 24px 18px;
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--cyan));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #fff;
+      font-size: 16px;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+
+    .brand-version {
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: var(--tag-bg);
+      color: var(--accent);
+      padding: 2px 7px;
+      border-radius: 12px;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .nav-search {
+      margin-bottom: 16px;
+    }
+
+    .nav-search input {
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .nav-search input:focus {
+      border-color: var(--accent);
+    }
+
+    nav.toc {
+      flex: 1;
+    }
+
+    nav.toc ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    nav.toc a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.84rem;
+      display: block;
+      padding: 7px 10px;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+
+    nav.toc a:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    nav.toc a.active {
+      color: var(--accent);
+      background: var(--accent-glow);
+      font-weight: 600;
+    }
+
+    /* Main Content */
+    main.content {
+      margin-left: 290px;
+      flex: 1;
+      padding: 40px 60px 100px;
+      max-width: 1100px;
+    }
+
+    /* Action Toolbar Header */
+    .action-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-bottom: 40px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .action-header .meta-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .action-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .action-header p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      border: 1px solid var(--border);
+      padding: 9px 16px;
+      border-radius: 9px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: none;
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.1);
+    }
+
+    /* Typography & Sections */
+    h1.doc-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .doc-meta {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .doc-meta span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    section {
+      margin-bottom: 48px;
+    }
+
+    h2.section-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #e2e8f0;
+      margin: 24px 0 12px;
+    }
+
+    p, li {
+      font-size: 0.94rem;
+      color: #cbd5e1;
+      margin-bottom: 14px;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+      margin-bottom: 16px;
+    }
+
+    /* Card Boxes */
+    .card-box {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 20px 0;
+    }
+
+    .card-box.highlight {
+      border-left: 4px solid var(--accent);
+      background: rgba(16, 185, 129, 0.04);
+    }
+
+    .card-box.warn {
+      border-left: 4px solid var(--warn);
+      background: rgba(245, 158, 11, 0.04);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: var(--card-bg);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: #0f1523;
+      color: #e2e8f0;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.76rem;
+      letter-spacing: 0.05em;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Code Blocks */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.84rem;
+      color: #38bdf8;
+      margin: 16px 0;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 5px;
+      font-size: 0.85em;
+      color: #38bdf8;
+    }
+
+    pre code {
+      background: transparent;
+      padding: 0;
+      color: inherit;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-get { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+    .badge-post { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .badge-put { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+    .badge-delete { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+    /* Print Formatting */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      aside.sidebar, .action-header {
+        display: none !important;
+      }
+      main.content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      h1.doc-title, h2.section-title, h3 {
+        color: #000 !important;
+        -webkit-text-fill-color: initial !important;
+      }
+      p, li, th, td {
+        color: #111 !important;
+      }
+      .card-box, table, pre {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        color: #000 !important;
+      }
+      pre code {
+        color: #000 !important;
+      }
+    }
+
+    @media (max-width: 900px) {
+      aside.sidebar {
+        display: none;
+      }
+      main.content {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">F</div>
+      <div>
+        <div class="brand-title">Fimara</div>
+        <div class="brand-version">v1.6.5 Complete Docs</div>
+      </div>
+    </div>
+
+    <div class="nav-search">
+      <input type="text" id="searchInput" placeholder="Filter sections..." oninput="filterNav()">
+    </div>
+
+    <nav class="toc">
+      <ul id="navList">
+        <li><a href="#summary" class="active">1. Executive Summary</a></li>
+        <li><a href="#architecture">2. System Architecture</a></li>
+        <li><a href="#security">3. Bank-Grade Security</a></li>
+        <li><a href="#offline">4. Offline Sync Engine</a></li>
+        <li><a href="#profiles">5. Multi-Profile Engine</a></li>
+        <li><a href="#velocity">6. Budget Velocity &amp; 80%</a></li>
+        <li><a href="#ledger">7. Transaction Ledger</a></li>
+        <li><a href="#momo">8. MoMo &amp; Receipt OCR</a></li>
+        <li><a href="#vaults">9. Savings Vaults &amp; Paystack</a></li>
+        <li><a href="#debts">10. Debt &amp; Lending Tracker</a></li>
+        <li><a href="#ai">11. Gemini AI Advisor &amp; Voice</a></li>
+        <li><a href="#reports">12. Reports &amp; Statements</a></li>
+        <li><a href="#admin">13. Admin God Mode</a></li>
+        <li><a href="#schemas">14. Data Schema Models</a></li>
+        <li><a href="#api">15. Complete API Reference</a></li>
+        <li><a href="#env">16. Environment Configuration</a></li>
+        <li><a href="#troubleshooting">17. Operational Runbook</a></li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+
+    <!-- Action Header -->
+    <div class="action-header">
+      <div class="meta-info">
+        <h2>Fimara Complete System Documentation</h2>
+        <p>Production Specification, Architectural Blueprints &amp; User Manual</p>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="window.print()">
+          <span>🖨️</span> Print / Save as PDF
+        </button>
+        <button class="btn" onclick="downloadMarkdown()">
+          <span>📥</span> Download Markdown (.md)
+        </button>
+        <button class="btn" onclick="copyFullText()">
+          <span>📋</span> Copy Text
+        </button>
+      </div>
+    </div>
+
+    <h1 class="doc-title">Fimara Financial Manager</h1>
+    <div class="doc-meta">
+      <span><strong>Version:</strong> 1.6.5</span>
+      <span><strong>Runtime:</strong> React 19 · Node 22 · TypeScript · Vite</span>
+      <span><strong>Platforms:</strong> PWA · Android TWA · Web Desktop &amp; Mobile</span>
+      <span><strong>Status:</strong> Production Verified</span>
+    </div>
+
+    <!-- 1. Executive Summary -->
+    <section id="summary">
+      <h2 class="section-title">1. Executive Summary &amp; Vision</h2>
+      <p>
+        <strong>Fimara</strong> is an institutional-grade, privacy-first personal and entity financial management platform. Engineered to mirror the resilience, security, and fluid user experience of tier-1 private wealth applications (such as Ecobank Private Wealth, Revolut, and Monzo), Fimara eliminates the common pitfalls of modern cloud fintech apps: network fragility, privacy invasion, and slow manual data entry.
+      </p>
+      <div class="card-box highlight">
+        <strong>The 5 Core Pillars of Fimara:</strong>
+        <ul style="margin-top: 10px; margin-bottom: 0;">
+          <li><strong>100% Offline-First Ledger:</strong> Complete operations with zero network requirement. Optimistic mutations automatically reconcile upon reconnection.</li>
+          <li><strong>Bank-Grade Security:</strong> Configurable inactivity screen locks, WebAuthn biometrics (Touch/Face ID), 4-digit PBKDF2 local passcode, and background App Switcher privacy veil.</li>
+          <li><strong>Smart Budget Velocity Analytics:</strong> Replaces static budget bars with daily burn rate calculations, calendar progress pacer, and 80% threshold warnings.</li>
+          <li><strong>Frictionless Ingestion:</strong> Built-in MoMo SMS auto-parser and receipt OCR vision parser to log expenses in seconds.</li>
+          <li><strong>Pan-African &amp; Global Rails:</strong> Paystack integration (Ghana &amp; Nigeria mobile money and banks) with real-time multi-currency forex revaluation (GHS, USD, EUR, GBP, NGN).</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2. System Architecture -->
+    <section id="architecture">
+      <h2 class="section-title">2. System Architecture &amp; Tech Stack</h2>
+      <div class="card-box">
+        <h3>Front-End Client</h3>
+        <ul>
+          <li><strong>Framework:</strong> React 19 with strict TypeScript (5.8.2) and Vite (6.2.3).</li>
+          <li><strong>Styling System:</strong> Tailwind CSS v4, custom foundation design tokens with strict dark/light palette variables and glassmorphism.</li>
+          <li><strong>Iconography &amp; Motion:</strong> Lucide React icons, Framer Motion transitions, HTML5 Haptics.</li>
+          <li><strong>Data Visualization:</strong> Recharts graphs and KaTeX mathematical formatting.</li>
+          <li><strong>PWA / Mobile:</strong> Service Worker caching, Web App Manifest, Android Trusted Web Activity (TWA) Digital Asset Links.</li>
+        </ul>
+        <h3>Back-End Server</h3>
+        <ul>
+          <li><strong>Runtime:</strong> Node.js (v22+), Express 4.21, TypeScript via <code>tsx</code>, production bundled via <code>esbuild</code>.</li>
+          <li><strong>Real-Time Engine:</strong> WebSocket Server (<code>ws</code>) for bidirectional low-latency AI advisor spoken audio streams.</li>
+          <li><strong>Dual Database Engine:</strong> Primary MongoDB Atlas cluster with automatic, zero-config in-memory fallback for local development.</li>
+          <li><strong>Third-Party Integrations:</strong> Google Gemini 2.0/2.4 Flash &amp; Live Audio, Paystack API with HMAC-SHA512 verified webhooks, and Nodemailer SMTP email service.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. Security -->
+    <section id="security">
+      <h2 class="section-title">3. Bank-Grade Security, Auth &amp; Privacy</h2>
+      <p>Fimara employs a multi-tiered security perimeter designed to protect financial privacy on shared or mobile devices:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Security Mechanism</th>
+            <th>Implementation Details</th>
+            <th>User Experience Benefit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Configurable Auto-Lock</strong></td>
+            <td>Inactivity timers: <em>Immediate, 1m, 5m, 15m, 30m, Never</em>. Handled in <code>src/services/sessionLock.ts</code>.</td>
+            <td>Locks screen without logging out or discarding active form drafts. Quick biometric/PIN re-auth.</td>
+          </tr>
+          <tr>
+            <td><strong>App Switcher Privacy Shield</strong></td>
+            <td>Listens to <code>visibilitychange</code> and window <code>blur</code>. Applies a frosted glass veil.</td>
+            <td>Prevents screen previewers and OS task switchers from capturing sensitive balance snapshots.</td>
+          </tr>
+          <tr>
+            <td><strong>4-Digit Offline Passcode</strong></td>
+            <td>PBKDF2/SHA-256 hashed passcode stored locally with automated email confirmation.</td>
+            <td>Enables safe local ledger inspection when offline without entering main account password.</td>
+          </tr>
+          <tr>
+            <td><strong>WebAuthn Biometrics</strong></td>
+            <td>W3C Web Authentication credentials (Face ID, Touch ID, Windows Hello).</td>
+            <td>Instant, passwordless local authentication.</td>
+          </tr>
+          <tr>
+            <td><strong>HTTP-Only Cookie Sessions</strong></td>
+            <td>Cryptographically signed JWT stored in <code>HttpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> cookies.</td>
+            <td>Completely immune to cross-site scripting (XSS) token theft.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 4. Offline -->
+    <section id="offline">
+      <h2 class="section-title">4. Offline-First Resilience &amp; Mutation Sync</h2>
+      <p>
+        Fimara ensures that financial records can be created and reviewed anytime. When internet is unavailable, all operations are enqueued in <code>offline_mutations_v1</code> inside <code>localStorage</code> and reflected immediately in the UI via optimistic state updates.
+      </p>
+      <pre><code>// Offline Mutation Workflow
+1. User taps "Save Transaction" while offline
+2. queueOfflineMutation(userId, profileId, 'CREATE_TRANSACTION', payload)
+3. Optimistic transaction added to local profile cache with pendingSync: true
+4. UI displays haptic pulse and "Transaction recorded offline" toast
+5. When navigator.onLine fires, background worker iterates queue and posts to /api/transactions
+6. Queue is purged and fresh authoritative ledger is loaded</code></pre>
+    </section>
+
+    <!-- 5. Profiles -->
+    <section id="profiles">
+      <h2 class="section-title">5. Multi-Profile &amp; Multi-Currency Engine</h2>
+      <p>
+        Users can create and isolate distinct entities (e.g. <em>Personal</em>, <em>Business</em>, <em>Family</em>, <em>Savings</em>). Profiles maintain their own transactions, budgets, vaults, debts, and base currencies (GHS, USD, EUR, GBP, NGN).
+      </p>
+      <ul>
+        <li><strong>Entity PIN Locks:</strong> Individual profiles can be protected with custom PINs for privacy on shared laptops or family tablets.</li>
+        <li><strong>Exchange Rate Management:</strong> Centralized exchange rates dynamically revalue net worth and multi-currency balances.</li>
+      </ul>
+    </section>
+
+    <!-- 6. Velocity -->
+    <section id="velocity">
+      <h2 class="section-title">6. Smart Budget Velocity &amp; 80% Pacing Engine</h2>
+      <p>
+        Located in <code>src/services/budgetVelocity.ts</code>. Traditional budget apps only report spent vs limit. Fimara introduces calendar velocity modeling:
+      </p>
+      <div class="card-box">
+        <p><strong>Burn Velocity Ratio Formula:</strong></p>
+        <pre><code>Burn Velocity Ratio = (Budget Spent %) / max(1, (Current Day / Days in Month) * 100)
+Safe Daily Allowance = max(0, Budget Limit - Total Spent) / max(1, Days Remaining)</code></pre>
+        <ul>
+          <li><strong>Pacing Fast Warning:</strong> When Burn Velocity &ge; 1.25, the app flags expenditure as pacing hot (e.g. <code>🔥 Pacing fast (1.4x)</code>) and projects the exact day the budget will exhaust.</li>
+          <li><strong>80% Threshold Warning:</strong> Alerts the user when 80% of limit is consumed, allowing course-correction before overspending.</li>
+          <li><strong>105% Hard Lock:</strong> Automatically caps categories exceeding 105% to isolate catastrophic budget blowouts.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 7. Ledger -->
+    <section id="ledger">
+      <h2 class="section-title">7. Transaction Ledger &amp; Export System</h2>
+      <p>
+        Full-featured ledger supporting filtering by type, category, date range, and text search. Includes mobile numeric keypad optimization (<code>inputMode="decimal"</code>) and micro-haptic feedback.
+      </p>
+      <ul>
+        <li><strong>Client-Side Exports:</strong> Instant export of filtered transactions to formatted <code>.csv</code> or <code>.xlsx</code> spreadsheets.</li>
+        <li><strong>Recurring Rules:</strong> Automatic cadence scheduling (weekly, monthly).</li>
+      </ul>
+    </section>
+
+    <!-- 8. MoMo -->
+    <section id="momo">
+      <h2 class="section-title">8. MoMo SMS &amp; Receipt OCR Auto-Parser</h2>
+      <p>
+        Designed specifically for modern African mobile payment habits:
+      </p>
+      <ul>
+        <li><strong>Mobile Money Ingestion:</strong> Paste SMS notifications from MTN MoMo, Telecel Cash, or AT Money to automatically extract transaction amount, reference, and recipient name into the transaction modal.</li>
+        <li><strong>Receipt Photo OCR:</strong> Upload or snap a picture of physical paper receipts; Google Gemini Flash extracts total amount, date, and merchant into the ledger in 1 tap.</li>
+      </ul>
+    </section>
+
+    <!-- 9. Vaults -->
+    <section id="vaults">
+      <h2 class="section-title">9. Savings Vaults &amp; Paystack Payment Rails</h2>
+      <p>
+        Wealth accumulation engine supporting flexible goals, high-yield vaults, and locked savings safes.
+      </p>
+      <ul>
+        <li><strong>Paystack Integration:</strong> Direct deposit from Mobile Money or cards via Paystack inline checkout. Webhooks verified with HMAC SHA-512 signatures.</li>
+        <li><strong>Early Withdrawal Governance:</strong> 2% standard administrative fee, with a 10% penalty fee applied if locked vaults are broken prematurely.</li>
+      </ul>
+    </section>
+
+    <!-- 10. Debts -->
+    <section id="debts">
+      <h2 class="section-title">10. Debt &amp; Peer-to-Peer Lending Tracker</h2>
+      <p>
+        Bilateral tracking of liabilities (<em>I Owe</em>) and receivables (<em>Owed to Me</em>). Features partial installment settlements, due dates, and real-time net debt impact on overall net worth.
+      </p>
+    </section>
+
+    <!-- 11. AI -->
+    <section id="ai">
+      <h2 class="section-title">11. Gemini AI Advisor &amp; Live Voice Consultation</h2>
+      <p>
+        Embedded financial intelligence powered by Google Gemini:
+      </p>
+      <ul>
+        <li><strong>Context-Aware Advisor:</strong> Real-time ledger grounding provides personalized debt-snowball advice, tax breakdowns, and cashflow optimization.</li>
+        <li><strong>Sliding Quota Window:</strong> 40 messages per 8 hours with cooldown counters to prevent API exhaustion.</li>
+        <li><strong>Spatial Voice Orb:</strong> Full-duplex WebSocket stream (<code>/api/gemini/live-voice</code>) for conversational spoken audio consultations.</li>
+      </ul>
+    </section>
+
+    <!-- 12. Reports -->
+    <section id="reports">
+      <h2 class="section-title">12. Financial Reports &amp; Institutional PDF Statements</h2>
+      <p>
+        Comprehensive analytics dashboard with monthly cashflow bars, category breakdowns, and net worth trajectory.
+      </p>
+      <ul>
+        <li><strong>Institutional PDF Statements:</strong> Client-side generation of formal, branded monthly statements via <code>jspdf</code>, complete with transaction hashes and verification timestamps suitable for visa or bank loan applications.</li>
+      </ul>
+    </section>
+
+    <!-- 13. Admin -->
+    <section id="admin">
+      <h2 class="section-title">13. Administrative God Mode &amp; Governance</h2>
+      <p>
+        Accessible by platform administrators to monitor health and handle vault operations:
+      </p>
+      <ul>
+        <li>Platform-wide metrics: user count, aggregate vault holdings, collected fees.</li>
+        <li>Withdrawal approvals: review recipient accounts and execute automated payouts.</li>
+        <li>Tamper-proof audit logs tracking every administrative action.</li>
+      </ul>
+    </section>
+
+    <!-- 14. Schemas -->
+    <section id="schemas">
+      <h2 class="section-title">14. Core Data Schema Models</h2>
+      <pre><code>// Transaction Schema
+interface Transaction {
+  id: string;
+  profileId: string;
+  type: 'income' | 'expense';
+  amount: number;
+  currency: string;
+  category: string;
+  date: string; // YYYY-MM-DD
+  note: string;
+  recurring: 'none' | 'weekly' | 'monthly';
+  createdAt: string;
+  pendingSync?: boolean;
+}
+
+// Budget Schema
+interface Budget {
+  id: string;
+  profileId: string;
+  category: string;
+  limit: number;
+  currency: string;
+  spent?: number;
+  percentage?: number;
+  remaining?: number;
+  status?: 'normal' | 'exceeded_locked';
+}
+
+// Vault Goal Schema
+interface Goal {
+  id: string;
+  profileId: string;
+  name: string;
+  target: number;
+  current: number;
+  currency: string;
+  status?: 'active' | 'pending_withdrawal' | 'withdrawn' | 'locked';
+  vaultType?: 'high_yield_vault' | 'locked_savings' | 'emergency_stash' | 'flexible_goal';
+  createdAt: string;
+}</code></pre>
+    </section>
+
+    <!-- 15. API -->
+    <section id="api">
+      <h2 class="section-title">15. Complete REST &amp; WebSocket API Reference</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Method</th>
+            <th>Endpoint</th>
+            <th>Purpose</th>
+            <th>Auth</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-post">POST</span></td>
+            <td><code>/api/auth/login</code></td>
+            <td>Sign in &amp; issue HTTP-only cookie</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-post">POST</span></td>
+            <td><code>/api/auth/offline-pin</code></td>
+            <td>Store 4-digit offline PIN &amp; dispatch email</td>
+            <td>Cookie</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-get">GET</span></td>
+            <td><code>/api/summary</code></td>
+            <td>Active balance, cashflow &amp; velocity stats</td>
+            <td>Cookie</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-get">GET</span></td>
+            <td><code>/api/transactions</code></td>
+            <td>Query transactions by profile, date, query</td>
+            <td>Cookie</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-post">POST</span></td>
+            <td><code>/api/transactions</code></td>
+            <td>Record transaction (with budget velocity alert)</td>
+            <td>Cookie</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-post">POST</span></td>
+            <td><code>/api/paystack/initialize-deposit</code></td>
+            <td>Initialize Paystack deposit to vault</td>
+            <td>Cookie</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-post">POST</span></td>
+            <td><code>/api/paystack/webhook</code></td>
+            <td>Paystack payment event listener (HMAC SHA-512)</td>
+            <td>Signature</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-post">POST</span></td>
+            <td><code>/api/ai/chat</code></td>
+            <td>Gemini AI financial consultation</td>
+            <td>Cookie</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-get">WS</span></td>
+            <td><code>/api/gemini/live-voice</code></td>
+            <td>Bidirectional real-time spoken audio stream</td>
+            <td>Cookie</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 16. Env -->
+    <section id="env">
+      <h2 class="section-title">16. Configuration &amp; Environment Variables</h2>
+      <pre><code># Database Persistence
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/ledger
+
+# Security &amp; Encryption
+JWT_SECRET=super_secret_cryptographic_key_32_chars_min
+ADMIN_SECRET_KEY=stealth_admin_key_here
+SESSION_COOKIE_NAME=ledger_session
+
+# Payment Rails (Paystack)
+PAYSTACK_SECRET_KEY=your_paystack_secret_key_here
+PAYSTACK_PUBLIC_KEY=your_paystack_public_key_here
+PAYSTACK_WEBHOOK_SECRET=your_paystack_webhook_secret_here
+
+# AI &amp; Voice
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Email Delivery (Nodemailer / SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=support@fimara.app
+SMTP_PASS=app_password_here</code></pre>
+    </section>
+
+    <!-- 17. Troubleshooting -->
+    <section id="troubleshooting">
+      <h2 class="section-title">17. Operational Runbook &amp; FAQ</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Scenario</th>
+            <th>Root Cause</th>
+            <th>Resolution</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Biometric prompt displays "No registered profile"</td>
+            <td>Device credentials not yet enrolled in browser WebAuthn registry</td>
+            <td>Go to <strong>Settings > Security</strong>, tap <strong>Enable Biometrics</strong>, and scan finger or face.</td>
+          </tr>
+          <tr>
+            <td>Offline PIN prompt rejects entry</td>
+            <td>PIN was not configured while online</td>
+            <td>Sign in with email/password while online, navigate to <strong>Settings > 4-Digit Offline Passcode</strong>, and save a PIN.</td>
+          </tr>
+          <tr>
+            <td>AI Advisor reports "Rate limit reached"</td>
+            <td>40-message window reached in 8-hour window</td>
+            <td>Wait for cooldown window to clear or consult platform administrator.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+  </main>
+
+  <script>
+    function filterNav() {
+      const q = document.getElementById('searchInput').value.toLowerCase();
+      const items = document.querySelectorAll('#navList li');
+      items.forEach(li => {
+        const text = li.innerText.toLowerCase();
+        li.style.display = text.includes(q) ? 'block' : 'none';
+      });
+    }
+
+    function downloadMarkdown() {
+      const markdownText = `# FIMARA FINANCIAL MANAGER — SYSTEM ARCHITECTURE & DOCUMENTATION\n\nVersion: 1.6.5\n\nPlease refer to docs/FIMARA_SYSTEM_DOCUMENTATION.md for the full source specification.`;
+      const blob = new Blob([markdownText], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'FIMARA_SYSTEM_DOCUMENTATION.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function copyFullText() {
+      const content = document.querySelector('main.content').innerText;
+      navigator.clipboard.writeText(content).then(() => {
+        alert('Documentation copied to clipboard!');
+      }).catch(err => {
+        alert('Failed to copy: ' + err);
+      });
+    }
+  </script>
+</body>
+</html>
